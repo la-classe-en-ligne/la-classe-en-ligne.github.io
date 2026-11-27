@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Quiz Fractions — remédiation</title>
+<style>
+  :root {
+    --bg: #fff8f0;
+    --card: #ffffff;
+    --ink: #1c2b3a;
+    --muted: #6b7a8d;
+    --accent: #d9480f;
+    --accent2: #2b6cb0;
+    --good: #2f9e44;
+    --bad: #d9480f;
+    --border: #f0d9c0;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Segoe UI", Verdana, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    padding: 20px 16px 60px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  h1 { margin: 0 0 4px; text-align: center; font-size: clamp(1.4rem, 3vw, 2.1rem); }
+  .card {
+    background: var(--card);
+    border-radius: 18px;
+    box-shadow: 0 6px 24px rgba(60,30,10,0.10);
+    padding: 26px 30px;
+    max-width: 980px;
+    width: 100%;
+  }
+  .blockmenu {
+    display: flex;
+    gap: 6px;
+    justify-content: center;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+  }
+  .blockmenu button {
+    border: 1.5px solid var(--accent);
+    background: white;
+    color: var(--accent);
+    border-radius: 999px;
+    padding: 5px 11px;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 0.72rem;
+  }
+  .blockmenu button.active { background: var(--accent); color: white; }
+  .levelmenu {
+    display: flex;
+    gap: 6px;
+    justify-content: center;
+    margin-bottom: 10px;
+  }
+  .levelmenu button {
+    border: 1.5px solid var(--accent2);
+    background: white;
+    color: var(--accent2);
+    border-radius: 999px;
+    padding: 6px 16px;
+    font-weight: 700;
+    cursor: pointer;
+    font-size: 0.85rem;
+  }
+  .levelmenu button.active { background: var(--accent2); color: white; }
+  .progress { text-align: center; color: var(--muted); font-size: 0.9rem; margin-bottom: 6px; }
+  .question-title { text-align: center; font-size: 1.6rem; font-weight: 700; margin: 10px 0 18px; }
+  button.choice { font-size: 1.7rem !important; }
+  .feedback { font-size: 1.6rem !important; }
+  .visuals { display: flex; justify-content: center; align-items: center; gap: 30px; margin-bottom: 22px; flex-wrap: wrap; }
+  .visuals.stacked { flex-direction: column; gap: 14px; }
+  .pizza { display: inline-block; margin: 0 4px; }
+  .pizza-label { text-align: center; font-size: 0.8rem; color: var(--muted); margin-top: 6px; }
+  .pizza-wrap { display: flex; flex-direction: column; align-items: center; }
+  .band {
+    display: flex;
+    width: 440px; max-width: 90vw;
+    height: 80px;
+    border: 3px solid #3a2b1c;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .band > div { flex: 1; border-right: 2px solid #3a2b1c; }
+  .band > div:last-child { border-right: none; }
+  .band > div.filled { background: var(--accent); }
+  .frac {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    vertical-align: middle;
+    line-height: 1.15;
+    margin: 0 2px;
+  }
+  .frac .num, .frac .den {
+    display: block;
+    padding: 0 3px;
+  }
+  .frac .num { border-bottom: 2px solid currentColor; }
+  .choices {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+  /* La réponse se glisse sur le dessin (plus de clic). */
+  button.choice { touch-action: none; cursor: grab; }
+  .visuals.survol { outline: 4px dashed #f4c95d; outline-offset: 8px; border-radius: 14px; }
+  .vol-choix { position: fixed; z-index: 90; pointer-events: none; transform: scale(1.06); box-shadow: 0 10px 24px rgba(0,0,0,.25); }
+  .choices.two-col-narrow { grid-template-columns: repeat(2, 1fr); max-width: 320px; margin: 0 auto; }
+  button.choice {
+    border: 2px solid var(--accent2);
+    background: white;
+    color: var(--accent2);
+    border-radius: 12px;
+    padding: 14px;
+    font-size: 1.1rem;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  button.choice:disabled { cursor: default; }
+  button.choice.correct { background: var(--good); border-color: var(--good); color: white; }
+  button.choice.wrong { background: var(--bad); border-color: var(--bad); color: white; }
+  .feedback { text-align: center; margin-top: 16px; font-size: 1rem; min-height: 1.6em; font-weight: 600; }
+  .feedback.good { color: var(--good); }
+  .feedback.bad { color: var(--bad); }
+  .nextrow { text-align: center; margin-top: 18px; }
+  button.next {
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    padding: 12px 24px;
+    font-weight: 700;
+    font-size: 1rem;
+    cursor: pointer;
+    display: none;
+  }
+  .recap { text-align: center; }
+  .recap h2 { color: var(--accent); }
+  .recap table { margin: 16px auto; border-collapse: collapse; }
+  .recap td, .recap th { padding: 6px 16px; }
+  button.restart {
+    margin-top: 14px;
+    background: var(--accent2);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    padding: 12px 24px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+</style>
+</head>
+<body>
+
+  <h1>🍕 Quiz Fractions</h1>
+
+  <div class="card">
+    <div class="levelmenu" id="levelMenu"></div>
+    <div class="blockmenu" id="blockMenu"></div>
+    <div id="quizArea"></div>
+  </div>
+
+<script>
+  function pizzaSVG(n, k) {
+    // Vrai SVG (chaque part est un <path> distinct, contour propre) plutôt qu'un
+    // dégradé CSS : les traits de séparation sont garantis visibles quel que soit
+    // le navigateur, contrairement au conic-gradient superposé essayé auparavant.
+    const size = 170, r = 76, cx = size/2, cy = size/2;
+    let slices = "";
+    for (let i = 0; i < n; i++) {
+      const a0 = (-90 + i * (360/n)) * Math.PI/180;
+      const a1 = (-90 + (i+1) * (360/n)) * Math.PI/180;
+      const x0 = (cx + r*Math.cos(a0)).toFixed(2), y0 = (cy + r*Math.sin(a0)).toFixed(2);
+      const x1 = (cx + r*Math.cos(a1)).toFixed(2), y1 = (cy + r*Math.sin(a1)).toFixed(2);
+      const large = (360/n) > 180 ? 1 : 0;
+      const fill = i < k ? "#d9480f" : "#ffffff";
+      slices += `<path d="M ${cx} ${cy} L ${x0} ${y0} A ${r} ${r} 0 ${large} 1 ${x1} ${y1} Z" fill="${fill}" stroke="#3a2b1c" stroke-width="2"/>`;
+    }
+    return `<span class="pizza"><svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">${slices}<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#3a2b1c" stroke-width="3"/></svg></span>`;
+  }
+  function bandHTML(n, k) {
+    let cells = "";
+    for (let i = 0; i < n; i++) cells += `<div class="${i < k ? "filled" : ""}"></div>`;
+    return `<div class="band">${cells}</div>`;
+  }
+  function fracHTML(str) {
+    // Affiche "3/4" en numérateur/dénominateur empilés avec barre, au lieu du slash
+    // (qui se lit comme une division) — laisse tout le reste du texte inchangé.
+    return String(str).replace(/(\d+)\/(\d+)/g, '<span class="frac"><span class="num">$1</span><span class="den">$2</span></span>');
+  }
+
+  const LEVELS = [
+    {
+      label: "Découverte",
+      blocks: [
+        {
+          id: "notation",
+          label: "1. Notation de base",
+          title: "Quelle fraction est représentée ?",
+          questions: [
+            { visual: () => bandHTML(2,1), answer: "1/2", choices: ["1/2","1/3","2/1","1/4"] },
+            { visual: () => pizzaSVG(4,1), answer: "1/4", choices: ["1/4","4/1","1/3","2/4"] },
+            { visual: () => bandHTML(3,1), answer: "1/3", choices: ["1/3","3/1","1/2","2/3"] },
+            { visual: () => pizzaSVG(4,3), answer: "3/4", choices: ["3/4","4/3","1/4","3/1"] },
+            { visual: () => bandHTML(2,1), answer: "1/2", choices: ["1/2","2/1","1/3","2/3"] },
+            { visual: () => pizzaSVG(10,1), answer: "1/10", choices: ["1/10","10/1","1/5","2/10"] },
+          ]
+        },
+        {
+          id: "equivalence",
+          label: "2. Fractions équivalentes",
+          title: "Ces deux figures représentent-elles la même quantité ?",
+          isYesNo: true,
+          questions: [
+            { visual: () => bandHTML(2,1) + bandHTML(4,2), answer: "Oui", explain: "1/2 et 2/4 : la même quantité, dessinée avec des parts plus petites." },
+            { visual: () => bandHTML(3,1) + bandHTML(6,2), answer: "Oui", explain: "1/3 et 2/6 : même quantité coloriée." },
+            { visual: () => bandHTML(2,1) + bandHTML(3,2), answer: "Non", explain: "1/2 n'est pas la même quantité que 2/3." },
+            { visual: () => pizzaSVG(2,1) + pizzaSVG(6,3), answer: "Oui", explain: "1/2 et 3/6 : même quantité de pizza coloriée." },
+            { visual: () => bandHTML(4,1) + bandHTML(3,1), answer: "Non", explain: "1/4 est plus petit que 1/3 (les parts ne sont pas de la même taille)." },
+            { visual: () => pizzaSVG(4,2) + pizzaSVG(2,1), answer: "Oui", explain: "2/4 et 1/2 : même quantité de pizza coloriée." },
+          ]
+        },
+        {
+          id: "plusieurs",
+          label: "3. Fractions sur plusieurs unités",
+          title: "Quelle fraction représente toute la partie coloriée ?",
+          questions: [
+            { visual: () => pizzaSVG(4,4) + pizzaSVG(4,1), answer: "5/4", choices: ["5/4","1/8","4/5","5/8"], explain: "5/4 = 1 pizza entière (4/4) + 1 quart (1/4)." },
+            { visual: () => pizzaSVG(4,4) + pizzaSVG(4,4), answer: "8/4", choices: ["8/4","4/8","2/4","8/8"], explain: "8/4 = 2 pizzas entières." },
+            { visual: () => pizzaSVG(2,2) + pizzaSVG(2,1), answer: "3/2", choices: ["3/2","2/3","1/2","3/4"], explain: "3/2 = 1 pizza entière (2/2) + 1 demi (1/2)." },
+            { visual: () => pizzaSVG(4,4) + pizzaSVG(4,4) + pizzaSVG(4,1), answer: "9/4", choices: ["9/4","4/9","3/4","9/12"], explain: "9/4 = 2 pizzas entières (8/4) + 1 quart (1/4)." },
+            { visual: () => pizzaSVG(2,2) + pizzaSVG(2,2), answer: "4/2", choices: ["4/2","2/4","1/2","4/4"], explain: "4/2 = 2 pizzas entières." },
+            { visual: () => pizzaSVG(4,4) + pizzaSVG(4,3), answer: "7/4", choices: ["7/4","4/7","3/4","7/8"], explain: "7/4 = 1 pizza entière (4/4) + 3 quarts (3/4)." },
+            { visual: () => pizzaSVG(2,2) + pizzaSVG(2,2) + pizzaSVG(2,1), answer: "5/2", choices: ["5/2","2/5","1/2","5/6"], explain: "5/2 = 2 pizzas entières (4/2) + 1 demi (1/2)." },
+            { visual: () => pizzaSVG(4,4) + pizzaSVG(4,2), answer: "6/4", choices: ["6/4","4/6","2/4","6/8"], explain: "6/4 = 1 pizza entière (4/4) + 2 quarts (2/4)." },
+          ]
+        }
+      ]
+    },
+    {
+      label: "Défi",
+      blocks: [
+        {
+          id: "notation",
+          label: "1. Notation de base",
+          title: "Quelle fraction est représentée ?",
+          questions: [
+            { visual: () => bandHTML(5,2), answer: "2/5", choices: ["2/5","5/2","1/5","3/5"] },
+            { visual: () => pizzaSVG(6,5), answer: "5/6", choices: ["5/6","6/5","1/6","4/6"] },
+            { visual: () => bandHTML(8,3), answer: "3/8", choices: ["3/8","8/3","5/8","3/5"] },
+            { visual: () => pizzaSVG(10,7), answer: "7/10", choices: ["7/10","10/7","3/10","7/3"] },
+            { visual: () => bandHTML(6,1), answer: "1/6", choices: ["1/6","6/1","1/5","2/6"] },
+            { visual: () => pizzaSVG(12,5), answer: "5/12", choices: ["5/12","12/5","5/10","7/12"] },
+          ]
+        },
+        {
+          id: "equivalence",
+          label: "2. Fractions équivalentes",
+          title: "Ces deux figures représentent-elles la même quantité ?",
+          isYesNo: true,
+          questions: [
+            { visual: () => bandHTML(4,3) + bandHTML(8,6), answer: "Oui", explain: "3/4 et 6/8 : même quantité, dessinée avec des parts deux fois plus petites." },
+            { visual: () => bandHTML(3,2) + bandHTML(6,4), answer: "Oui", explain: "2/3 et 4/6 : même quantité coloriée." },
+            { visual: () => bandHTML(5,3) + bandHTML(10,6), answer: "Oui", explain: "3/5 et 6/10 : même quantité coloriée." },
+            { visual: () => pizzaSVG(5,2) + pizzaSVG(8,3), answer: "Non", explain: "2/5 n'est pas la même quantité que 3/8 (proche, mais pas égal)." },
+            { visual: () => pizzaSVG(6,4) + pizzaSVG(3,2), answer: "Oui", explain: "4/6 et 2/3 : même quantité de pizza coloriée." },
+            { visual: () => bandHTML(6,5) + bandHTML(8,7), answer: "Non", explain: "5/6 n'est pas la même quantité que 7/8 (proche, mais pas égal)." },
+          ]
+        },
+        {
+          id: "plusieurs",
+          label: "3. Fractions sur plusieurs unités",
+          title: "Quelle fraction représente toute la partie coloriée ?",
+          questions: [
+            { visual: () => pizzaSVG(3,3) + pizzaSVG(3,1), answer: "4/3", choices: ["4/3","3/4","1/3","4/1"], explain: "4/3 = 1 pizza entière (3/3) + 1 tiers (1/3)." },
+            { visual: () => pizzaSVG(5,5) + pizzaSVG(5,2), answer: "7/5", choices: ["7/5","5/7","2/5","7/2"], explain: "7/5 = 1 pizza entière (5/5) + 2 cinquièmes (2/5)." },
+            { visual: () => pizzaSVG(3,3) + pizzaSVG(3,3) + pizzaSVG(3,2), answer: "8/3", choices: ["8/3","3/8","2/3","8/6"], explain: "8/3 = 2 pizzas entières (6/3) + 2 tiers (2/3)." },
+            { visual: () => pizzaSVG(4,4) + pizzaSVG(4,4) + pizzaSVG(4,3), answer: "11/4", choices: ["11/4","4/11","3/4","11/8"], explain: "11/4 = 2 pizzas entières (8/4) + 3 quarts (3/4)." },
+            { visual: () => pizzaSVG(6,6) + pizzaSVG(6,5), answer: "11/6", choices: ["11/6","6/11","5/6","11/12"], explain: "11/6 = 1 pizza entière (6/6) + 5 sixièmes (5/6)." },
+            { visual: () => pizzaSVG(5,5) + pizzaSVG(5,5) + pizzaSVG(5,1), answer: "11/5", choices: ["11/5","5/11","1/5","11/15"], explain: "11/5 = 2 pizzas entières (10/5) + 1 cinquième (1/5)." },
+            { visual: () => pizzaSVG(8,8) + pizzaSVG(8,3), answer: "11/8", choices: ["11/8","8/11","3/8","11/16"], explain: "11/8 = 1 pizza entière (8/8) + 3 huitièmes (3/8)." },
+            { visual: () => pizzaSVG(3,3) + pizzaSVG(3,3) + pizzaSVG(3,3), answer: "9/3", choices: ["9/3","3/9","3/3","9/9"], explain: "9/3 = 3 pizzas entières." },
+          ]
+        }
+      ]
+    }
+  ];
+
+  let currentLevel = 0;
+  let currentBlock = 0;
+  let currentQ = 0;
+  let scores = LEVELS.map(lvl => lvl.blocks.map(() => 0));
+  let answered = false;
+
+  const levelMenuEl = document.getElementById("levelMenu");
+  const menuEl = document.getElementById("blockMenu");
+  const areaEl = document.getElementById("quizArea");
+
+  function renderLevelMenu() {
+    levelMenuEl.innerHTML = "";
+    LEVELS.forEach((lvl, i) => {
+      const btn = document.createElement("button");
+      btn.textContent = lvl.label;
+      if (i === currentLevel) btn.classList.add("active");
+      btn.addEventListener("click", () => {
+        currentLevel = i; currentBlock = 0; currentQ = 0;
+        renderLevelMenu(); renderMenu(); renderQuestion();
+      });
+      levelMenuEl.appendChild(btn);
+    });
+  }
+
+  function renderMenu() {
+    menuEl.innerHTML = "";
+    LEVELS[currentLevel].blocks.forEach((b, i) => {
+      const btn = document.createElement("button");
+      btn.textContent = b.label.split(". ")[0];
+      btn.title = b.label;
+      if (i === currentBlock) btn.classList.add("active");
+      btn.addEventListener("click", () => { currentBlock = i; currentQ = 0; renderMenu(); renderQuestion(); });
+      menuEl.appendChild(btn);
+    });
+  }
+
+  function shuffle(arr) {
+    const a = arr.slice();
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i+1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  function renderQuestion() {
+    const block = LEVELS[currentLevel].blocks[currentBlock];
+    if (currentQ >= block.questions.length) {
+      renderRecap();
+      return;
+    }
+    const q = block.questions[currentQ];
+    answered = false;
+    const choices = block.isYesNo ? ["Oui","Non"] : shuffle(q.choices);
+    areaEl.innerHTML = `
+      <div class="question-title">${block.title}</div>
+      <div class="visuals ${block.id === "equivalence" ? "stacked" : ""}">${q.visual()}</div>
+      <div class="choices ${block.isYesNo ? "two-col-narrow" : ""}" id="choicesRow"></div>
+      <div class="feedback" id="feedback"></div>
+      <div class="nextrow"><button class="next" id="btnNext">➜</button></div>
+    `;
+    const row = document.getElementById("choicesRow");
+    choices.forEach(c => {
+      const btn = document.createElement("button");
+      btn.className = "choice";
+      btn.innerHTML = fracHTML(c);
+      btn.dataset.value = c;
+      glisserVers(btn, ".visuals", () => selectAnswer(btn, c, q));
+      row.appendChild(btn);
+    });
+  }
+
+  // ---- Glisser (doigt, souris, stylet) : le dépôt sur le dessin vaut réponse ----
+  function glisserVers(objet, sel, auDepot) {
+    const sous = (x, y) => { const l = document.elementsFromPoint(x, y); for (const e of l) if (e.matches && e.matches(sel)) return e; return null; };
+    objet.addEventListener("pointerdown", ev => {
+      if (answered) return;
+      ev.preventDefault();
+      const r = objet.getBoundingClientRect(), dx = ev.clientX - r.left, dy = ev.clientY - r.top;
+      const vol = objet.cloneNode(true); vol.classList.add("vol-choix"); vol.style.width = r.width + "px";
+      vol.style.left = r.left + "px"; vol.style.top = r.top + "px"; document.body.appendChild(vol); objet.style.visibility = "hidden";
+      let survol = null;
+      const bouge = e => { vol.style.left = (e.clientX - dx) + "px"; vol.style.top = (e.clientY - dy) + "px"; const c = sous(e.clientX, e.clientY); if (survol && survol !== c) survol.classList.remove("survol"); if (c) c.classList.add("survol"); survol = c; };
+      const lache = e => {
+        document.removeEventListener("pointermove", bouge); document.removeEventListener("pointerup", lache);
+        vol.remove(); objet.style.visibility = ""; if (survol) survol.classList.remove("survol");
+        if (sous(e.clientX, e.clientY)) auDepot();
+      };
+      document.addEventListener("pointermove", bouge); document.addEventListener("pointerup", lache);
+    });
+  }
+
+  function selectAnswer(btn, chosen, q) {
+    if (answered) return;
+    answered = true;
+    const correct = chosen === q.answer;
+    if (correct) scores[currentLevel][currentBlock]++;
+    document.querySelectorAll("#choicesRow .choice").forEach(b => {
+      b.disabled = true;
+      if (b.dataset.value === q.answer) b.classList.add("correct");
+      else if (b === btn) b.classList.add("wrong");
+    });
+    const fb = document.getElementById("feedback");
+    // Retour court : l'explication est donnée à l'oral par l'enseignant.
+    const msg = correct ? "✅" : "❌ " + q.answer;
+    fb.innerHTML = fracHTML(msg);
+    fb.classList.add(correct ? "good" : "bad");
+    document.getElementById("btnNext").style.display = "inline-block";
+    document.getElementById("btnNext").onclick = () => { currentQ++; renderQuestion(); };
+  }
+
+  function renderRecap() {
+    const blocks = LEVELS[currentLevel].blocks;
+    const block = blocks[currentBlock];
+    const total = block.questions.length;
+    areaEl.innerHTML = `
+      <div class="recap">
+        <h2>Résultat — ${LEVELS[currentLevel].label} · ${block.label}</h2>
+        <p style="font-size:1.4rem;font-weight:700;">${scores[currentLevel][currentBlock]} / ${total}</p>
+        <table>
+          <tr><th></th>${blocks.map(b=>`<th>${b.label.split(". ")[0]}</th>`).join("")}</tr>
+          <tr><td>Score</td>${blocks.map((b,i)=>`<td>${scores[currentLevel][i]} / ${b.questions.length}</td>`).join("")}</tr>
+        </table>
+        <button class="restart" id="btnRestartBlock">🔁 Refaire ce bloc</button>
+        ${currentBlock < blocks.length - 1 ? `<button class="restart" id="btnNextBlock">Bloc suivant →</button>` : ""}
+      </div>
+    `;
+    document.getElementById("btnRestartBlock").addEventListener("click", () => {
+      scores[currentLevel][currentBlock] = 0; currentQ = 0; renderQuestion();
+    });
+    const nb = document.getElementById("btnNextBlock");
+    if (nb) nb.addEventListener("click", () => { currentBlock++; currentQ = 0; renderMenu(); renderQuestion(); });
+  }
+
+  // Class Flow ouvre le quiz sur un niveau : …html#2
+  if (/^#\d$/.test(location.hash) && +location.hash.slice(1) <= LEVELS.length) currentLevel = +location.hash.slice(1) - 1;
+  renderLevelMenu();
+  renderMenu();
+  renderQuestion();
+</script>
+<!-- DEUX GESTES -->
+<script>
+/* ==== DEUX GESTES (GTH) : chaque jeu se joue en glissant OU en touchant (demande de Karim du 01/10) ====
+   REGLES  : jeu au glisser-déposer → on peut aussi toucher l'objet (il s'entoure), puis toucher sa place ; s'il n'a qu'une place
+             possible (une case réponse), un seul toucher le pose (10/10) :
+             le module rejoue exactement le même glisser-déposer, le jeu garde ses règles.
+   INVERSE : jeu au toucher (toucher la carte, puis la zone) → on peut aussi glisser la carte sur la zone.
+   Installé par .claude/outils/deux-gestes/injecter.py ; ne pas modifier dans le jeu, mais dans ce fichier. */
+(function () {
+  var REGLES = [{"source": ".choice", "cible": ".visuals"}], INVERSE = [];
+  // setPointerCapture refuse les pointeurs rejoués : on ignore l'erreur
+  ["setPointerCapture", "releasePointerCapture"].forEach(function (m) {
+    var o = Element.prototype[m]; if (!o) return;
+    Element.prototype[m] = function (id) { try { return o.call(this, id); } catch (e) { return undefined; } };
+  });
+  var st = document.createElement("style");
+  st.textContent = ".dg-choisi{outline:7px solid #1f7a8c !important; outline-offset:4px !important;}" +
+    ".dg-vol{position:fixed !important; z-index:9999; pointer-events:none; opacity:.92; transform:scale(1.05) rotate(-2deg); margin:0 !important;}";
+  document.head.appendChild(st);
+
+  var choix = null, bas = null, rejeu = false, avalerClic = 0;
+  function sous(x, y) { return document.elementFromPoint(x, y); }
+  function trouver(el, liste, cle) {
+    if (!el || !el.closest) return null;
+    for (var i = 0; i < liste.length; i++) { var e = el.closest(liste[i][cle]); if (e) return { regle: liste[i], el: e }; }
+    return null;
+  }
+  function oublier() { if (choix) choix.el.classList.remove("dg-choisi"); choix = null; }
+  function evt(type, cible, x, y) {
+    var e = new PointerEvent(type, { bubbles: true, cancelable: true, composed: true, clientX: x, clientY: y, pointerId: 777,
+      pointerType: "touch", isPrimary: true, button: 0, buttons: type === "pointerup" ? 0 : 1 });
+    (cible && cible.isConnected ? cible : document).dispatchEvent(e);
+  }
+  // Rejoue le glisser-déposer du jeu : de l'objet jusqu'au point touché
+  function rejouer(src, x, y) {
+    if (!src.isConnected) return;
+    var r = src.getBoundingClientRect(), x0 = r.left + r.width / 2, y0 = r.top + r.height / 2;
+    var depart = sous(x0, y0); if (!depart || !src.contains(depart)) depart = src;
+    rejeu = true;
+    try {
+      evt("pointerdown", depart, x0, y0);
+      for (var k = 1; k <= 12; k++) evt("pointermove", depart, x0 + (x - x0) * k / 12, y0 + (y - y0) * k / 12);
+      evt("pointerup", depart, x, y);
+    } finally { rejeu = false; }
+  }
+
+  // ---------- REGLES : toucher l'objet, puis sa place ----------
+  document.addEventListener("pointerdown", function (e) {
+    if (rejeu || !e.isTrusted || !REGLES.length) return;
+    if (choix && !choix.el.isConnected) oublier();
+    // l'objet touché est repéré dès que le doigt se pose : ensuite, le jeu le cache pour le faire glisser
+    bas = { x: e.clientX, y: e.clientY, cible: null, src: trouver(e.target, REGLES, "source") };
+    if (choix) {
+      var c = e.target.closest && e.target.closest(choix.regle.cible);
+      if (c && !(e.target.closest(choix.regle.source))) { bas.cible = c; e.stopImmediatePropagation(); e.preventDefault(); }
+    }
+  }, true);
+  document.addEventListener("pointerup", function (e) {
+    if (rejeu || !e.isTrusted || !bas || !REGLES.length) return;
+    var b = bas; bas = null;
+    var tap = Math.hypot(e.clientX - b.x, e.clientY - b.y) < 12;
+    if (b.cible) {   // le toucher sur la place : le jeu ne le voit pas, on rejoue le glisser à cet endroit
+      e.stopImmediatePropagation(); e.preventDefault(); avalerClic = Date.now();
+      if (tap && choix) { var s = choix.el; oublier(); var x = e.clientX, y = e.clientY; setTimeout(function () { rejouer(s, x, y); }, 0); }
+      return;
+    }
+    if (!tap) { oublier(); return; }   // un vrai glisser : le jeu s'en occupe
+    var src = b.src;
+    setTimeout(function () {   // après le jeu : l'objet touché est choisi (ou ne l'est plus)
+      if (!src || !src.el.isConnected) { return; }
+      // une seule place où le poser (une case réponse) : un toucher suffit, la réponse part dans la case (Karim, 10/10)
+      var places = Array.prototype.filter.call(document.querySelectorAll(src.regle.cible), function (c) {
+        var r = c.getBoundingClientRect(); return r.width > 0 && r.height > 0 && !src.el.contains(c) && getComputedStyle(c).visibility !== "hidden"; });
+      if (places.length === 1) { oublier(); var r = places[0].getBoundingClientRect(); rejouer(src.el, r.left + r.width / 2, r.top + r.height / 2); return; }
+      if (choix && choix.el === src.el) { oublier(); return; }
+      oublier(); choix = src; src.el.classList.add("dg-choisi");
+    }, 0);
+  }, true);
+  document.addEventListener("click", function (e) {
+    if (Date.now() - avalerClic < 500 && e.isTrusted) { e.stopImmediatePropagation(); e.preventDefault(); }
+  }, true);
+
+  // ---------- INVERSE : glisser la carte sur la zone = la toucher, puis toucher la zone ----------
+  var g = null;
+  document.addEventListener("pointerdown", function (e) {
+    if (rejeu || !e.isTrusted || !INVERSE.length) return;
+    var src = trouver(e.target, INVERSE, "source"); if (!src) return;
+    g = { src: src, x: e.clientX, y: e.clientY, vol: null };
+  }, true);
+  document.addEventListener("pointermove", function (e) {
+    if (!g || rejeu) return;
+    if (!g.vol && Math.hypot(e.clientX - g.x, e.clientY - g.y) < 12) return;
+    if (!g.vol) {
+      var r = g.src.el.getBoundingClientRect();
+      g.vol = g.src.el.cloneNode(true); g.vol.classList.add("dg-vol"); g.vol.style.width = r.width + "px";
+      g.dx = g.x - r.left; g.dy = g.y - r.top; document.body.appendChild(g.vol);
+    }
+    g.vol.style.left = (e.clientX - g.dx) + "px"; g.vol.style.top = (e.clientY - g.dy) + "px";
+  }, true);
+  document.addEventListener("pointerup", function (e) {
+    if (!g || rejeu || !e.isTrusted) return;
+    var d = g; g = null;
+    if (!d.vol) return;   // simple toucher : le jeu s'en occupe
+    d.vol.remove(); e.stopImmediatePropagation(); e.preventDefault(); avalerClic = Date.now();
+    var dessous = sous(e.clientX, e.clientY), zone = dessous && dessous.closest ? dessous.closest(d.src.regle.cible) : null;
+    if (!zone) return;
+    rejeu = true;
+    try { evt("pointerup", d.src.el, e.clientX, e.clientY); evt("pointerup", zone, e.clientX, e.clientY); }
+    finally { rejeu = false; }
+  }, true);
+})();
+</script>
+<!-- /DEUX GESTES -->
+<!-- MENU -->
+<script>
+/* ==== LE MENU ☰ (GTH, 10/10) : interface épurée — à l'écran, seulement le titre, le score, la consigne et l'activité ====
+   Tout le reste (niveaux, onglets de méthode, ✏️, 🔊, 🖨️, aide…) part dans un menu ☰, ouvert d'un toucher.
+   Réglage par outil (CONF, posé par l'injecteur) : ancre = où mettre le bouton ☰ (sinon en haut à droite de l'écran) ;
+   cacher = ce qui part dans le menu (sinon : tout ce qui, dans « .barre .droite », n'est pas un score).
+   Installé par .claude/outils/menu-outil/injecter.py ; ne pas modifier dans l'outil, mais dans ce fichier. */
+(function () {
+  var CONF = {"cacher": ["#levelMenu", "#blockMenu"]};
+  var st = document.createElement("style");
+  st.textContent =
+    ".menu-btn{width:58px; height:58px; border-radius:16px; border:2px solid rgba(0,0,0,.15); background:#fff; color:#1f2a33; font-size:2rem; line-height:1; cursor:pointer; flex:none; padding:0;}" +
+    ".menu-btn.fixe{position:fixed; top:10px; right:12px; z-index:150; box-shadow:0 4px 14px rgba(0,0,0,.15);}" +
+    ".menu-btn.ouvert{background:#1f2a33; color:#fff;}" +
+    ".menu-panneau{position:fixed; top:76px; right:16px; z-index:200; background:#fff; color:#1f2a33; border-radius:18px; box-shadow:0 18px 50px rgba(0,0,0,.28); padding:16px 18px;" +
+    "  display:flex; flex-direction:column; align-items:flex-start; gap:12px; max-width:min(620px, 92vw); max-height:80vh; overflow:auto;}" +
+    ".menu-panneau[hidden]{display:none !important;}" +
+    ".menu-panneau h4{margin:0; font-family:sans-serif; font-size:.85rem; text-transform:uppercase; letter-spacing:.6px; color:#6d7a85;}" +
+    ".menu-panneau > *{position:static !important; margin:0 !important;}" +
+    ".menu-panneau > div,.menu-panneau > nav{display:flex; flex-wrap:wrap; gap:8px;}";
+  document.head.appendChild(st);
+  function installer() {
+    var autres = [];
+    if (CONF.cacher) CONF.cacher.forEach(function (s) { document.querySelectorAll(s).forEach(function (e) { if (autres.indexOf(e) === -1) autres.push(e); }); });
+    else { var d = document.querySelector(".barre .droite"); if (d) autres = Array.prototype.filter.call(d.children, function (e) { return !e.classList.contains("score"); }); }
+    if (!autres.length) return;
+    var btn = document.createElement("button"); btn.type = "button"; btn.className = "menu-btn"; btn.title = "Niveaux et réglages"; btn.textContent = "☰";
+    var pan = document.createElement("div"); pan.className = "menu-panneau"; pan.hidden = true;
+    var t = document.createElement("h4"); t.textContent = "Niveaux et réglages"; pan.appendChild(t);
+    autres.forEach(function (e) { pan.appendChild(e); });
+    var ancre = document.querySelector(CONF.ancre || ".barre .droite");
+    if (ancre) ancre.appendChild(btn); else { btn.classList.add("fixe"); document.body.appendChild(btn); }
+    document.body.appendChild(pan);
+    function ouvrir(o) { pan.hidden = !o; btn.classList.toggle("ouvert", o); }
+    btn.addEventListener("click", function (e) { e.stopPropagation(); ouvrir(pan.hidden); });
+    // un niveau choisi, ou une fenêtre ouverte (✏️, 🖨️) : le menu se referme ; on garde le menu ouvert pour choisir un type de jeu
+    pan.addEventListener("click", function (e) { var b = e.target.closest("button"); if (b && !b.closest(CONF.garderOuvert || ".types")) setTimeout(function () { ouvrir(false); }, 120); });
+    document.addEventListener("pointerdown", function (e) { if (!pan.hidden && !pan.contains(e.target) && e.target !== btn) ouvrir(false); });
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", installer); else installer();
+})();
+</script>
+<!-- /MENU -->
+</body>
+</html>

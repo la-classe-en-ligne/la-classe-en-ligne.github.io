@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>La pyramide additive</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath d='M32 6 L60 56 H4 Z' fill='%23e8c27a' stroke='%238a5a1c' stroke-width='4' stroke-linejoin='round'/%3E%3Cpath d='M18 31 H46 M11 44 H53 M32 31 V44 M22 44 V56 M42 44 V56' stroke='%238a5a1c' stroke-width='3'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Quicksand:wght@600;700&display=swap">
+<style>
+  /* Univers de ce jeu : le chantier d'une pyramide dans le désert. Chaque pierre porte la somme des deux pierres du dessous ;
+     on calcule à l'ardoise, puis on glisse la bonne pierre du chariot à sa place. */
+  :root{
+    --encre:#3b2408; --gris:#7a6248; --bord:#e2c99a; --pierre:#e8c27a; --pierre-ombre:#a8742c; --bien:#1a8f5c; --faux:#d6455d;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{margin:0; color:var(--encre); font-family:"Quicksand",system-ui,sans-serif; overflow:hidden; height:100vh; display:flex; flex-direction:column;
+    background:linear-gradient(180deg,#8fd0f2 0%,#cdeaf7 38%,#fde7b8 62%,#f2c879 100%);
+    user-select:none; -webkit-user-select:none; touch-action:none;}
+  body::after{content:""; position:fixed; left:-10%; right:-10%; bottom:-6vh; height:24vh; z-index:-1; border-radius:50% 50% 0 0 / 40% 40% 0 0;
+    background:#e9b765; pointer-events:none;}
+  /* Les pyramides du décor, posées sur l'horizon, derrière les dunes (pâles pour ne pas gêner la lecture). */
+  .decor{position:fixed; left:0; right:0; bottom:15vh; height:46vh; width:100%; z-index:-1; pointer-events:none;}
+  .soleil{position:fixed; right:7vw; top:15vh; width:130px; height:130px; border-radius:50%; z-index:-1; pointer-events:none;
+    background:radial-gradient(circle,#fffbe0 0 45%,#ffd84a 62%,rgba(255,200,60,.3) 70%,transparent 72%);}
+
+  /* ---------- Barre du haut ---------- */
+  .barre{display:grid; grid-template-columns:1fr auto; align-items:center; gap:16px; padding:12px 26px; background:#fffaf0; border-bottom:3px solid var(--bord);}
+  .titre{display:flex; align-items:center; gap:12px;}
+  .titre svg{width:50px; height:50px; flex:none;}
+  .titre h1{font-family:"Baloo 2",cursive; font-weight:800; font-size:1.9rem; margin:0;}
+  .droite{justify-self:end; display:flex; align-items:center; gap:12px;}
+  .score{display:flex; flex-direction:column; align-items:center; padding:2px 14px; border-radius:12px; background:#fff; border:2px solid var(--bord); min-width:130px;}
+  .score small{font-size:.8rem; font-weight:700; color:var(--gris); text-transform:uppercase; letter-spacing:.5px;}
+  .score b{font-family:"Baloo 2",cursive; font-size:1.8rem; line-height:1.05;}
+  .niveaux{display:flex; flex-direction:column; gap:4px;}
+  .niveaux button{font:inherit; font-weight:700; font-size:.85rem; padding:2px 12px; border-radius:999px; cursor:pointer; background:#fff; color:var(--gris); border:2px solid var(--bord);}
+  .niveaux button.actif{background:var(--encre); color:#fff; border-color:var(--encre);}
+  .btn-son{width:44px; height:44px; border-radius:50%; font-size:1.2rem; cursor:pointer; background:#fff; border:2px solid var(--bord);}
+
+  /* ---------- Consigne ---------- */
+  .consigne{display:flex; justify-content:center; padding:14px 20px 0;}
+  .consigne p{margin:0; font-family:"Baloo 2",cursive; font-weight:700; font-size:2.1rem; text-align:center; background:rgba(255,255,255,.9); padding:2px 22px; border-radius:16px;}
+
+  /* ---------- Jeu ---------- */
+  .jeu{flex:1; min-height:0; display:grid; grid-template-columns:1fr 420px; gap:30px; align-items:center; padding:10px 40px 0;}
+  .pyramide{display:flex; flex-direction:column-reverse; align-items:center; gap:8px;}
+  .rang{display:flex; gap:8px;}
+  .case{width:190px; height:112px; border-radius:10px; display:flex; align-items:center; justify-content:center;
+    font-family:"Baloo 2",cursive; font-weight:800; font-size:3.6rem; line-height:1;}
+  .case.donnee,.case.posee{background:var(--pierre); border:4px solid var(--pierre-ombre); box-shadow:inset 0 -10px 0 rgba(138,90,28,.25);}
+  .case.vide{background:rgba(255,255,255,.55); border:4px dashed var(--pierre-ombre);}
+  .case.survol{background:#fff6d8; border-style:solid; border-color:var(--encre);}
+  .case.choisie,.bloc.choisi{outline:7px solid #1f7a8c; outline-offset:3px;}
+  .case.vide{cursor:pointer;}
+  .case.repere{outline:6px solid #ffb300; outline-offset:3px;}
+  .case.posee{animation:pose .45s ease;} .case.secoue{animation:secoue .4s ease;}
+  @keyframes pose{0%{transform:translateY(-30px)}60%{transform:translateY(4px)}100%{transform:none}}
+  @keyframes secoue{0%,100%{transform:none}25%{transform:translateX(-10px)}75%{transform:translateX(10px)}}
+
+  .chariot{align-self:center; background:#8a5a1c; border-radius:22px; padding:16px; box-shadow:0 10px 0 #5e3c10;}
+  .chariot-titre{color:#fde7b8; font-family:"Baloo 2",cursive; font-weight:700; font-size:1.3rem; text-align:center; margin:-4px 0 8px;}
+  .pile{display:grid; grid-template-columns:repeat(3,1fr); gap:12px;}
+  .bloc{height:88px; border-radius:10px; background:var(--pierre); border:4px solid #f5dca8; box-shadow:inset 0 -8px 0 rgba(138,90,28,.25);
+    display:flex; align-items:center; justify-content:center; font-family:"Baloo 2",cursive; font-weight:800; font-size:2.8rem; cursor:grab; touch-action:none;}
+  .bloc.parti{visibility:hidden;}
+  .bloc.en-vol{position:fixed; z-index:50; pointer-events:none; width:126px; transform:scale(1.1) rotate(-3deg); box-shadow:0 18px 30px rgba(59,36,8,.35);}
+
+  .bas{display:flex; flex-direction:column; align-items:center; gap:6px; padding:8px 0 18px;}
+  .btn-indice{font:inherit; font-weight:700; font-size:1.2rem; padding:6px 16px; border-radius:999px; cursor:pointer; background:#fff8dc; border:2px solid #f1d27a; color:#7a5b00;}
+  .verdict{min-height:3rem; font-family:"Baloo 2",cursive; font-size:2.2rem; font-weight:800; text-align:center;}
+  .verdict:not(:empty){background:rgba(255,255,255,.9); padding:0 24px; border-radius:14px;}
+  .verdict.bien{color:var(--bien);} .verdict.faux{color:var(--faux);}
+  .btn-suivant{font:inherit; font-family:"Baloo 2",cursive; font-weight:800; font-size:1.8rem; padding:4px 34px; border-radius:999px; cursor:pointer;
+    background:var(--encre); color:#fff; border:none;}
+  .btn-suivant[hidden]{display:none;}
+</style>
+</head>
+<body>
+<div class="soleil"></div>
+<svg class="decor" viewBox="0 0 1920 1000" preserveAspectRatio="xMidYMax slice" aria-hidden="true"><g opacity="0.95"><path d="M-60 1000 L250 580 L324 1000 Z" fill="#f2d496"/><path d="M324 1000 L250 580 L560 1000 Z" fill="#d6a85c"/><g stroke="#c4934a" stroke-width="3" stroke-opacity=".45"><path d="M-8 930 H508"/><path d="M43 860 H457"/><path d="M95 790 H405"/><path d="M147 720 H353"/><path d="M198 650 H302"/></g></g><g opacity="0.85"><path d="M460 1000 L640 770 L683 1000 Z" fill="#f2d496"/><path d="M683 1000 L640 770 L820 1000 Z" fill="#d6a85c"/><g stroke="#c4934a" stroke-width="3" stroke-opacity=".45"><path d="M490 962 H790"/><path d="M520 923 H760"/><path d="M550 885 H730"/><path d="M580 847 H700"/><path d="M610 808 H670"/></g></g><g opacity="0.75"><path d="M1030 1000 L1180 820 L1216 1000 Z" fill="#f2d496"/><path d="M1216 1000 L1180 820 L1330 1000 Z" fill="#d6a85c"/><g stroke="#c4934a" stroke-width="3" stroke-opacity=".45"><path d="M1055 970 H1305"/><path d="M1080 940 H1280"/><path d="M1105 910 H1255"/><path d="M1130 880 H1230"/><path d="M1155 850 H1205"/></g></g><g opacity="0.95"><path d="M1210 1000 L1560 530 L1644 1000 Z" fill="#f2d496"/><path d="M1644 1000 L1560 530 L1910 1000 Z" fill="#d6a85c"/><g stroke="#c4934a" stroke-width="3" stroke-opacity=".45"><path d="M1268 922 H1852"/><path d="M1327 843 H1793"/><path d="M1385 765 H1735"/><path d="M1443 687 H1677"/><path d="M1502 608 H1618"/></g></g><g opacity="0.8"><path d="M1690 1000 L1840 810 L1876 1000 Z" fill="#f2d496"/><path d="M1876 1000 L1840 810 L1990 1000 Z" fill="#d6a85c"/><g stroke="#c4934a" stroke-width="3" stroke-opacity=".45"><path d="M1715 968 H1965"/><path d="M1740 937 H1940"/><path d="M1765 905 H1915"/><path d="M1790 873 H1890"/><path d="M1815 842 H1865"/></g></g></svg>
+<div class="barre">
+  <div class="titre">
+    <svg viewBox="0 0 64 64" aria-hidden="true"><path d="M32 6 L60 56 H4 Z" fill="#e8c27a" stroke="#8a5a1c" stroke-width="4" stroke-linejoin="round"/><path d="M18 31 H46 M11 44 H53 M32 31 V44 M22 44 V56 M42 44 V56" stroke="#8a5a1c" stroke-width="3"/></svg>
+    <h1>La pyramide additive</h1>
+  </div>
+  <div class="droite">
+    <div class="score" title="Pyramides terminées sans aucune erreur"><small>Pyramides sans erreur</small><b id="score">0</b></div>
+    <div class="score" title="Le meilleur score à ce niveau, gardé sur cet ordinateur"><small>🏆 Record</small><b id="record">0</b></div>
+    <div class="niveaux" id="niveaux">
+      <button type="button" data-niveau="3" class="actif">Base de 3</button>
+      <button type="button" data-niveau="4">Base de 4</button>
+      <button type="button" data-niveau="defi">Défi</button>
+    </div>
+    <button class="btn-son" id="btnSon" type="button" title="Son">🔊</button>
+  </div>
+</div>
+<div class="consigne"><p id="consigne">Chaque pierre porte la somme des deux pierres du dessous</p></div>
+<div class="jeu">
+  <div class="pyramide" id="pyramide"></div>
+  <div class="chariot"><div class="chariot-titre">Le chariot de pierres</div><div class="pile" id="pile"></div></div>
+</div>
+<div class="bas">
+  <button class="btn-indice" id="btnIndice" type="button">💡 Indice</button>
+  <div class="verdict" id="verdict"></div>
+  <button class="btn-suivant" id="btnSuivant" type="button" hidden>➜</button>
+</div>
+<script>
+(function () {
+  // base = rang du bas ; vus = cases déjà écrites (« rang-colonne », rang 0 = base). Sans « vus » : toute la base est donnée.
+  // Les deux premières pyramides des niveaux « Base de 3 » et « Base de 4 » sont celles de la fiche de préparation du 2/10.
+  var PYRAMIDES = {
+    "3": [[5, 8, 4], [36, 23, 44], [12, 15, 9], [24, 18, 31], [17, 26, 14], [45, 27, 38], [29, 33, 16], [52, 19, 27],
+          [38, 46, 25], [63, 28, 17], [44, 39, 56], [27, 58, 34]].map(function (b) { return { base: b }; }),
+    "4": [[15, 32, 21, 36], [12, 25, 18, 30], [24, 16, 33, 20], [31, 14, 27, 22], [18, 35, 12, 40], [26, 19, 34, 15],
+          [42, 17, 23, 38], [13, 48, 25, 31], [36, 22, 41, 19], [29, 37, 16, 44], [45, 28, 33, 17]].map(function (b) { return { base: b }; }),
+    // Défi : il manque une pierre en bas ; on la retrouve en enlevant (la pierre du dessus moins sa voisine).
+    "defi": [
+      { base: [14, 17, 23], vus: ["0-0", "0-2", "1-0"] },
+      { base: [26, 12, 20], vus: ["0-1", "0-2", "2-0"] },
+      { base: [18, 25, 9], vus: ["0-0", "0-2", "1-1"] },
+      { base: [33, 14, 21], vus: ["0-1", "1-0", "0-2"] },
+      { base: [15, 24, 32], vus: ["0-0", "0-1", "2-0"] },
+      { base: [40, 16, 27], vus: ["0-0", "0-2", "1-1"] },
+      { base: [22, 35, 18], vus: ["1-0", "0-1", "0-2"] },
+      { base: [19, 28, 13], vus: ["0-2", "1-1", "2-0"] },
+      { base: [12, 30, 25, 16], vus: ["0-0", "0-2", "0-3", "1-0"] },
+      { base: [21, 14, 32, 18], vus: ["0-0", "0-1", "0-3", "1-2"] },
+      { base: [17, 26, 11, 34], vus: ["0-1", "0-2", "0-3", "3-0"] }
+    ]
+  };
+  var el = function (id) { return document.getElementById(id); };
+  var niveau = "3", index = 0, score = 0, sonActif = true;
+  var lignes = [], connu = {}, erreurs = 0, fini = false;
+
+  var ctx = null;
+  function son(type) {
+    if (!sonActif) return;
+    try {
+      ctx = ctx || new (window.AudioContext || window.webkitAudioContext)();
+      var o = ctx.createOscillator(), g = ctx.createGain(), t = ctx.currentTime;
+      o.connect(g); g.connect(ctx.destination);
+      if (type === "bien") { o.type = "triangle"; o.frequency.setValueAtTime(520, t); o.frequency.setValueAtTime(780, t + .1); }
+      else if (type === "fin") { o.type = "triangle"; o.frequency.setValueAtTime(520, t); o.frequency.setValueAtTime(660, t + .12); o.frequency.setValueAtTime(990, t + .24); }
+      else { o.type = "sine"; o.frequency.setValueAtTime(380, t); o.frequency.exponentialRampToValueAtTime(90, t + .4); }
+      g.gain.setValueAtTime(.12, t); g.gain.exponentialRampToValueAtTime(.001, t + .45); o.start(t); o.stop(t + .5);
+    } catch (e) { /* pas de son */ }
+  }
+  function cleRecord() { return "pyramide-additive-record-" + niveau; }
+  function lireRecord() { try { return parseInt(localStorage.getItem(cleRecord()), 10) || 0; } catch (e) { return 0; } }
+  function majScore() {
+    var r = lireRecord();
+    if (score > r) { r = score; try { localStorage.setItem(cleRecord(), String(r)); } catch (e) {} }
+    el("score").textContent = score; el("record").textContent = r;
+  }
+  function melanger(t) { for (var i = t.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)), x = t[i]; t[i] = t[j]; t[j] = x; } return t; }
+
+  // Une case est trouvable si ses deux pierres du dessous sont connues (addition),
+  // ou si la pierre du dessus et sa voisine sont connues (soustraction, niveau Défi).
+  function trouvable(r, c) {
+    if (r > 0 && connu[(r - 1) + "-" + c] && connu[(r - 1) + "-" + (c + 1)]) return { calc: "+", avec: [(r - 1) + "-" + c, (r - 1) + "-" + (c + 1)] };
+    var n = lignes.length;
+    if (r < n - 1) {
+      if (c > 0 && connu[(r + 1) + "-" + (c - 1)] && connu[r + "-" + (c - 1)]) return { calc: "-", avec: [(r + 1) + "-" + (c - 1), r + "-" + (c - 1)] };
+      if (c < lignes[r].length - 1 && connu[(r + 1) + "-" + c] && connu[r + "-" + (c + 1)]) return { calc: "-", avec: [(r + 1) + "-" + c, r + "-" + (c + 1)] };
+    }
+    return null;
+  }
+  function caseEl(cle) { return document.querySelector('.case[data-cle="' + cle + '"]'); }
+
+  function afficher() {
+    var P = PYRAMIDES[niveau][index];
+    lignes = [P.base.slice()];
+    while (lignes[lignes.length - 1].length > 1) {
+      var d = lignes[lignes.length - 1], h = [];
+      for (var i = 0; i < d.length - 1; i++) h.push(d[i] + d[i + 1]);
+      lignes.push(h);
+    }
+    connu = {}; erreurs = 0; fini = false; caseChoisie = pierreChoisie = null;
+    if (P.vus) P.vus.forEach(function (k) { connu[k] = true; });
+    else P.base.forEach(function (_, c) { connu["0-" + c] = true; });
+    var pyr = el("pyramide"); pyr.innerHTML = "";
+    var aTrouver = [];
+    lignes.forEach(function (ligne, r) {
+      var rang = document.createElement("div"); rang.className = "rang";
+      ligne.forEach(function (v, c) {
+        var k = r + "-" + c, d = document.createElement("div");
+        d.dataset.cle = k;
+        if (connu[k]) { d.className = "case donnee"; d.textContent = v; } else { d.className = "case vide"; aTrouver.push(v); }
+        rang.appendChild(d);
+      });
+      pyr.appendChild(rang);
+    });
+    // Le chariot : les bonnes pierres et quelques pièges (oubli de la retenue, erreur de 1).
+    var pieges = [];
+    aTrouver.forEach(function (v) { [v - 10, v + 10, v + 1, v - 1].forEach(function (p) { if (p > 0 && aTrouver.indexOf(p) === -1 && pieges.indexOf(p) === -1) pieges.push(p); }); });
+    var pierres = aTrouver.concat(melanger(pieges).slice(0, Math.max(3, 9 - aTrouver.length)));
+    var pile = el("pile"); pile.innerHTML = "";
+    melanger(pierres).forEach(function (v) {
+      var b = document.createElement("div"); b.className = "bloc"; b.textContent = v; b.dataset.v = v;
+      glisser(b); pile.appendChild(b);
+    });
+    el("verdict").textContent = ""; el("verdict").className = "verdict"; el("btnSuivant").hidden = true;
+    el("consigne").textContent = P.vus ? "Retrouve les pierres qui manquent, en bas aussi" : "Chaque pierre porte la somme des deux pierres du dessous";
+    majScore();
+  }
+
+  function glisser(b) {
+    b.addEventListener("pointerdown", function (ev) {
+      if (fini) return;
+      ev.preventDefault();
+      var vol = b.cloneNode(true); vol.classList.add("en-vol"); document.body.appendChild(vol); b.classList.add("parti");
+      function place(x, y) { vol.style.left = (x - 63) + "px"; vol.style.top = (y - 44) + "px"; }
+      place(ev.clientX, ev.clientY);
+      var survol = null, x0 = ev.clientX, y0 = ev.clientY, bouge_ = false; enVol = true;
+      function cible(x, y) { var t = document.elementFromPoint(x, y); return t && t.classList && t.classList.contains("vide") ? t : null; }
+      function bouge(e) {
+        place(e.clientX, e.clientY);
+        if (Math.hypot(e.clientX - x0, e.clientY - y0) > 12) bouge_ = true;
+        var c = cible(e.clientX, e.clientY);
+        if (survol && survol !== c) survol.classList.remove("survol");
+        if (c) c.classList.add("survol"); survol = c;
+      }
+      function lache(e) {
+        document.removeEventListener("pointermove", bouge); document.removeEventListener("pointerup", lache);
+        vol.remove(); b.classList.remove("parti"); enVol = false;
+        if (survol) survol.classList.remove("survol");
+        if (!bouge_) return toucherPierre(b);   // simple toucher : on choisit la pierre
+        var c = cible(e.clientX, e.clientY);
+        if (c) deposer(b, c);
+      }
+      document.addEventListener("pointermove", bouge); document.addEventListener("pointerup", lache);
+    });
+  }
+
+  // Deux façons de jouer : glisser la pierre sur la case, ou toucher la case puis la pierre (ou l'inverse).
+  var caseChoisie = null, pierreChoisie = null, enVol = false;
+  function oublierChoix() {
+    if (caseChoisie) caseChoisie.classList.remove("choisie"); if (pierreChoisie) pierreChoisie.classList.remove("choisi");
+    caseChoisie = pierreChoisie = null;
+  }
+  function toucherPierre(b) {
+    if (fini) return;
+    if (caseChoisie) { var c = caseChoisie; deposer(b, c); return; }
+    var deja = pierreChoisie === b; oublierChoix();
+    if (!deja) { pierreChoisie = b; b.classList.add("choisi"); }
+  }
+  el("pyramide").addEventListener("pointerup", function (ev) {
+    var c = ev.target.closest && ev.target.closest(".case.vide"); if (!c || fini || enVol) return;   // fin d'un glisser : c'est lui qui décide
+    if (pierreChoisie) { deposer(pierreChoisie, c); return; }
+    var deja = caseChoisie === c; oublierChoix();
+    if (!deja) { caseChoisie = c; c.classList.add("choisie"); }
+  });
+  function deposer(b, c) {
+    var k = c.dataset.cle, rc = k.split("-").map(Number), v = lignes[rc[0]][rc[1]];
+    document.querySelectorAll(".case.repere").forEach(function (x) { x.classList.remove("repere"); });
+    if (!trouvable(rc[0], rc[1])) {
+      oublierChoix();
+      c.classList.remove("secoue"); void c.offsetWidth; c.classList.add("secoue");
+      el("verdict").textContent = "Remplis d'abord les pierres du dessous"; el("verdict").className = "verdict faux"; son("non");
+      return;
+    }
+    if (Number(b.dataset.v) !== v) {
+      if (pierreChoisie) { pierreChoisie.classList.remove("choisi"); pierreChoisie = null; }
+      if (!caseChoisie) { caseChoisie = c; c.classList.add("choisie"); }
+      erreurs++; c.classList.remove("secoue"); void c.offsetWidth; c.classList.add("secoue");
+      el("verdict").textContent = "🤪"; el("verdict").className = "verdict faux"; son("non");
+      return;
+    }
+    oublierChoix();
+    connu[k] = true; b.remove();
+    c.className = "case posee"; c.textContent = v;
+    var reste = document.querySelectorAll(".case.vide").length;
+    if (reste) { el("verdict").textContent = "✅"; el("verdict").className = "verdict bien"; son("bien"); return; }
+    fini = true;
+    if (!erreurs) score++;
+    majScore(); son("fin");
+    el("verdict").textContent = erreurs ? "✅ Pyramide finie !" : "✅ Pyramide finie sans erreur !";
+    el("verdict").className = "verdict bien";
+    el("btnSuivant").hidden = false;
+  }
+
+  // Indice : on montre les deux pierres qui servent pour la première case qu'on peut trouver.
+  el("btnIndice").addEventListener("click", function () {
+    if (fini) return;
+    document.querySelectorAll(".case.repere").forEach(function (x) { x.classList.remove("repere"); });
+    for (var r = 0; r < lignes.length; r++) for (var c = 0; c < lignes[r].length; c++) {
+      var k = r + "-" + c; if (connu[k]) continue;
+      var t = trouvable(r, c); if (!t) continue;
+      caseEl(k).classList.add("repere"); t.avec.forEach(function (a) { caseEl(a).classList.add("repere"); });
+      el("verdict").className = "verdict";
+      el("verdict").textContent = t.calc === "+" ? "💡 Ajoute les deux pierres du dessous" : "💡 La pierre du dessus moins sa voisine";
+      return;
+    }
+  });
+  el("btnSuivant").addEventListener("click", function () { index = (index + 1) % PYRAMIDES[niveau].length; afficher(); });
+  el("btnSon").addEventListener("click", function () { sonActif = !sonActif; el("btnSon").textContent = sonActif ? "🔊" : "🔇"; });
+  function choisirNiveau(n) {
+    var b = document.querySelector('#niveaux button[data-niveau="' + n + '"]'); if (!b) return false;
+    niveau = n; index = 0; score = 0;
+    document.querySelectorAll("#niveaux button").forEach(function (x) { x.classList.toggle("actif", x === b); });
+    afficher(); return true;
+  }
+  document.querySelectorAll("#niveaux button").forEach(function (b) { b.addEventListener("click", function () { choisirNiveau(b.dataset.niveau); }); });
+  // Class Flow ouvre le jeu sur un niveau : …html#4 ou #defi
+  if (!(location.hash && choisirNiveau(location.hash.slice(1)))) afficher();
+  window.__pyramide = { lignes: function () { return lignes; }, trouvable: trouvable, connu: function () { return connu; } };
+})();
+</script>
+<!-- MENU -->
+<script>
+/* ==== LE MENU ☰ (GTH, 10/10) : interface épurée — à l'écran, seulement le titre, le score, la consigne et l'activité ====
+   Tout le reste (niveaux, onglets de méthode, ✏️, 🔊, 🖨️, aide…) part dans un menu ☰, ouvert d'un toucher.
+   Réglage par outil (CONF, posé par l'injecteur) : ancre = où mettre le bouton ☰ (sinon en haut à droite de l'écran) ;
+   cacher = ce qui part dans le menu (sinon : tout ce qui, dans « .barre .droite », n'est pas un score).
+   Installé par .claude/outils/menu-outil/injecter.py ; ne pas modifier dans l'outil, mais dans ce fichier. */
+(function () {
+  var CONF = {};
+  var st = document.createElement("style");
+  st.textContent =
+    ".menu-btn{width:58px; height:58px; border-radius:16px; border:2px solid rgba(0,0,0,.15); background:#fff; color:#1f2a33; font-size:2rem; line-height:1; cursor:pointer; flex:none; padding:0;}" +
+    ".menu-btn.fixe{position:fixed; top:10px; right:12px; z-index:150; box-shadow:0 4px 14px rgba(0,0,0,.15);}" +
+    ".menu-btn.ouvert{background:#1f2a33; color:#fff;}" +
+    ".menu-panneau{position:fixed; top:76px; right:16px; z-index:200; background:#fff; color:#1f2a33; border-radius:18px; box-shadow:0 18px 50px rgba(0,0,0,.28); padding:16px 18px;" +
+    "  display:flex; flex-direction:column; align-items:flex-start; gap:12px; max-width:min(620px, 92vw); max-height:80vh; overflow:auto;}" +
+    ".menu-panneau[hidden]{display:none !important;}" +
+    ".menu-panneau h4{margin:0; font-family:sans-serif; font-size:.85rem; text-transform:uppercase; letter-spacing:.6px; color:#6d7a85;}" +
+    ".menu-panneau > *{position:static !important; margin:0 !important;}" +
+    ".menu-panneau > div,.menu-panneau > nav{display:flex; flex-wrap:wrap; gap:8px;}";
+  document.head.appendChild(st);
+  function installer() {
+    var autres = [];
+    if (CONF.cacher) CONF.cacher.forEach(function (s) { document.querySelectorAll(s).forEach(function (e) { if (autres.indexOf(e) === -1) autres.push(e); }); });
+    else { var d = document.querySelector(".barre .droite"); if (d) autres = Array.prototype.filter.call(d.children, function (e) { return !e.classList.contains("score"); }); }
+    if (!autres.length) return;
+    var btn = document.createElement("button"); btn.type = "button"; btn.className = "menu-btn"; btn.title = "Niveaux et réglages"; btn.textContent = "☰";
+    var pan = document.createElement("div"); pan.className = "menu-panneau"; pan.hidden = true;
+    var t = document.createElement("h4"); t.textContent = "Niveaux et réglages"; pan.appendChild(t);
+    autres.forEach(function (e) { pan.appendChild(e); });
+    var ancre = document.querySelector(CONF.ancre || ".barre .droite");
+    if (ancre) ancre.appendChild(btn); else { btn.classList.add("fixe"); document.body.appendChild(btn); }
+    document.body.appendChild(pan);
+    function ouvrir(o) { pan.hidden = !o; btn.classList.toggle("ouvert", o); }
+    btn.addEventListener("click", function (e) { e.stopPropagation(); ouvrir(pan.hidden); });
+    // un niveau choisi, ou une fenêtre ouverte (✏️, 🖨️) : le menu se referme ; on garde le menu ouvert pour choisir un type de jeu
+    pan.addEventListener("click", function (e) { var b = e.target.closest("button"); if (b && !b.closest(CONF.garderOuvert || ".types")) setTimeout(function () { ouvrir(false); }, 120); });
+    document.addEventListener("pointerdown", function (e) { if (!pan.hidden && !pan.contains(e.target) && e.target !== btn) ouvrir(false); });
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", installer); else installer();
+})();
+</script>
+<!-- /MENU -->
+<!-- INDICE-COTE -->
+<script>
+/* 💡 sur le côté (Karim, 21/10) : dans les jeux qui ont un bouton « 💡 Indice » (.btn-indice), le bouton devient une ampoule seule,
+   collée au bord droit de l'écran, à mi-hauteur ; l'indice s'ouvre dans une bulle à côté d'elle, jamais sous le jeu.
+   Le jeu garde son propre code : au toucher, on regarde quel texte il vient d'écrire (zone #indice, ou la ligne de message),
+   on le reprend dans la bulle et on remet la zone comme avant. Installé par injecter.py. */
+(function () {
+  var b = document.querySelector(".btn-indice"); if (!b) return;
+  var st = document.createElement("style");
+  st.textContent =
+    ".btn-indice.cote{position:fixed !important; right:18px; top:50%; transform:translateY(-50%); width:76px; height:76px; padding:0 !important; border-radius:50% !important;" +
+    " font-size:40px !important; line-height:1; z-index:60; margin:0 !important; display:flex; align-items:center; justify-content:center}" +
+    "#bulle-cote{position:fixed; right:110px; top:50%; transform:translateY(-50%); max-width:520px; background:#fff8c4; border:2px solid #d4b106; border-radius:18px;" +
+    " padding:16px 22px; font-size:26px; line-height:1.35; z-index:60; box-shadow:0 6px 18px rgba(0,0,0,.15); display:none}" +
+    "#bulle-cote::after{content:''; position:absolute; right:-14px; top:50%; margin-top:-12px; border:12px solid transparent; border-left:14px solid #d4b106; border-right:none}";
+  document.head.appendChild(st);
+  b.classList.add("cote"); b.textContent = "💡"; b.title = "Indice"; document.body.appendChild(b);
+  var bulle = document.createElement("div"); bulle.id = "bulle-cote"; document.body.appendChild(bulle);
+  var zones = function () { return Array.prototype.slice.call(document.querySelectorAll("#indice, .indice, #message, .message, #verdict, .verdict, #consigne-aide")); };
+  var avant = [], minuteur = null;
+  b.addEventListener("click", function () { avant = zones().map(function (z) { return [z, z.textContent, z.className]; }); }, true);   // avant le code du jeu
+  b.addEventListener("click", function () {
+    setTimeout(function () {
+      var txt = "";
+      avant.forEach(function (a) {
+        var z = a[0], neuf = z.textContent;
+        if (neuf !== a[1] && neuf.trim()) { txt = neuf; z.textContent = a[1]; z.className = a[2]; }
+      });
+      if (!txt) return;   // le jeu montre l'indice autrement : on le laisse faire
+      bulle.textContent = txt.replace(/^\s*💡\s*/, ""); bulle.style.display = "block";
+      clearTimeout(minuteur); minuteur = setTimeout(function () { bulle.style.display = "none"; }, 8000);
+    }, 0);
+  });
+  document.addEventListener("pointerdown", function (e) { if (e.target !== b && e.target !== bulle) bulle.style.display = "none"; });
+})();
+</script>
+<!-- /INDICE-COTE -->
+</body>
+</html>

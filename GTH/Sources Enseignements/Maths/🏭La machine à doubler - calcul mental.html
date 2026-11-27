@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>La machine à doubler</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect x='6' y='20' width='52' height='38' rx='8' fill='%231f6fb2'/%3E%3Cpath d='M20 4h24l-6 16H26z' fill='%2366737f'/%3E%3Crect x='14' y='30' width='36' height='16' rx='4' fill='%23fff'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Quicksand:wght@600;700&display=swap">
+<style>
+  /* Univers (Karim, 12/10, à la place du papillon) : une usine. Le nombre arrive sur le tapis roulant ; on le COUPE au doigt
+     en morceaux (centaines | dizaines | unités : 145 → 100 | 40 | 5) ; chaque morceau entre dans la machine, qui en sort deux
+     pareils (40 + 40) : l'élève donne le double ; les doubles s'empilent à la sortie, puis on assemble le double du nombre.
+     Le calcul se construit en bas : Le double de 145 = 200 + 80 + 10 = 290. Méthode du guide de la banque (P1, S4 séance 4 :
+     « le double de 235 = le double de 200 + le double de 35 »). Onglet La tour : 3 → 6 → 12 → 24…, un étage par double.
+     Nombres : leçon MENTAL 2 et exercices de la banque (manuel P1 S4 séances 1, 3, 4 ; bilan P1 ; devoirs fiche 16), rien d'inventé.
+     Réponse au toucher OU glissée dans la case (une seule case : un toucher suffit).
+     ✏️ Mon nombre (Karim, 12/10) : le maître tape le nombre qu'il veut sur un pavé (1 à 99 999 ; dans La tour, le départ, 1 à 500). */
+  :root{ --encre:#1f2a33; --gris:#66737f; --bord:#dfe5ea; --bleu:#1f6fb2; --bleu-fonce:#164f80; --bleu-clair:#d8e8f6;
+    --bien:#1a8f5c; --faux:#d6455d; --talbot:#1f7a8c; --jaune:#f4b400; }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{margin:0; color:var(--encre); font-family:"Quicksand",system-ui,sans-serif; overflow:hidden; height:100vh; display:flex; flex-direction:column;
+    background:#f3f5f7; user-select:none; -webkit-user-select:none; touch-action:none;}
+  [hidden]{display:none !important;}
+  .barre{display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:20px; padding:8px 26px; background:#fff; border-bottom:3px solid var(--bord);}
+  .titre{display:flex; align-items:center; gap:12px;} .titre svg{width:54px; height:54px;}
+  .titre h1{font-family:"Baloo 2",cursive; font-weight:800; font-size:1.9rem; margin:0;}
+  .onglets{display:flex; gap:6px; justify-content:center;}
+  .onglets button{font:inherit; font-weight:700; font-size:1.1rem; padding:6px 18px; border-radius:999px; cursor:pointer; background:#fff; color:var(--gris); border:2px solid var(--bord); white-space:nowrap;}
+  .onglets button.actif{background:var(--encre); color:#fff; border-color:var(--encre);}
+  .droite{display:flex; align-items:center; gap:12px;}
+  .score{display:flex; flex-direction:column; align-items:center; padding:2px 14px; border-radius:12px; background:#fff; border:2px solid var(--bord); min-width:130px;}
+  .score small{font-size:.8rem; font-weight:700; color:var(--gris); text-transform:uppercase; letter-spacing:.5px;}
+  .score b{font-family:"Baloo 2",cursive; font-size:1.8rem; line-height:1.05;}
+  .niveaux{display:flex; gap:4px; flex-wrap:wrap;}
+  .niveaux button{font:inherit; font-weight:700; font-size:.95rem; padding:3px 14px; border-radius:999px; cursor:pointer; background:#fff; color:var(--gris); border:2px solid var(--bord);}
+  .niveaux button.actif{background:var(--encre); color:#fff; border-color:var(--encre);}
+  .btn-son{width:44px; height:44px; border-radius:50%; font-size:1.2rem; cursor:pointer; background:#fff; border:2px solid var(--bord);}
+  .consigne{display:flex; justify-content:center; padding:12px 20px 0;}
+  .consigne p{margin:0; font-family:"Baloo 2",cursive; font-weight:700; font-size:2.1rem; text-align:center; background:#fff; padding:2px 22px; border-radius:16px; border:2px solid var(--bord);}
+  .jeu{flex:1; min-height:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px; padding:0 40px;}
+
+  /* ---------- le tapis roulant et le nombre ---------- */
+  .tapis{position:relative; width:1500px; max-width:100%; height:200px; display:flex; align-items:flex-end; justify-content:center; padding-bottom:34px; touch-action:none;}
+  .tapis::after{content:""; position:absolute; left:0; right:0; bottom:0; height:30px; border-radius:15px;
+    background:repeating-linear-gradient(90deg,#4a5560 0 22px,#36404a 22px 44px); box-shadow:inset 0 -5px 0 rgba(0,0,0,.25);}
+  .morceaux{position:relative; z-index:1; display:flex; gap:56px; align-items:flex-end;}
+  .morceau{display:flex; align-items:center; font-family:"Baloo 2",cursive; font-weight:800; font-size:8rem; line-height:1; padding:14px 30px 2px;
+    background:#fff; border:5px solid var(--encre); border-radius:22px; box-shadow:0 8px 0 rgba(31,42,51,.18); cursor:grab; touch-action:none;}
+  .morceau .ch{display:inline-block;} .morceau .ch.mille{margin-left:.22em;}
+  .morceau .zero{color:#aab4bd;}
+  .morceau.utilise{opacity:.18; border-style:dashed; box-shadow:none; cursor:default;}
+  .morceau.parti{visibility:hidden;}
+  .fente{position:relative; display:inline-block; width:44px; height:1em; cursor:crosshair; touch-action:none;}
+  .fente::before{content:""; position:absolute; left:50%; top:-26px; bottom:-14px; margin-left:-3px; border-left:6px dashed #9aa6b0;}
+  .fente:hover::before{border-left-color:var(--talbot);}
+  .coupe{animation:coupe .35s ease;} @keyframes coupe{50%{transform:scale(1.06) rotate(-2deg)}}
+
+  /* ---------- l'atelier : la machine au centre, la pile des doubles à droite ---------- */
+  .atelier{display:grid; grid-template-columns:330px 820px 330px; align-items:center; gap:30px; margin-top:40px; margin-bottom:58px;}
+  .machine{position:relative; height:300px; border-radius:18px; border:8px solid #37495a;
+    background:radial-gradient(circle at 16px 16px,#b0bec5 5px,transparent 6px),radial-gradient(circle at calc(100% - 16px) 16px,#b0bec5 5px,transparent 6px),
+      radial-gradient(circle at 16px calc(100% - 16px),#b0bec5 5px,transparent 6px),radial-gradient(circle at calc(100% - 16px) calc(100% - 16px),#b0bec5 5px,transparent 6px),
+      repeating-linear-gradient(90deg,#557086 0 3px,#64829b 3px 160px);
+    box-shadow:0 10px 22px rgba(0,0,0,.2);}
+  .machine::before{content:"ENTRÉE"; position:absolute; left:50%; top:-84px; width:300px; height:76px; margin-left:-150px; background:linear-gradient(180deg,#90a4ae,#607d8b);
+    clip-path:polygon(0 0,100% 0,72% 100%,28% 100%); color:#fff; font-family:"Baloo 2",cursive; font-weight:800; font-size:1.3rem; text-align:center; line-height:44px; letter-spacing:2px;}
+  .machine::after{content:"SORTIE ▼"; position:absolute; left:50%; bottom:-50px; width:240px; height:42px; margin-left:-120px; background:#37495a; color:#ffd54f;
+    clip-path:polygon(10% 0,90% 0,100% 100%,0 100%); font-family:"Baloo 2",cursive; font-weight:800; font-size:1.2rem; text-align:center; line-height:44px; letter-spacing:2px;}
+  .hublot{position:absolute; right:22px; top:8px; width:200px; height:80px; border-radius:40px; background:#263845; border:6px solid #b0bec5; overflow:hidden;}
+  .chute-morceau{position:absolute; left:50%; top:-170px; transform:translateX(-50%); z-index:3; font-family:"Baloo 2",cursive; font-weight:800; font-size:3rem; line-height:1;
+    background:#fff; border:4px solid #1f2a33; border-radius:14px; padding:8px 22px 2px; animation:chute .55s ease-in forwards;}
+  @keyframes chute{to{top:-30px; transform:translateX(-50%) scale(.35); opacity:0}}
+  .ecran span.copie{display:inline-block; animation:copie .45s ease-out both;} .ecran span.copie.b{animation-delay:.18s;}
+  @keyframes copie{from{transform:translateY(-120px) scale(.4); opacity:0}}
+  .machine.cible{outline:8px solid var(--talbot); outline-offset:6px;}
+  .plaque{position:absolute; left:28px; top:22px; color:#fff; background:#37495a; padding:4px 14px; border-radius:8px; font-family:"Baloo 2",cursive; font-weight:800; font-size:1.5rem; letter-spacing:1px;}
+  .roue{position:absolute; width:96px; height:96px; top:-2px;}
+  .roue.g{left:20px;} .roue.d{left:104px; width:74px; height:74px; top:10px;}
+  .machine.tourne .roue.g{animation:tourne .7s linear infinite;} .machine.tourne .roue.d{animation:tourne .7s linear infinite reverse;}
+  .machine.tourne{animation:vibre .1s linear infinite;}
+  @keyframes tourne{to{transform:rotate(360deg)}} @keyframes vibre{50%{transform:translateY(2px)}}
+  .ecran{position:absolute; left:28px; right:28px; bottom:30px; height:160px; border-radius:20px; background:#fff; display:flex; align-items:center; justify-content:center; gap:22px;
+    font-family:"Baloo 2",cursive; font-weight:800; font-size:4.4rem; line-height:1; box-shadow:inset 0 4px 0 rgba(0,0,0,.08); white-space:nowrap;}
+  .ecran .vide{color:#c3ccd4; font-size:2.4rem; font-weight:700;}
+  .trou{display:inline-flex; align-items:center; justify-content:center; min-width:150px; height:1.25em; padding:8px 18px 0; border:5px dashed var(--gris); border-radius:16px; color:var(--gris);}
+  .trou.cible{border-color:var(--talbot); background:#e3f2f5;}
+  .trou.plein{border-style:solid; border-color:var(--bien); color:var(--bien); background:#e7f6ee;}
+  .pile{display:flex; flex-direction:column-reverse; align-items:flex-start; gap:10px; height:300px; justify-content:flex-start;}
+  .double{font-family:"Baloo 2",cursive; font-weight:800; font-size:3.4rem; line-height:1; padding:10px 26px 2px; background:#fff; border:5px solid var(--bien); color:var(--encre); border-radius:18px;
+    box-shadow:0 6px 0 rgba(26,143,92,.25); animation:arrive .5s ease;}
+  @keyframes arrive{from{transform:translateX(-160px) scale(.6); opacity:0}}
+
+  /* ---------- les réponses ---------- */
+  .tuiles{display:flex; gap:34px; justify-content:center; min-height:104px; align-items:center;}
+  .tuile{font-family:"Baloo 2",cursive; font-weight:800; font-size:3.6rem; line-height:1; padding:12px 34px 4px; border-radius:18px; background:#fff; border:5px solid var(--encre); cursor:grab; touch-action:none;
+    box-shadow:0 6px 0 rgba(31,42,51,.18);}
+  .tuile.parti{visibility:hidden;} .tuile.tombe{animation:tombe .6s ease forwards;}
+  @keyframes tombe{to{transform:translateY(80px) rotate(25deg); opacity:0}}
+  .en-vol{position:fixed !important; z-index:50; pointer-events:none; margin:0 !important; transform:rotate(-4deg) scale(1.05);}
+  .secoue{animation:secoue .4s ease;} @keyframes secoue{0%,100%{transform:none}25%{transform:translateX(-12px)}75%{transform:translateX(12px)}}
+
+  /* ---------- le calcul qui se construit ---------- */
+  .calcul{font-family:"Baloo 2",cursive; font-weight:800; font-size:3.6rem; line-height:1.1; display:flex; gap:20px; align-items:center; white-space:nowrap; min-height:96px;}
+  .calcul .mot{font-size:2.6rem; color:var(--gris);} .calcul .db{color:var(--bien);} .calcul .att{color:#c3ccd4;}
+  .calcul .trou{min-width:180px;}
+
+  /* ---------- la tour ---------- */
+  .tour-jeu{display:grid; grid-template-columns:1fr 1fr; gap:60px; align-items:center; width:1500px; max-width:100%; height:100%;}
+  .tour{display:flex; flex-direction:column-reverse; align-items:center; gap:8px; justify-self:end;}
+  .etage{font-family:"Baloo 2",cursive; font-weight:800; font-size:2.7rem; line-height:1; height:72px; display:flex; align-items:center; justify-content:center; padding-top:8px;
+    background:var(--bleu); color:#fff; border-radius:14px; box-shadow:inset 0 -8px 0 rgba(0,0,0,.18);}
+  .etage:nth-child(even){background:var(--bleu-fonce);}
+  .etage.neuf{animation:pose .45s ease;}
+  .etage.attend{background:#fff; color:var(--gris); border:5px dashed var(--gris); box-shadow:none; animation:none;}
+  .etage.attend.cible{border-color:var(--talbot); background:#e3f2f5;}
+  @keyframes pose{from{transform:translateY(-120px); opacity:0}}
+  .tour-panneau{display:flex; flex-direction:column; gap:30px; align-items:flex-start;}
+  .tour-eq{font-family:"Baloo 2",cursive; font-weight:800; font-size:5rem; line-height:1; white-space:nowrap;}
+  .tour-panneau .tuiles{justify-content:flex-start;}
+
+  /* ✏️ Mon nombre : le pavé du maître */
+  .onglets .perso{border-color:var(--talbot); color:var(--talbot);}
+  .fond-pave{position:fixed; inset:0; background:rgba(20,30,45,.45); display:flex; align-items:center; justify-content:center; z-index:60;}
+  .pave{background:#fff; border-radius:26px; padding:24px 30px; box-shadow:0 20px 50px rgba(0,0,0,.3); display:flex; flex-direction:column; gap:16px; align-items:center;}
+  .pave h2{margin:0; font-family:"Baloo 2",cursive; font-size:1.8rem;}
+  .pave-ecran{font-family:"Baloo 2",cursive; font-weight:800; font-size:5rem; line-height:1; min-width:420px; text-align:center; padding:14px 20px 4px; border:5px solid var(--encre); border-radius:18px; min-height:1.3em;}
+  .pave-ecran.secoue{border-color:var(--faux);}
+  .touches{display:grid; grid-template-columns:repeat(3,120px); gap:12px;}
+  .touches button{font-family:"Baloo 2",cursive; font-weight:800; font-size:2.6rem; height:96px; border-radius:18px; border:3px solid var(--bord); background:#f6f8fa; cursor:pointer;}
+  .touches button.ok{background:var(--talbot); color:#fff; border-color:var(--talbot); font-size:2rem;}
+  .pave-bas{display:flex; gap:12px;}
+  .pave-bas button{font:inherit; font-weight:700; font-size:1.2rem; padding:8px 22px; border-radius:999px; border:2px solid var(--bord); background:#fff; cursor:pointer;}
+  .bas{display:flex; align-items:center; justify-content:center; gap:18px; padding:6px 0 14px; min-height:70px;}
+  .btn-indice{font:inherit; font-weight:700; font-size:1.2rem; padding:6px 16px; border-radius:999px; cursor:pointer; background:#fff8dc; border:2px solid #f1d27a; color:#7a5b00;}
+  .verdict{min-height:3rem; font-family:"Baloo 2",cursive; font-size:2rem; font-weight:800; text-align:center;}
+  .verdict:not(:empty){background:#fff; padding:0 24px; border-radius:14px;}
+  .verdict.bien{color:var(--bien);} .verdict.faux{color:var(--faux);} .verdict.indice{color:#7a5b00;}
+  .btn-suivant{font:inherit; font-family:"Baloo 2",cursive; font-weight:800; font-size:1.8rem; padding:4px 34px; border-radius:999px; cursor:pointer; background:var(--encre); color:#fff; border:none;}
+</style>
+</head>
+<body>
+<div class="barre">
+  <div class="titre">
+    <svg viewBox="0 0 64 64" aria-hidden="true"><rect x="6" y="20" width="52" height="38" rx="8" fill="#1f6fb2"/><path d="M20 4h24l-6 16H26z" fill="#66737f"/><rect x="14" y="30" width="36" height="16" rx="4" fill="#fff"/><text x="32" y="43" font-size="13" font-weight="bold" text-anchor="middle" fill="#1f2a33">×2</text></svg>
+    <h1>La machine à doubler</h1>
+  </div>
+  <div class="onglets" id="onglets">
+    <button type="button" data-onglet="double" class="actif">Je double</button>
+    <button type="button" data-onglet="tour">La tour</button>
+    <button type="button" class="perso" id="btnPerso" title="Taper le nombre de mon choix">✏️ Mon nombre</button>
+  </div>
+  <div class="droite">
+    <div class="score"><small id="nomScore">Doubles construits</small><b id="score">0</b></div>
+    <div class="score" title="Le meilleur score à ce niveau, gardé sur cet ordinateur"><small>🏆 Record</small><b id="record">0</b></div>
+    <div class="niveaux" id="niveaux">
+      <button type="button" data-niveau="100" class="actif">≤ 100</button>
+      <button type="button" data-niveau="centaines">Centaines</button>
+      <button type="button" data-niveau="defi">Défi</button>
+    </div>
+    <button class="btn-son" id="btnSon" type="button" title="Son">🔊</button>
+  </div>
+</div>
+<div class="consigne"><p id="consigne"></p></div>
+<div class="jeu" id="jeuDouble">
+  <div class="tapis" id="tapis"><div class="morceaux" id="morceaux"></div></div>
+  <div class="atelier">
+    <div></div>
+    <div class="machine" id="machine">
+      <div class="plaque">MACHINE À DOUBLER</div>
+      <div class="hublot">
+      <svg class="roue g" viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="40" fill="none" stroke="#f4b400" stroke-width="16" stroke-dasharray="13 8"/><circle cx="50" cy="50" r="30" fill="#f4b400"/><circle cx="50" cy="50" r="10" fill="#263845"/></svg>
+      <svg class="roue d" viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="40" fill="none" stroke="#cfd8dc" stroke-width="16" stroke-dasharray="13 8"/><circle cx="50" cy="50" r="30" fill="#cfd8dc"/><circle cx="50" cy="50" r="10" fill="#263845"/></svg>
+      </div>
+      <div class="ecran" id="ecran"></div>
+    </div>
+    <div class="pile" id="pile"></div>
+  </div>
+  <div class="tuiles" id="tuiles"></div>
+  <div class="calcul" id="calcul"></div>
+</div>
+<div class="jeu" id="jeuTour" hidden>
+  <div class="tour-jeu">
+    <div class="tour" id="tour"></div>
+    <div class="tour-panneau">
+      <div class="tour-eq" id="tourEq"></div>
+      <div class="tuiles" id="tuilesTour"></div>
+    </div>
+  </div>
+</div>
+<div class="fond-pave" id="fondPave" hidden>
+  <div class="pave">
+    <h2 id="paveTitre">Mon nombre à doubler</h2>
+    <div class="pave-ecran" id="paveEcran"></div>
+    <div class="touches" id="touches">
+      <button type="button">7</button><button type="button">8</button><button type="button">9</button>
+      <button type="button">4</button><button type="button">5</button><button type="button">6</button>
+      <button type="button">1</button><button type="button">2</button><button type="button">3</button>
+      <button type="button" data-t="eff">⌫</button><button type="button">0</button><button type="button" class="ok" data-t="ok">OK</button>
+    </div>
+    <div class="pave-bas"><button type="button" id="paveAnnuler">Annuler</button></div>
+  </div>
+</div>
+<div class="bas">
+  <button class="btn-indice" id="btnIndice" type="button">💡 Indice</button>
+  <div class="verdict" id="verdict"></div>
+  <button class="btn-suivant" id="btnSuivant" type="button" hidden>➜</button>
+</div>
+<!-- CALCULETTE -->
+<script>
+/* 🧮 La calculette (Karim, 21/10) : pour répondre par un nombre, l'élève touche les touches d'une petite calculette posée sur le côté
+   (plus d'étiquettes-réponses à glisser). Ce qu'il tape s'écrit dans la case du jeu ; dès que le nombre ne peut plus devenir la
+   réponse, c'est faux ; dès qu'il est juste, le jeu continue. Installé par injecter.py.
+   Calculette.ouvrir({ cible: élément, bon: 42, format: f, siBon: function () {}, siFaux: function (tapé) {} }) ; Calculette.fermer(). */
+(function () {
+  var st = document.createElement("style");
+  st.textContent =
+    "#calculette{position:fixed; right:110px; bottom:28px; display:none; flex-direction:column; gap:6px; padding:8px; background:#eceff1; border:2px solid #cfd8dc; border-radius:14px; z-index:55; opacity:.9}" +
+    "#calculette .ecr{display:none}" +
+    "#calculette .tou{display:grid; grid-template-columns:repeat(3,46px); gap:5px}" +
+    "#calculette button{height:38px; border:1px solid #cfd8dc; border-radius:8px; background:#fff; color:#607d8b; font:700 19px 'Baloo 2',Arial,sans-serif; cursor:pointer}" +
+    "#calculette button:active{transform:translateY(2px); box-shadow:none}" +
+    "#calculette button.eff{color:#c62828}";
+  document.head.appendChild(st);
+  var box = document.createElement("div"); box.id = "calculette";
+  box.innerHTML = '<div class="ecr"></div><div class="tou"></div>';
+  document.addEventListener("DOMContentLoaded", function () { document.body.appendChild(box); });
+  if (document.body) document.body.appendChild(box);
+  var o = null, tape = "", texteAvant = "";
+  ["7", "8", "9", "4", "5", "6", "1", "2", "3", "", "0", "⌫"].forEach(function (k) {
+    var b = document.createElement("button"); b.type = "button"; b.textContent = k; if (!k) b.style.visibility = "hidden"; if (k === "⌫") b.className = "eff";
+    b.addEventListener("click", function () { touche(k); }); box.querySelector(".tou").appendChild(b);
+  });
+  function montre() {
+    box.querySelector(".ecr").textContent = tape;
+    if (o && o.cible) o.cible.textContent = tape ? (o.format ? o.format(+tape) : tape) : texteAvant;
+  }
+  function touche(k) {
+    if (!o || !k) return;
+    if (k === "⌫") tape = tape.slice(0, -1); else if (tape.length < 7) tape += k;
+    montre();
+    var juste = String(o.bon);
+    if (tape === juste) { var f = o.siBon; o = null; tape = ""; box.style.display = "none"; f(+juste); return; }
+    if (tape && juste.indexOf(tape) !== 0) {
+      var t = tape; if (o.siFaux) o.siFaux(+t);
+      setTimeout(function () { tape = ""; montre(); }, 700);
+    }
+  }
+  document.addEventListener("keydown", function (e) { if (!o) return; if (/^[0-9]$/.test(e.key)) touche(e.key); else if (e.key === "Backspace") touche("⌫"); });
+  // si le jeu passe à autre chose (sa case disparaît), la calculette se range
+  setInterval(function () { if (o && o.cible && !document.body.contains(o.cible)) window.Calculette.fermer(); }, 400);
+  window.Calculette = {
+    ouvrir: function (opt) { o = opt; tape = ""; texteAvant = opt.cible ? opt.cible.textContent : ""; box.style.display = "flex"; montre(); },
+    fermer: function () { o = null; tape = ""; box.style.display = "none"; }
+  };
+})();
+</script>
+<!-- /CALCULETTE -->
+<script>
+(function () {
+  // Nombres de la banque (aucun inventé) : MENTAL 2 (doubles de 1 à 20 : 14, 17), manuel P1 S4 séance 1 (19, 35, 250, 675),
+  // séance 3 (25, 30, 45, 50, 60, 75), séance 4 (130 145 160 175 225 230 245 475 575 560 545 ; CM2 645 675 845 1 275),
+  // bilan P1 (CM1 27 424 608 ; CM2 59 312 735 980), devoirs fiche 16 (120, 1 080), guide S4 séance 4 (235).
+  var LISTES = {
+    "100": [14, 19, 25, 27, 35, 45, 17, 59, 60, 75, 30, 50],
+    "centaines": [120, 130, 145, 160, 175, 225, 230, 235, 245, 250, 424, 608],
+    "defi": [475, 545, 560, 575, 645, 675, 735, 845, 980, 312, 1080, 1275]
+  };
+  // La tour : on part d'un petit nombre et on double jusqu'à dépasser 1 000
+  var DEPARTS = [3, 5, 6, 7, 9, 11, 12, 13, 15, 25];
+  var el = function (id) { return document.getElementById(id); };
+  var niveau = "100", onglet = "double", idx = 0, score = 0, sonActif = true, ctx = null;
+  var N = 0, D = "", coupes = [], etape = "", dedans = null, faits = [], doubles = [], erreurs = 0;
+  var tIdx = 0, tour = [];
+  function n(x) { return String(x).replace(/\B(?=(\d{3})+(?!\d))/g, " "); }
+  function son(type) {
+    if (!sonActif) return;
+    try {
+      ctx = ctx || new (window.AudioContext || window.webkitAudioContext)();
+      var t = ctx.currentTime, notes = type === "bien" ? [[784, 0, .3], [988, .08, .3], [1175, .16, .45]] : type === "coupe" ? [[1800, 0, .05, "square"], [900, .04, .06, "square"]]
+        : type === "machine" ? [[110, 0, .6, "sawtooth"], [165, .2, .4, "sawtooth"]] : type === "pose" ? [[523, 0, .12], [659, .08, .2]] : [[300, 0, .35, "sine", 140]];
+      notes.forEach(function (q) { var o = ctx.createOscillator(), g = ctx.createGain(); o.type = q[3] || "triangle"; o.frequency.setValueAtTime(q[0], t + q[1]);
+        if (q[4]) o.frequency.exponentialRampToValueAtTime(q[4], t + q[1] + q[2]);
+        o.connect(g); g.connect(ctx.destination); g.gain.setValueAtTime(.0001, t + q[1]); g.gain.exponentialRampToValueAtTime(type === "machine" ? .05 : .13, t + q[1] + .01);
+        g.gain.exponentialRampToValueAtTime(.0001, t + q[1] + q[2]); o.start(t + q[1]); o.stop(t + q[1] + q[2] + .05); });
+    } catch (e) {}
+  }
+  function cleRecord() { return "machine-doubler-record-" + (onglet === "tour" ? "tour" : niveau); }
+  function majScore() {
+    var r = 0; try { r = parseInt(localStorage.getItem(cleRecord()), 10) || 0; } catch (e) {}
+    if (score > r) { r = score; try { localStorage.setItem(cleRecord(), String(r)); } catch (e) {} }
+    el("score").textContent = score; el("record").textContent = r;
+    el("nomScore").textContent = onglet === "tour" ? "Étages construits" : "Doubles construits";
+  }
+  function verdict(t, c) { el("verdict").textContent = t; el("verdict").className = "verdict" + (c ? " " + c : ""); }
+  function consigne(t) { el("consigne").textContent = t; }
+  function secoue(x) { x.classList.remove("secoue"); void x.offsetWidth; x.classList.add("secoue"); }
+  function melange(t) { for (var i = t.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)), w = t[i]; t[i] = t[j]; t[j] = w; } return t; }
+
+  // ---------- les morceaux : une coupe avant le chiffre j (jamais devant un 0) ----------
+  function segments() { var b = [0].concat(coupes.slice().sort(function (a, c) { return a - c; })).concat([D.length]), s = [];
+    for (var i = 0; i < b.length - 1; i++) s.push([b[i], b[i + 1]]); return s; }
+  function valeur(sg) { return parseInt(D.slice(sg[0], sg[1]), 10) * Math.pow(10, D.length - sg[1]); }
+  function fentesPossibles() { var f = []; for (var j = 1; j < D.length; j++) if (D[j] !== "0" && coupes.indexOf(j) === -1) f.push(j); return f; }
+  function dessinerMorceaux() {
+    var M = el("morceaux"); M.innerHTML = "";
+    segments().forEach(function (sg, k) {
+      var c = document.createElement("div"), pris = faits.indexOf(k) !== -1 || dedans === k;
+      c.className = "morceau" + (pris ? " utilise" : ""); c.dataset.k = k; c.dataset.v = valeur(sg);
+      for (var j = sg[0]; j < D.length; j++) {
+        var zero = j >= sg[1];
+        if (!zero && j > sg[0] && D[j] !== "0" && etape === "couper") { var f = document.createElement("span"); f.className = "fente"; f.dataset.j = j; c.appendChild(f); }
+        var s = document.createElement("span"); s.className = "ch" + (zero ? " zero" : "") + ((D.length - j) % 3 === 0 && j > sg[0] ? " mille" : "");
+        s.textContent = zero ? "0" : D[j]; c.appendChild(s);
+      }
+      M.appendChild(c); if (!pris) deplacerMorceau(c);
+    });
+  }
+  function couper(j) {
+    j = +j; if (etape !== "couper" || coupes.indexOf(j) !== -1 || D[j] === "0") return;
+    coupes.push(j); son("coupe"); dessinerMorceaux();
+    [].forEach.call(document.querySelectorAll(".morceau"), function (m) { m.classList.add("coupe"); });
+    majConsigne();
+  }
+  // le couteau : toucher une fente, ou passer le doigt à travers
+  var couteau = false;
+  el("tapis").addEventListener("pointerdown", function (ev) {
+    if (etape !== "couper") return;
+    var f = ev.target.closest(".fente");
+    if (f) { ev.preventDefault(); couper(f.dataset.j); couteau = true; return; }
+    if (!ev.target.closest(".morceau")) couteau = true;
+  });
+  document.addEventListener("pointermove", function (ev) {
+    if (!couteau) return; var x = document.elementFromPoint(ev.clientX, ev.clientY), f = x && x.closest && x.closest(".fente"); if (f) couper(f.dataset.j);
+  });
+  document.addEventListener("pointerup", function () { couteau = false; });
+
+  // ---------- glisser (ou toucher) : morceaux vers la machine, réponses vers la case ----------
+  function glissable(d, cible, quand) {
+    d.addEventListener("pointerdown", function (ev) {
+      if (ev.target.closest(".fente")) return;
+      if (!quand()) return; ev.preventDefault(); ev.stopPropagation();
+      var r = d.getBoundingClientRect(), vol = d.cloneNode(true); vol.classList.add("en-vol"); vol.style.left = r.left + "px"; vol.style.top = r.top + "px"; vol.style.width = r.width + "px";
+      document.body.appendChild(vol); d.classList.add("parti");
+      var x0 = ev.clientX, y0 = ev.clientY, dx = x0 - r.left, dy = y0 - r.top, bouge = false;
+      function sur(x, y) { var c = cible(); if (!c) return false; var b = c.getBoundingClientRect(); return x > b.left - 40 && x < b.right + 40 && y > b.top - 40 && y < b.bottom + 40; }
+      function mv(e) { vol.style.left = (e.clientX - dx) + "px"; vol.style.top = (e.clientY - dy) + "px"; if (Math.hypot(e.clientX - x0, e.clientY - y0) > 12) bouge = true;
+        var c = cible(); if (c) c.classList.toggle("cible", sur(e.clientX, e.clientY)); }
+      function up(e) {
+        document.removeEventListener("pointermove", mv); document.removeEventListener("pointerup", up);
+        vol.remove(); d.classList.remove("parti"); var c = cible(); if (c) c.classList.remove("cible");
+        if (!bouge || sur(e.clientX, e.clientY)) d.__poser();   // une seule place possible : un toucher suffit
+      }
+      document.addEventListener("pointermove", mv); document.addEventListener("pointerup", up);
+    });
+  }
+  function deplacerMorceau(c) {
+    c.__poser = function () { entrer(+c.dataset.k); };
+    glissable(c, function () { return el("machine"); }, function () { return dedans === null && (etape === "couper" || etape === "attente"); });
+  }
+
+  // ---------- la machine ----------
+  var VIDE = "<span class='vide'>la machine attend un morceau</span>";
+  function entrer(k) {
+    if (dedans !== null || faits.indexOf(k) !== -1) return;
+    dedans = k; etape = "doubler"; erreurs = 0; verdict(""); dessinerMorceaux(); dessinerCalcul();
+    var p = valeur(segments()[k]), M = el("machine");
+    M.classList.add("tourne"); son("machine"); el("ecran").innerHTML = ""; el("tuiles").innerHTML = ""; consigne("…");
+    var chute = document.createElement("div"); chute.className = "chute-morceau"; chute.textContent = n(p); M.appendChild(chute); setTimeout(function () { chute.remove(); }, 650);   // le morceau tombe dans la trémie
+    setTimeout(function () {
+      M.classList.remove("tourne");
+      el("ecran").innerHTML = "<span class='copie'>" + n(p) + "</span><span>+</span><span class='copie b'>" + n(p) + "</span><span>=</span><span class='trou' id='trouMachine'>?</span>";   // il ressort en deux exemplaires
+      tuiles(el("tuiles"), 2 * p, leurresDouble(p), function () { return el("trouMachine"); }, bonDouble);
+      majConsigne();
+    }, 700);
+  }
+  function rang(x) { var u = 1; while (x % (u * 10) === 0 && u * 10 <= x) u *= 10; return u; }
+  function sansRetenue(a, b) {   // addition chiffre à chiffre en oubliant les retenues (l'erreur typique)
+    var s = String(a), t = String(b), L = Math.max(s.length, t.length), r = ""; s = s.padStart(L, "0"); t = t.padStart(L, "0");
+    for (var i = 0; i < L; i++) r += String((+s[i] + +t[i]) % 10); return parseInt(r, 10);
+  }
+  function leurresDouble(p) {
+    var d = 2 * p, u = rang(p), t = [];
+    function aj(x) { if (x > 0 && x !== d && t.indexOf(x) === -1) t.push(x); }
+    aj(sansRetenue(p, p)); aj(d + u); aj(d - u); aj(d + 10 * u); aj(d - 10 * u); aj(d + 2 * u);
+    return t.slice(0, 2);
+  }
+  function leurresTotal(T) {
+    var t = [];
+    function aj(x) { if (x > 0 && x !== T && t.indexOf(x) === -1) t.push(x); }
+    var s = doubles[0]; for (var i = 1; i < doubles.length; i++) s = sansRetenue(s, doubles[i]); aj(s);
+    aj(T - doubles[doubles.length - 1]); aj(T + 10); aj(T - 10); aj(T + 100); aj(T - 100);
+    return t.slice(0, 3);
+  }
+  function tuiles(zone, bon, leurres, cible, siBon) {
+    zone.innerHTML = "";
+    // 🧮 la calculette (Karim, 21/10) : l'élève tape le nombre ; les étiquettes à glisser ne servent plus
+    if (window.Calculette) {
+      Calculette.ouvrir({ cible: cible(), bon: bon, format: n, siBon: function () { siBon(bon, cible()); },
+        siFaux: function (x) { var d = document.createElement("div"); zone.appendChild(d); faux(d, x); } });
+      return;
+    }
+    melange([bon].concat(leurres)).forEach(function (x) {
+      var d = document.createElement("div"); d.className = "tuile"; d.textContent = n(x); d.dataset.v = x;
+      d.__poser = function () { if (x === bon) siBon(x, cible()); else faux(d, x); };
+      glissable(d, cible, function () { return !!cible() && !cible().classList.contains("plein"); });
+      zone.appendChild(d);
+    });
+  }
+  function faux(d, x) {
+    erreurs++; son("non"); secoue(d);
+    if (onglet === "tour") { var h = tour[tour.length - 1]; verdict("🤪 " + n(h) + " + " + n(h) + " ne fait pas " + n(x), "faux"); }
+    else if (etape === "doubler") { var p = valeur(segments()[dedans]); verdict("🤪 " + n(p) + " + " + n(p) + " ne fait pas " + n(x), "faux"); }
+    else verdict("🤪 " + doubles.map(n).join(" + ") + " ne fait pas " + n(x), "faux");
+    d.classList.add("tombe"); setTimeout(function () { d.remove(); }, 600);
+  }
+  function remplir(trou, x) { trou.textContent = n(x); trou.classList.add("plein"); }
+  function bonDouble(x, trou) {
+    remplir(trou, x); son("pose"); verdict(""); el("tuiles").innerHTML = "";
+    var k = dedans; faits.push(k); doubles[k] = x; dedans = null; etape = "sortie";
+    setTimeout(function () {
+      var c = document.createElement("div"); c.className = "double"; c.textContent = n(x); el("pile").appendChild(c);
+      el("ecran").innerHTML = VIDE;
+      var nb = segments().length;
+      if (faits.length < nb) { etape = "attente"; dessinerMorceaux(); dessinerCalcul(); majConsigne(); }
+      else if (nb === 1) finir();
+      else { etape = "assembler"; dessinerMorceaux(); dessinerCalcul(); majConsigne();
+        tuiles(el("tuiles"), 2 * N, leurresTotal(2 * N), function () { return el("trouTotal"); }, function (y, t) { remplir(t, y); finir(); }); }
+    }, 450);
+  }
+  function dessinerCalcul() {
+    var nb = segments().length, h = "<span class='mot'>Le double de</span><span>" + n(N) + "</span><span>=</span>";
+    if (nb > 1 && etape !== "couper") {
+      segments().forEach(function (sg, k) { h += (k ? "<span>+</span>" : "") + (doubles[k] !== undefined ? "<span class='db'>" + n(doubles[k]) + "</span>" : "<span class='att'>…</span>"); });
+      h += "<span>=</span>" + (etape === "fini" ? "<span class='db'>" + n(2 * N) + "</span>" : etape === "assembler" ? "<span class='trou' id='trouTotal'>?</span>" : "<span class='att'>?</span>");
+    } else h += etape === "fini" ? "<span class='db'>" + n(2 * N) + "</span>" : "<span class='att'>?</span>";
+    el("calcul").innerHTML = h;
+  }
+  function finir() {
+    etape = "fini"; dessinerCalcul(); el("tuiles").innerHTML = ""; son("bien");
+    score++; majScore(); verdict(erreurs ? "✅" : "✅ Bravo !", "bien");
+    consigne("Le double de " + n(N) + ", c'est " + n(2 * N) + " !"); el("btnSuivant").hidden = false;
+  }
+  function majConsigne() {
+    if (etape === "couper") consigne(fentesPossibles().length ? "Coupe le nombre, puis glisse un morceau dans la machine." : "Glisse le nombre dans la machine.");
+    else if (etape === "attente") consigne("Glisse un autre morceau dans la machine.");
+    else if (etape === "doubler") consigne("Glisse le double dans l'écran.");
+    else if (etape === "assembler") consigne("Assemble le double : glisse le total.");
+  }
+  function nouveau(choisi) {
+    var L = LISTES[niveau]; N = choisi || L[idx % L.length]; D = String(N);
+    coupes = []; etape = "couper"; dedans = null; faits = []; doubles = []; erreurs = 0;
+    verdict(""); el("btnSuivant").hidden = true; el("pile").innerHTML = ""; el("tuiles").innerHTML = ""; el("ecran").innerHTML = VIDE;
+    dessinerMorceaux(); dessinerCalcul(); majConsigne();
+  }
+
+  // ---------- La tour : chaque double est un étage de plus ----------
+  function nouvelleTour(depart) { tour = [depart || DEPARTS[tIdx % DEPARTS.length]]; erreurs = 0; verdict(""); el("btnSuivant").hidden = true; etageSuivant(); }
+  function etageSuivant() {
+    var T = el("tour"); T.innerHTML = "";
+    tour.forEach(function (x, i) { var e = document.createElement("div"); e.className = "etage" + (i === tour.length - 1 && i ? " neuf" : ""); e.style.width = (200 + 34 * i) + "px"; e.textContent = n(x); T.appendChild(e); });
+    var h = tour[tour.length - 1];
+    if (2 * h > 1000) {
+      el("tourEq").innerHTML = ""; el("tuilesTour").innerHTML = ""; son("bien");
+      verdict("🏆 Une tour de " + tour.length + " étages !", "bien"); consigne("La tour est finie !"); el("btnSuivant").hidden = false; return;
+    }
+    var a = document.createElement("div"); a.className = "etage attend"; a.id = "trouTour"; a.style.width = (200 + 34 * tour.length) + "px"; a.textContent = "?"; T.appendChild(a);
+    el("tourEq").innerHTML = n(h) + " + " + n(h) + " = ?";
+    consigne(tour.length === 1 ? "Construis la tour : glisse le double." : "Glisse le double de " + n(h) + ".");
+    tuiles(el("tuilesTour"), 2 * h, leurresDouble(h), function () { return el("trouTour"); }, function (x) {
+      tour.push(x); score++; majScore(); son("pose"); verdict(""); etageSuivant();
+    });
+  }
+
+  // ---------- 💡 la méthode, jamais le résultat ----------
+  el("btnIndice").addEventListener("click", function () {
+    if (onglet === "tour" || etape === "doubler") return verdict("💡 Double le chiffre, puis remets les zéros. Ou : le morceau + le même morceau.", "indice");
+    if (etape === "couper") return verdict("💡 Coupe avant chaque chiffre : les centaines, les dizaines, les unités.", "indice");
+    if (etape === "assembler") return verdict("💡 Additionne les doubles : d'abord les plus grands.", "indice");
+    verdict("💡 Glisse un morceau dans la machine.", "indice");
+  });
+  // ---------- ✏️ Mon nombre : le pavé ----------
+  var saisie = "";
+  function maxPerso() { return onglet === "tour" ? 500 : 99999; }
+  function majPave() { el("paveEcran").textContent = saisie ? n(+saisie) : ""; }
+  function ouvrirPave() {
+    saisie = ""; majPave(); el("paveTitre").textContent = onglet === "tour" ? "Le nombre de départ de la tour" : "Mon nombre à doubler"; el("fondPave").hidden = false;
+  }
+  function fermerPave() { el("fondPave").hidden = true; }
+  el("btnPerso").addEventListener("click", ouvrirPave);
+  el("paveAnnuler").addEventListener("click", fermerPave);
+  el("fondPave").addEventListener("click", function (e) { if (e.target === el("fondPave")) fermerPave(); });
+  el("touches").addEventListener("click", function (e) {
+    var b = e.target.closest("button"); if (!b) return;
+    if (b.dataset.t === "eff") { saisie = saisie.slice(0, -1); majPave(); return; }
+    if (b.dataset.t === "ok") {
+      var v = +saisie;
+      if (!v || v > maxPerso()) { secoue(el("paveEcran")); verdict("Un nombre de 1 à " + n(maxPerso()), "indice"); return; }
+      fermerPave(); verdict("");
+      if (onglet === "tour") nouvelleTour(v); else nouveau(v);
+      return;
+    }
+    if (saisie.length >= String(maxPerso()).length || (saisie === "" && b.textContent === "0")) return;
+    saisie += b.textContent; majPave();
+  });
+  el("btnSuivant").addEventListener("click", function () { if (onglet === "tour") { tIdx++; nouvelleTour(); } else { idx++; nouveau(); } });
+  el("btnSon").addEventListener("click", function () { sonActif = !sonActif; el("btnSon").textContent = sonActif ? "🔊" : "🔇"; });
+
+  function lancer() {
+    score = 0; idx = 0; tIdx = 0;
+    document.querySelectorAll("#onglets button[data-onglet]").forEach(function (b) { b.classList.toggle("actif", b.dataset.onglet === onglet); });
+    document.querySelectorAll("#niveaux button").forEach(function (b) { b.classList.toggle("actif", b.dataset.niveau === niveau); });
+    el("jeuDouble").hidden = onglet !== "double"; el("jeuTour").hidden = onglet !== "tour";
+    majScore();
+    if (onglet === "tour") nouvelleTour(); else nouveau();
+  }
+  document.querySelectorAll("#onglets button[data-onglet]").forEach(function (b) { b.addEventListener("click", function () { onglet = b.dataset.onglet; lancer(); }); });
+  document.querySelectorAll("#niveaux button").forEach(function (b) { b.addEventListener("click", function () { niveau = b.dataset.niveau; onglet = "double"; lancer(); }); });
+  function lireHash() {   // #100, #centaines, #defi, #tour
+    decodeURIComponent(location.hash.slice(1)).split("-").forEach(function (h) { if (LISTES[h]) { niveau = h; onglet = "double"; } if (h === "tour") onglet = "tour"; });
+    lancer();
+  }
+  window.addEventListener("hashchange", lireHash);
+  lireHash();
+  window.__machine = { etat: function () {
+    return { onglet: onglet, niveau: niveau, N: N, etape: etape, coupes: coupes.slice(), morceaux: segments().map(valeur), dedans: dedans, faits: faits.slice(),
+      doubles: doubles.slice(), fentes: fentesPossibles(), tuiles: [].map.call(document.querySelectorAll((onglet === "tour" ? "#tuilesTour" : "#tuiles") + " .tuile"), function (d) { return +d.dataset.v; }),
+      calcul: el("calcul").textContent.replace(/\s+/g, " ").trim(), score: score, tour: tour.slice(), listes: LISTES };
+  } };
+})();
+</script>
+<!-- MENU -->
+<script>
+/* ==== LE MENU ☰ (GTH, 10/10) : interface épurée — à l'écran, seulement le titre, le score, la consigne et l'activité ====
+   Tout le reste (niveaux, onglets de méthode, ✏️, 🔊, 🖨️, aide…) part dans un menu ☰, ouvert d'un toucher.
+   Réglage par outil (CONF, posé par l'injecteur) : ancre = où mettre le bouton ☰ (sinon en haut à droite de l'écran) ;
+   cacher = ce qui part dans le menu (sinon : tout ce qui, dans « .barre .droite », n'est pas un score).
+   Installé par .claude/outils/menu-outil/injecter.py ; ne pas modifier dans l'outil, mais dans ce fichier. */
+(function () {
+  var CONF = {};
+  var st = document.createElement("style");
+  st.textContent =
+    ".menu-btn{width:58px; height:58px; border-radius:16px; border:2px solid rgba(0,0,0,.15); background:#fff; color:#1f2a33; font-size:2rem; line-height:1; cursor:pointer; flex:none; padding:0;}" +
+    ".menu-btn.fixe{position:fixed; top:10px; right:12px; z-index:150; box-shadow:0 4px 14px rgba(0,0,0,.15);}" +
+    ".menu-btn.ouvert{background:#1f2a33; color:#fff;}" +
+    ".menu-panneau{position:fixed; top:76px; right:16px; z-index:200; background:#fff; color:#1f2a33; border-radius:18px; box-shadow:0 18px 50px rgba(0,0,0,.28); padding:16px 18px;" +
+    "  display:flex; flex-direction:column; align-items:flex-start; gap:12px; max-width:min(620px, 92vw); max-height:80vh; overflow:auto;}" +
+    ".menu-panneau[hidden]{display:none !important;}" +
+    ".menu-panneau h4{margin:0; font-family:sans-serif; font-size:.85rem; text-transform:uppercase; letter-spacing:.6px; color:#6d7a85;}" +
+    ".menu-panneau > *{position:static !important; margin:0 !important;}" +
+    ".menu-panneau > div,.menu-panneau > nav{display:flex; flex-wrap:wrap; gap:8px;}";
+  document.head.appendChild(st);
+  function installer() {
+    var autres = [];
+    if (CONF.cacher) CONF.cacher.forEach(function (s) { document.querySelectorAll(s).forEach(function (e) { if (autres.indexOf(e) === -1) autres.push(e); }); });
+    else { var d = document.querySelector(".barre .droite"); if (d) autres = Array.prototype.filter.call(d.children, function (e) { return !e.classList.contains("score"); }); }
+    if (!autres.length) return;
+    var btn = document.createElement("button"); btn.type = "button"; btn.className = "menu-btn"; btn.title = "Niveaux et réglages"; btn.textContent = "☰";
+    var pan = document.createElement("div"); pan.className = "menu-panneau"; pan.hidden = true;
+    var t = document.createElement("h4"); t.textContent = "Niveaux et réglages"; pan.appendChild(t);
+    autres.forEach(function (e) { pan.appendChild(e); });
+    var ancre = document.querySelector(CONF.ancre || ".barre .droite");
+    if (ancre) ancre.appendChild(btn); else { btn.classList.add("fixe"); document.body.appendChild(btn); }
+    document.body.appendChild(pan);
+    function ouvrir(o) { pan.hidden = !o; btn.classList.toggle("ouvert", o); }
+    btn.addEventListener("click", function (e) { e.stopPropagation(); ouvrir(pan.hidden); });
+    // un niveau choisi, ou une fenêtre ouverte (✏️, 🖨️) : le menu se referme ; on garde le menu ouvert pour choisir un type de jeu
+    pan.addEventListener("click", function (e) { var b = e.target.closest("button"); if (b && !b.closest(CONF.garderOuvert || ".types")) setTimeout(function () { ouvrir(false); }, 120); });
+    document.addEventListener("pointerdown", function (e) { if (!pan.hidden && !pan.contains(e.target) && e.target !== btn) ouvrir(false); });
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", installer); else installer();
+})();
+</script>
+<!-- /MENU -->
+<!-- INDICE-COTE -->
+<script>
+/* 💡 sur le côté (Karim, 21/10) : dans les jeux qui ont un bouton « 💡 Indice » (.btn-indice), le bouton devient une ampoule seule,
+   collée au bord droit de l'écran, à mi-hauteur ; l'indice s'ouvre dans une bulle à côté d'elle, jamais sous le jeu.
+   Le jeu garde son propre code : au toucher, on regarde quel texte il vient d'écrire (zone #indice, ou la ligne de message),
+   on le reprend dans la bulle et on remet la zone comme avant. Installé par injecter.py. */
+(function () {
+  var b = document.querySelector(".btn-indice"); if (!b) return;
+  var st = document.createElement("style");
+  st.textContent =
+    ".btn-indice.cote{position:fixed !important; right:18px; top:50%; transform:translateY(-50%); width:76px; height:76px; padding:0 !important; border-radius:50% !important;" +
+    " font-size:40px !important; line-height:1; z-index:60; margin:0 !important; display:flex; align-items:center; justify-content:center}" +
+    "#bulle-cote{position:fixed; right:110px; top:50%; transform:translateY(-50%); max-width:520px; background:#fff8c4; border:2px solid #d4b106; border-radius:18px;" +
+    " padding:16px 22px; font-size:26px; line-height:1.35; z-index:60; box-shadow:0 6px 18px rgba(0,0,0,.15); display:none}" +
+    "#bulle-cote::after{content:''; position:absolute; right:-14px; top:50%; margin-top:-12px; border:12px solid transparent; border-left:14px solid #d4b106; border-right:none}";
+  document.head.appendChild(st);
+  b.classList.add("cote"); b.textContent = "💡"; b.title = "Indice"; document.body.appendChild(b);
+  var bulle = document.createElement("div"); bulle.id = "bulle-cote"; document.body.appendChild(bulle);
+  var zones = function () { return Array.prototype.slice.call(document.querySelectorAll("#indice, .indice, #message, .message, #verdict, .verdict, #consigne-aide")); };
+  var avant = [], minuteur = null;
+  b.addEventListener("click", function () { avant = zones().map(function (z) { return [z, z.textContent, z.className]; }); }, true);   // avant le code du jeu
+  b.addEventListener("click", function () {
+    setTimeout(function () {
+      var txt = "";
+      avant.forEach(function (a) {
+        var z = a[0], neuf = z.textContent;
+        if (neuf !== a[1] && neuf.trim()) { txt = neuf; z.textContent = a[1]; z.className = a[2]; }
+      });
+      if (!txt) return;   // le jeu montre l'indice autrement : on le laisse faire
+      bulle.textContent = txt.replace(/^\s*💡\s*/, ""); bulle.style.display = "block";
+      clearTimeout(minuteur); minuteur = setTimeout(function () { bulle.style.display = "none"; }, 8000);
+    }, 0);
+  });
+  document.addEventListener("pointerdown", function (e) { if (e.target !== b && e.target !== bulle) bulle.style.display = "none"; });
+})();
+</script>
+<!-- /INDICE-COTE -->
+</body>
+</html>

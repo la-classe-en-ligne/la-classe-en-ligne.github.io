@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Le fil du temps</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath d='M2 14 Q32 22 62 14' stroke='%236d4c41' stroke-width='4' fill='none'/%3E%3Crect x='10' y='24' width='18' height='22' rx='3' fill='%23fff' stroke='%232e7d32' stroke-width='3'/%3E%3Crect x='36' y='24' width='18' height='22' rx='3' fill='%23fff' stroke='%232e7d32' stroke-width='3'/%3E%3Crect x='17' y='12' width='4' height='14' fill='%23f9a825'/%3E%3Crect x='43' y='12' width='4' height='14' fill='%23f9a825'/%3E%3C/svg%3E">
+<!--
+  🕰️ Le fil du temps — accrocher les événements du thème « Le temps de la République » sur une frise graduée (idée de Karim, 21/11 :
+  « une frise où les élèves devraient placer les dates : ça fait travailler le placement sur une droite graduée, et l'histoire avec des indices »).
+  Univers : un fil à linge tendu = la frise ; on y accroche chaque carte avec une pince, à sa place.
+  Geste : glisser la carte jusqu'au fil (ou toucher la carte, puis toucher le fil) ; le dépôt vaut réponse. Pas de nombre sous le doigt :
+  on lit la graduation. Juste (à 2 ans près, 3 en Défi) : la carte s'accroche à l'année exacte. Sinon : « Tu l'as accrochée vers 1830 : trop tôt. »
+  Niveaux : #date (la date est écrite : je la place) · #indice (pas de date : un indice pour la calculer, « 96 ans après 1848 ») ·
+  #defi (l'indice, et seules 1800, 1900, 2000 sont écrites). Graduation : un petit trait tous les 5 ans, un grand tous les 10, une année écrite tous les 20.
+  Contenu : les séances hi-s1 à hi-s3 de GTH v2 et la frise de l'évaluation ; les indices sont des ajouts (calculs sur des dates du thème).
+-->
+<style>
+:root{--vert:#2e7d32;--fond:#fbf7ef;--encre:#17252b;--talbot:#1f7a8c;--corde:#8d6e63}
+html,body{margin:0;height:100%;background:#3e2723;overflow:hidden;font-family:"Segoe UI",Arial,sans-serif;color:var(--encre)}
+#scene{position:absolute;left:0;top:0;width:1920px;height:1080px;transform-origin:0 0;background:linear-gradient(#e3f2fd 0,#fbf7ef 46%);overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none}
+button{font-family:inherit;cursor:pointer} [hidden]{display:none !important}
+#barre{height:84px;display:flex;align-items:center;gap:20px;padding:0 30px;background:#4e342e;color:#fff}
+#barre h1{margin:0;font-size:34px;display:flex;align-items:center;gap:14px;color:#ffe0b2}
+#barre h1 svg{width:54px;height:54px}
+#niveaux{display:flex;gap:8px;margin-left:24px}
+#niveaux button{font-size:19px;padding:6px 16px;border-radius:10px;border:2px solid #8d6e63;background:#6d4c41;color:#fff}
+#niveaux button.on{background:var(--talbot);border-color:#fff}
+#coin{margin-left:auto;text-align:right;font-size:20px}
+#coin b{font-size:26px;color:#ffe0b2}
+#consigne{height:96px;display:flex;align-items:center;justify-content:center;font-size:46px;font-weight:700;text-align:center}
+/* la carte à accrocher */
+#pioche{position:absolute;left:0;right:0;top:190px;height:210px;display:flex;justify-content:center;align-items:center}
+#carte{position:relative;min-width:520px;max-width:1100px;background:#fff;border:5px solid #f9a825;border-radius:24px;padding:20px 36px 22px;box-shadow:0 8px 20px rgba(0,0,0,.18);cursor:grab;text-align:center;touch-action:none}
+#carte.choisie{outline:6px solid var(--talbot);outline-offset:4px}
+#carte.ko{animation:secoue .45s 2}
+@keyframes secoue{0%,100%{transform:translateX(0)}25%{transform:translateX(-12px)}75%{transform:translateX(12px)}}
+#carte .ico{font-size:52px;line-height:1}
+#carte .evt{font-size:40px;font-weight:700;line-height:1.15;margin-top:6px}
+#carte .quand{margin-top:12px;font-size:44px;font-weight:800;color:var(--vert)}
+#carte .ind{margin-top:12px;font-size:32px;color:#6d4c41;font-weight:600}
+#carte .ind b{color:#bf360c}
+#fantome{position:absolute;z-index:30;pointer-events:none;opacity:.9;transform:translate(-50%,-30%) scale(.7);transform-origin:50% 0}
+#guide{position:absolute;top:0;width:0;border-left:3px dashed var(--talbot);pointer-events:none;display:none;z-index:2}
+/* le fil */
+#fil{position:absolute;left:0;top:0;width:1920px;height:1080px;pointer-events:none}
+#zone{position:absolute;left:40px;right:40px;top:470px;height:120px;cursor:crosshair}
+.accroche{position:absolute;transform:translateX(-50%);background:#fff;border:3px solid var(--vert);border-radius:14px;padding:6px 12px;text-align:center;font-size:19px;line-height:1.15;box-shadow:0 4px 10px rgba(0,0,0,.12);width:170px;animation:pend .7s ease-out;transform-origin:50% -60px}
+.accroche b{display:block;font-size:22px;color:var(--vert)}
+.accroche i{font-style:normal;font-size:28px;display:block;line-height:1}
+@keyframes pend{0%{transform:translateX(-50%) rotate(14deg)}40%{transform:translateX(-50%) rotate(-8deg)}70%{transform:translateX(-50%) rotate(4deg)}100%{transform:translateX(-50%) rotate(0)}}
+.ficelle{position:absolute;width:2px;background:#8d6e63}
+.pince{position:absolute;width:12px;height:30px;margin-left:-6px;background:#f9a825;border-radius:3px;box-shadow:inset -3px 0 0 rgba(0,0,0,.15)}
+.rate{position:absolute;transform:translateX(-50%);font-size:24px;font-weight:700;color:#c62828;animation:efface 2.6s forwards;white-space:nowrap}
+.rate::before{content:"";position:absolute;left:50%;top:-34px;height:30px;border-left:4px solid #c62828}
+@keyframes efface{0%,70%{opacity:1}100%{opacity:0}}
+#verdict{position:absolute;left:0;right:0;bottom:24px;text-align:center;font-size:38px;font-weight:700;min-height:50px}
+#verdict.ok{color:var(--vert)} #verdict.ko{color:#c62828}
+#indice{position:absolute;left:30px;bottom:24px;width:78px;height:78px;border-radius:50%;font-size:40px;border:2px solid #d4b106;background:#fff8c4;z-index:5}
+#bulle::after{content:"  ✕";color:#a1887f;font-size:.8em}
+#bulle{cursor:pointer;position:absolute;left:124px;bottom:30px;max-width:1000px;background:#fff8c4;border:2px solid #d4b106;border-radius:18px;padding:14px 24px;font-size:28px;display:none;z-index:6}
+#fin{position:absolute;left:0;right:0;top:180px;height:240px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;z-index:20}
+#fin h2{margin:0;font-size:56px;color:var(--vert)} #fin p{margin:0;font-size:30px}
+#fin button{font-size:32px;padding:14px 40px;border-radius:40px;border:0;background:var(--talbot);color:#fff}
+</style>
+</head>
+<body>
+<div id="scene">
+  <div id="barre">
+    <h1><svg viewBox="0 0 64 64"><path d="M2 14 Q32 22 62 14" stroke="#ffe0b2" stroke-width="4" fill="none"/><rect x="10" y="24" width="18" height="22" rx="3" fill="#fff" stroke="#a5d6a7" stroke-width="3"/><rect x="36" y="24" width="18" height="22" rx="3" fill="#fff" stroke="#a5d6a7" stroke-width="3"/><rect x="17" y="12" width="4" height="14" fill="#f9a825"/><rect x="43" y="12" width="4" height="14" fill="#f9a825"/></svg>Le fil du temps</h1>
+    <div id="niveaux"><button data-n="date">La date est écrite</button><button data-n="indice">Avec un indice</button><button data-n="defi">Défi</button></div>
+    <div id="coin">Accrochés du premier coup : <b id="score">0</b> · 🏆 Record : <b id="record">0</b></div>
+  </div>
+  <div id="consigne"></div>
+  <div id="pioche"><div id="carte"></div></div>
+  <svg id="fil"></svg>
+  <div id="zone"></div>
+  <div id="guide"></div>
+  <div id="accroches"></div>
+  <div id="verdict"></div>
+  <button id="indice" title="Indice">💡</button>
+  <div id="bulle"></div>
+  <div id="fin" hidden><h2>🎉 Le fil est complet !</h2><p id="bilan"></p><button id="encore">↺ Recommencer</button></div>
+</div>
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+const A = 1780, B = 2000, X0 = 80, X1 = 1840, YF = 520;   // le fil va de 1780 à 2000
+const x = an => X0 + (an - A) * (X1 - X0) / (B - A), an = px => A + (px - X0) * (B - A) / (X1 - X0);
+const EVTS = [
+  { an: 1789, ico: "📜", evt: "La Déclaration des droits de l'homme", court: "La Déclaration des droits", ind: "<b>3 ans avant</b> la première République (1792)." },
+  { an: 1792, ico: "📢", evt: "La République est proclamée pour la première fois", court: "La 1re République", ind: "La Révolution commence en 1789 : <b>3 ans plus tard</b>." },
+  { an: 1832, ico: "✏️", evt: "Daumier va en prison pour son dessin", court: "Daumier en prison", ind: "Il dessine Gargantua en 1831 : il va en prison <b>l'année suivante</b>." },
+  { an: 1848, ico: "🗳️", evt: "Tous les hommes peuvent voter", court: "Tous les hommes votent", ind: "<b>56 ans après</b> la première République (1792)." },
+  { an: 1870, ico: "🏛️", evt: "La République revient, et cette fois elle dure", court: "La République dure", ind: "<b>22 ans après</b> le vote de tous les hommes (1848)." },
+  { an: 1882, ico: "🏫", evt: "L'école devient gratuite, laïque et obligatoire", court: "L'école de Jules Ferry", ind: "<b>12 ans après</b> le retour de la République (1870)." },
+  { an: 1892, ico: "🎂", evt: "La République fête ses cent ans", court: "Les cent ans", ind: "<b>Cent ans après</b> la première République (1792)." },
+  { an: 1905, ico: "⛪", evt: "La loi : chacun peut croire ou ne pas croire", court: "Croire ou ne pas croire", ind: "<b>13 ans après</b> les cent ans de la République (1892)." },
+  { an: 1944, ico: "👩", evt: "Les femmes obtiennent le droit de vote", court: "Les femmes votent", ind: "<b>96 ans après</b> le vote de tous les hommes (1848)." },
+  { an: 1974, ico: "🗳️", evt: "On peut voter à 18 ans", court: "Le vote à 18 ans", ind: "<b>30 ans après</b> le vote des femmes (1944)." }
+];
+const NIV = { date: { tol: 2, ecrit: 20 }, indice: { tol: 2, ecrit: 20 }, defi: { tol: 3, ecrit: 100 } };
+const etat = { n: "date", file: [], pose: [], cur: null, essais: 0, score: 0, choisie: false };
+window.FIL = etat;   // pour le test automatique
+const mem = { lire(k) { try { return +localStorage.getItem(k) || 0; } catch (e) { return 0; } }, ecrire(k, v) { try { localStorage.setItem(k, v); } catch (e) {} } };
+const cle = () => "fil-du-temps-record-" + etat.n;
+function afficheScore() { $("score").textContent = etat.score; $("record").textContent = mem.lire(cle()); }
+
+// ---- le fil, gradué ----
+function dessineFil() {
+  const ecrit = NIV[etat.n].ecrit; let s = '<path d="M30 ' + (YF - 6) + " Q960 " + (YF + 10) + " 1890 " + (YF - 6) + '" stroke="#6d4c41" stroke-width="2" fill="none" opacity=".35"/>';
+  s += '<line x1="' + (X0 - 30) + '" y1="' + YF + '" x2="' + (X1 + 30) + '" y2="' + YF + '" stroke="#8d6e63" stroke-width="8" stroke-linecap="round"/>';
+  s += '<line x1="' + (X0 - 30) + '" y1="' + YF + '" x2="' + (X1 + 30) + '" y2="' + YF + '" stroke="#bcaaa4" stroke-width="2" stroke-dasharray="6 6"/>';
+  for (let a = A; a <= B; a += 5) {
+    const grand = a % 10 === 0, h = a % ecrit === 0 ? 34 : grand ? 24 : 13;
+    s += '<line x1="' + x(a) + '" y1="' + (YF + 6) + '" x2="' + x(a) + '" y2="' + (YF + 6 + h) + '" stroke="#4e342e" stroke-width="' + (a % ecrit === 0 ? 4 : grand ? 3 : 2) + '"/>';
+    if (a % ecrit === 0) s += '<text x="' + x(a) + '" y="' + (YF + 74) + '" text-anchor="middle" font-size="28" font-weight="700" fill="#4e342e" font-family="Segoe UI,Arial">' + a + "</text>";
+  }
+  $("fil").innerHTML = s;
+}
+// ---- les cartes accrochées : sous le fil, sur trois rangs pour ne pas se chevaucher ----
+function dessineAccroches() {
+  const P = etat.pose.slice().sort((a, b) => a.an - b.an);
+  // les ficelles d'abord, les cartes par-dessus : une ficelle passe derrière les cartes du rang au-dessus
+  const R = P.map((e, k) => ({ e, y: YF + 110 + (k % 3) * 118 }));
+  $("accroches").innerHTML = R.map(({ e, y }) => '<div class="ficelle" style="left:' + (x(e.an) - 1) + "px;top:" + YF + "px;height:" + (y - YF) + 'px"></div>').join("")
+    + R.map(({ e }) => '<div class="pince" style="left:' + x(e.an) + "px;top:" + (YF - 14) + 'px"></div>').join("")
+    + R.map(({ e, y }) => '<div class="accroche" style="left:' + Math.max(100, Math.min(1820, x(e.an))) + "px;top:" + y + 'px"><i>' + e.ico + "</i><b>" + e.an + "</b>" + e.court + "</div>").join("");
+}
+// ---- la carte à accrocher ----
+function carte() {
+  const e = etat.cur, C = $("carte"); C.className = "";
+  C.innerHTML = '<div class="ico">' + e.ico + '</div><div class="evt">' + e.evt + "</div>" + (etat.n === "date" ? '<div class="quand">' + e.an + "</div>" : '<div class="ind">💭 ' + e.ind + "</div>");
+  $("consigne").textContent = etat.n === "date" ? "Accroche la carte à sa date sur le fil." : "Calcule la date, puis accroche la carte sur le fil.";
+}
+function suivante() {
+  if (!etat.file.length) { $("bilan").textContent = etat.score + " événements sur " + EVTS.length + " accrochés du premier coup."; $("fin").hidden = false; $("pioche").style.visibility = "hidden"; $("consigne").textContent = ""; verdict(""); return; }
+  etat.cur = etat.file.shift(); etat.essais = 0; carte(); $("pioche").style.visibility = "";
+}
+// ---- le dépôt : l'année où la carte tombe ----
+function depose(px) {
+  const e = etat.cur, a = Math.round(an(px)), tol = NIV[etat.n].tol;
+  etat.choisie = false; $("carte").classList.remove("choisie");
+  if (a < A - 5 || a > B + 5) return;
+  if (Math.abs(a - e.an) <= tol) {
+    if (!etat.essais) { etat.score++; if (etat.score > mem.lire(cle())) mem.ecrire(cle(), etat.score); }
+    afficheScore(); etat.pose.push(e); dessineAccroches(); verdict("✅ " + e.an + " : " + e.court + ".", "ok");
+    $("pioche").style.visibility = "hidden"; setTimeout(suivante, 1300);
+  } else {
+    etat.essais++;
+    const vers = Math.round(a / 5) * 5, m = document.createElement("div"); m.className = "rate"; m.style.left = x(a) + "px"; m.style.top = (YF + 92) + "px"; m.textContent = "vers " + vers;
+    $("accroches").appendChild(m); setTimeout(() => m.remove(), 2700);
+    $("carte").classList.add("ko"); setTimeout(() => $("carte").classList.remove("ko"), 950);
+    verdict("🤪 Tu l'as accrochée vers " + vers + " : c'est trop " + (a < e.an ? "tôt" : "tard") + ".", "ko");
+    if (etat.essais >= 2 && etat.n !== "date") bulle("L'indice : " + e.ind.replace(/<[^>]+>/g, "") + " Écris le calcul sur ton ardoise.");
+  }
+}
+function verdict(t, c) { const v = $("verdict"); v.textContent = t; v.className = c || ""; }
+function bulle(t) { const b = $("bulle"); b.textContent = t; b.style.display = "block"; clearTimeout(bulle.t); bulle.t = setTimeout(() => b.style.display = "none", 8000); }
+// ---- les deux gestes : glisser la carte, ou toucher la carte puis le fil ----
+const ech = () => +($("scene").dataset.ech || 1);
+const dansScene = ev => { const r = $("scene").getBoundingClientRect(); return [(ev.clientX - r.left) / ech(), (ev.clientY - r.top) / ech()]; };
+let glisse = null;
+$("carte").addEventListener("pointerdown", ev => {
+  ev.preventDefault(); const [sx, sy] = dansScene(ev); glisse = { sx, sy, bouge: false };
+  $("carte").setPointerCapture && $("carte").setPointerCapture(ev.pointerId);
+});
+$("carte").addEventListener("pointermove", ev => {
+  if (!glisse) return; const [px, py] = dansScene(ev);
+  if (!glisse.bouge && Math.hypot(px - glisse.sx, py - glisse.sy) > 12) {
+    glisse.bouge = true; const f = $("carte").cloneNode(true); f.id = "fantome"; f.className = ""; $("scene").appendChild(f); $("carte").style.opacity = ".3";
+  }
+  if (glisse.bouge) { const f = $("fantome"); f.style.left = px + "px"; f.style.top = py + "px"; guide(px, py); }
+});
+$("carte").addEventListener("pointerup", ev => {
+  if (!glisse) return; const [px, py] = dansScene(ev), bouge = glisse.bouge; glisse = null;
+  const f = $("fantome"); if (f) f.remove(); $("carte").style.opacity = ""; $("guide").style.display = "none";
+  if (!bouge) { etat.choisie = !etat.choisie; $("carte").classList.toggle("choisie", etat.choisie); if (etat.choisie) verdict("Touche le fil, là où va la carte."); return; }
+  if (py > YF - 160 && py < YF + 140) depose(px); else verdict("Lâche la carte sur le fil.", "");
+});
+function guide(px, py) { const g = $("guide"); if (py > YF - 160 && py < YF + 140) { g.style.display = "block"; g.style.left = px + "px"; g.style.top = (YF - 60) + "px"; g.style.height = "110px"; } else g.style.display = "none"; }
+$("zone").addEventListener("pointerdown", ev => { if (!etat.choisie) { verdict("Glisse d'abord la carte (ou touche-la, puis touche le fil).", ""); return; } depose(dansScene(ev)[0]); });
+$("bulle").onclick = () => { $("bulle").style.display = "none"; };   // 21/11 (Karim : « on ne peut pas refermer l'indice ») : un toucher sur la bulle la ferme
+$("indice").onclick = () => { if ($("bulle").style.display === "block") { $("bulle").style.display = "none"; return; } indiceOuvre(); };   // 💡 retouché : elle se ferme
+const indiceOuvre = () => {
+  const e = etat.cur; if (!e) return;
+  if (etat.n === "date") bulle("Trouve les deux années écrites qui entourent " + e.an + ", puis compte les traits : un petit trait = 5 ans, un grand = 10 ans.");
+  else bulle("Écris le calcul sur ton ardoise (par exemple 1848 + 96 : 1848 + 100 − 4). Puis cherche la bonne " + (etat.n === "defi" ? "centaine, puis la dizaine" : "vingtaine") + " sur le fil.");
+};
+function ouvre(n) {
+  etat.n = NIV[n] ? n : "date"; etat.score = 0; etat.pose = [];
+  etat.file = EVTS.slice().sort(() => Math.random() - .5);
+  document.querySelectorAll("#niveaux button").forEach(b => b.classList.toggle("on", b.dataset.n === etat.n));
+  history.replaceState(null, "", "#" + etat.n); $("fin").hidden = true; verdict(""); dessineFil(); dessineAccroches(); afficheScore(); suivante();
+}
+document.querySelectorAll("#niveaux button").forEach(b => b.onclick = () => ouvre(b.dataset.n));
+$("encore").onclick = () => ouvre(etat.n);
+function ajuste() {
+  const e = Math.min(innerWidth / 1920, innerHeight / 1080), s = $("scene");
+  s.style.transform = "scale(" + e + ")"; s.style.left = ((innerWidth - 1920 * e) / 2) + "px"; s.style.top = ((innerHeight - 1080 * e) / 2) + "px"; s.dataset.ech = e;
+}
+addEventListener("resize", ajuste); ajuste();
+addEventListener("hashchange", () => ouvre(location.hash.slice(1)));
+ouvre(location.hash.slice(1));
+</script>
+</body>
+</html>

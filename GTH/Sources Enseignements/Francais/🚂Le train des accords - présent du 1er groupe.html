@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Le train des accords</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700&family=Quicksand:wght@500;600;700&display=swap">
+<style>
+  :root{
+    --bg-deep:#0a1f2e; --bg-panel:#123246; --panel-border:#2d6079;
+    --ink:#eaf6ff; --ink-soft:#a9c7d6; --moon:#ffe9a8; --good:#5be08a; --bad:#ff77bb;
+    --tile:#173b52; --tile-border:#2d6079; --gs:#5aa9ff; --gs-bg:#12304f; --gv:#ffb454;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0; min-height:100vh; color:var(--ink); font-family:"Quicksand",ui-sans-serif,system-ui,sans-serif;
+    background:radial-gradient(circle at 88% 6%, rgba(255,233,168,0.25), transparent 42%),
+      radial-gradient(1.5px 1.5px at 12% 22%, rgba(255,255,255,0.7), transparent),
+      radial-gradient(1.2px 1.2px at 40% 12%, rgba(255,255,255,0.5), transparent), var(--bg-deep);
+    background-size:auto,220px 200px,220px 200px,auto;
+    padding:18px 16px; display:flex; justify-content:center; user-select:none; -webkit-user-select:none; touch-action:none;}
+  .page{width:100%; max-width:1150px; background:var(--bg-panel); border:2px solid var(--panel-border); border-radius:22px;
+    padding:20px 24px 26px; box-shadow:0 14px 40px rgba(0,0,0,0.45); overflow:hidden;}
+  h1{font-family:"Baloo 2",cursive; font-size:clamp(1.7rem,4.4vw,2.5rem); margin:0; line-height:1.1;}
+  .sous-titre{color:var(--ink-soft); margin:2px 0 10px; font-weight:600;}
+  .barre-haut{display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;}
+  .droite-haut{display:flex; align-items:center; gap:10px;}
+  .etoiles{font-family:"Baloo 2",cursive; font-size:1.5rem; color:var(--moon);}
+  .niveaux{display:flex; gap:8px;}
+  .niveaux button,.btn{font:inherit; font-weight:700; border-radius:999px; border:2px solid var(--tile-border); background:var(--tile);
+    color:var(--ink); padding:8px 16px; cursor:pointer; font-size:1rem;}
+  .niveaux button.actif{background:#4fd1c5; color:#0a1f2e; border-color:#4fd1c5;}
+  .btn.principal{background:var(--moon); color:#0a1f2e; border-color:var(--moon); font-size:1.15rem; padding:10px 22px;}
+  .btn[hidden]{display:none;}
+
+  .panneau{margin:12px auto 6px; max-width:900px; text-align:center; font-size:clamp(1.4rem,3.4vw,2.2rem); font-weight:700;
+    background:#f3e7c4; color:#3a2b10; border:5px solid #7a5a2a; border-radius:14px; padding:12px 18px; box-shadow:0 8px 0 #4a3818;}
+  .panneau .trou{display:inline-block; min-width:4.5em; border-bottom:4px dashed #7a5a2a; color:#b04a12;}
+  .panneau .inf{color:#7a5a2a; font-size:.75em;}
+
+  /* Paysage + train */
+  .scene{position:relative; height:250px; margin:18px 0 8px; border-radius:18px; overflow:hidden;
+    background:linear-gradient(#1b4a6b 0%, #2b6a8a 55%, #3c7a52 56%, #2f6444 100%);}
+  .scene svg.decor{position:absolute; inset:0; width:100%; height:100%;}
+  .rails{position:absolute; left:0; right:0; bottom:26px; height:14px;
+    background:repeating-linear-gradient(90deg, #6b4a2b 0 10px, transparent 10px 34px), linear-gradient(transparent 5px, #b8c4cc 5px 8px, transparent 8px);}
+  /* Le train se lit comme la phrase : locomotive « groupe sujet » à gauche (elle tire), wagon « verbe » à droite,
+     la terminaison s'accroche à la FIN du mot, dans le wagon. Départ vers la gauche. */
+  .train{position:absolute; bottom:38px; left:50%; transform:translateX(-50%); display:flex; align-items:flex-end;}
+  .train.depart{transition:transform 2.6s cubic-bezier(.5,0,.8,.4); transform:translateX(-140vw);}
+  .loco{min-width:250px; padding:14px 16px 10px 26px; border-radius:46px 12px 6px 6px; background:var(--gs-bg); border:4px solid var(--gs);
+    color:#d8ebff; font-size:clamp(1.1rem,2.4vw,1.5rem); font-weight:700; text-align:center; position:relative;}
+  .loco .etiquette,.wagon .etiquette{display:block; font-size:.75rem; opacity:.8; margin-bottom:4px; font-weight:700;}
+  .loco .cheminee{position:absolute; top:-30px; left:40px; width:26px; height:30px; background:#20262b; border-radius:4px 4px 0 0;}
+  .fumee{position:absolute; top:-62px; left:36px; font-size:1.8rem; opacity:0;}
+  .train.depart .fumee{animation:fumee 1s ease-out infinite;}
+  @keyframes fumee{0%{opacity:.9; transform:translate(0,0) scale(.6)}100%{opacity:0; transform:translate(40px,-30px) scale(1.4)}}
+  .zone-pronom{display:inline-block; margin-top:8px; min-width:110px; padding:4px 12px; border-radius:10px; border:3px dashed var(--moon);
+    color:var(--moon); font-size:1.1rem; animation:pulse 1.4s ease-in-out infinite;}
+  .zone-pronom.pose{border-style:solid; border-color:var(--gs); background:var(--gs); color:#08233d; font-weight:800; animation:none;}
+  @keyframes pulse{50%{box-shadow:0 0 0 6px rgba(255,233,168,.25)}}
+  .crochet{width:34px; height:10px; margin:0 0 22px; background:#9aa8b1; border-radius:4px;}
+  .wagon{min-width:220px; padding:14px 16px 10px; border-radius:12px 12px 6px 6px; background:#3b2a12; border:4px solid var(--gv);
+    color:#ffe2b0; font-size:clamp(1.4rem,3vw,2rem); font-weight:800; text-align:center; position:relative;}
+  .mot-verbe{white-space:nowrap;}
+  .slot-term{display:inline-block; min-width:2.4em; margin-left:2px; padding:0 6px; border-radius:8px; border:3px dashed var(--moon);
+    color:var(--moon); animation:pulse 1.4s ease-in-out infinite;}
+  .slot-term.cache{border-color:transparent; animation:none; color:rgba(255,226,176,.45);}
+  .slot-term.pose{border-style:solid; border-color:var(--good); background:#1e3a2c; color:#c9ffd9; animation:none;}
+  .slot-term.casse{animation:casse .8s ease;}
+  @keyframes casse{0%,100%{transform:translateY(0)}20%{transform:translateY(-8px) rotate(-10deg)}50%{transform:translateY(10px) rotate(12deg)}75%{transform:translateY(-4px)}}
+  .survol{box-shadow:0 0 0 5px var(--moon) !important;}
+  .roues{position:absolute; bottom:-22px; left:0; right:0; display:flex; justify-content:space-around;}
+  .roue{width:30px; height:30px; border-radius:50%; background:#20262b; border:5px solid #9aa8b1;}
+  .train.depart .roue{animation:tourne .4s linear infinite reverse;}
+  @keyframes tourne{to{transform:rotate(360deg)}}
+  .train.secoue{animation:secoue .4s ease 2;}
+  @keyframes secoue{0%,100%{margin-left:0}25%{margin-left:-10px}75%{margin-left:10px}}
+  .cartes{display:flex; justify-content:center; gap:12px; flex-wrap:wrap; min-height:72px; margin:10px 0;}
+  .carte{font-size:1.5rem; font-weight:800; padding:10px 20px; border-radius:14px; cursor:grab; touch-action:none; box-shadow:0 6px 14px rgba(0,0,0,.35);}
+  .carte.pronom{background:var(--gs-bg); border:3px solid var(--gs); color:#d8ebff;}
+  .carte.term{background:#5a3b10; border:3px solid var(--gv); color:#fff1d6; min-width:80px; text-align:center; font-size:1.7rem;}
+  .en-vol{position:fixed; z-index:50; pointer-events:none; transform:scale(1.12);}
+  .message{min-height:2.8em; text-align:center; font-size:clamp(1.1rem,2.5vw,1.4rem); font-weight:700; margin:8px 0 4px; line-height:1.35; color:var(--moon);}
+  .message.bien{color:var(--good);} .message.pas-bien{color:var(--bad);}
+  .bas{display:flex; justify-content:center; gap:12px; flex-wrap:wrap;}
+  .aide{display:none; margin:8px auto; max-width:620px; background:#0f2a3b; border:2px solid var(--tile-border); border-radius:14px; padding:10px 16px;}
+  .aide.visible{display:block;}
+  .aide table{width:100%; border-collapse:collapse; font-size:1.25rem; font-weight:700;}
+  .aide td{padding:4px 10px; border-bottom:1px solid #25506a;}
+  .aide td:last-child{color:var(--gv);}
+  .fin{display:none; text-align:center;} .fin.visible{display:block;}
+  .fin h2{font-family:"Baloo 2",cursive; font-size:2.2rem; color:var(--moon);}
+
+  /* tout l'écran (Karim, 21/10 : « ressserré au centre, ça n'utilise pas l'écran entier ») */
+  .page{max-width:none; min-height:calc(100vh - 36px); display:flex; flex-direction:column}
+  .panneau{max-width:1500px; font-size:3rem; padding:18px 26px}
+  .scene{height:46vh; min-height:380px; margin:26px 0 14px}
+  .loco{min-width:420px; font-size:2.3rem; padding:22px 26px 16px 40px}
+  .loco .etiquette,.wagon .etiquette{font-size:1.1rem}
+  .wagon{min-width:360px; font-size:3rem; padding:22px 24px 16px}
+  .zone-pronom{font-size:1.7rem; min-width:170px}
+  .roue{width:46px; height:46px} .roues{bottom:-34px}
+  .train{bottom:50px}
+  .cartes{gap:18px; margin:18px 0}
+  .carte{font-size:2.4rem; padding:14px 30px}
+  .carte.term{font-size:2.6rem; min-width:120px}
+  .message{font-size:2rem}
+
+  /* Être et avoir (4/11) : wagons ÊTRE / AVOIR du niveau « Je trie », formes du niveau « Je conjugue » */
+  .wagon.etre{background:#12304f; border-color:var(--gs); color:#d8ebff}
+  .wagon .pile{display:flex; flex-wrap:wrap; justify-content:center; gap:6px; min-height:2.4em; margin-top:6px}
+  .btn.principal.grand{font-size:1.9rem; padding:14px 38px}
+  .chip{padding:2px 12px; border-radius:10px; border:3px solid var(--good); background:#1e3a2c; color:#c9ffd9; font-size:1.7rem; font-weight:800}
+  .train.trie .loco{min-width:220px; font-size:1.8rem; padding:18px 20px 14px 32px}
+  .train.trie .wagon{min-width:330px; max-width:430px; font-size:1.8rem; padding:18px 18px 14px}
+  .train.trie .wagon .etiquette{font-size:1.3rem}
+  .aide th{padding:4px 10px; border-bottom:2px solid #25506a; text-align:left; color:var(--ink-soft)}
+
+  /* Karim, 9/11 : « trop sombre, pourquoi les couleurs des montagnes ? il faut épurer » : fond blanc, sans décor */
+  :root{ --ink:#17252b; --ink-soft:#607d8b; --bg-panel:#fff; --panel-border:#fff; --tile:#fff; --tile-border:#cfd8dc; --moon:#ffc107; }
+  body{ background:#fff !important; color:var(--ink); }
+  .page{ box-shadow:none; border:0; }
+  h1{ font-size:1.6rem !important; color:#607d8b; }
+  /* Karim, 9/11 (2) : « je n'ai pas dit d'enlever le paysage » : le paysage reste, en couleurs de jour ; seul le fond de la page est blanc */
+  .scene{ background:linear-gradient(#cfe9f8 0%, #e9f6fd 55%, #a5d6a7 56%, #81c784 100%) !important; }
+  .scene svg.decor polygon:nth-of-type(1), .scene svg.decor polygon:nth-of-type(3){ fill:#9fb9cc; } .scene svg.decor polygon:nth-of-type(2){ fill:#87a6bd; }
+  .scene svg.decor polygon:nth-of-type(4){ fill:#e3cf9a; } .scene svg.decor polygon:nth-of-type(5){ fill:#d4bc80; }
+  .scene svg.decor path{ fill:#7cc3ea; } .scene svg.decor circle{ fill:#ffd54f; }
+  /* la phrase se lit sur le train : la locomotive (le groupe sujet), le wagon du verbe, le wagon de la suite ; plus de panneau au-dessus */
+  #panneau{ display:none; }
+  .wagon.reste{ background:#f3e5f5 !important; border-color:#ba68c8 !important; color:#4a148c !important; }
+  .wagon .inf-w{ display:block; font-size:.55em; color:#8d6e63; margin-top:4px; }
+  .scene{ height:42vh !important; }
+  .aide.visible ~ #jeu .scene{ height:31vh !important; }   /* le tableau ouvert : le paysage se resserre, rien ne défile */
+  .aide{ background:#fff !important; border:2px solid #cfd8dc !important; color:#17252b !important; }
+  .aide td, .aide th{ color:#17252b !important; border-color:#e0e0e0 !important; } .aide td:nth-child(3){ color:#e65100 !important; } .aide td:nth-child(2){ color:#1565c0 !important; }
+  .loco{ background:#e3f2fd; color:#0d47a1; border-color:#64b5f6; } .wagon{ background:#fff8e1 !important; color:#5d4037 !important; }
+  .zone-pronom{ color:#e65100; border-color:#ffb74d; }
+  .carte{ background:#fff !important; color:#17252b !important; border-color:#b0bec5 !important; }
+  .message{ color:#37474f; }
+  .slot-term.pose, .chip{ background:#e8f5e9 !important; color:#1b5e20 !important; border-color:#66bb6a !important; }
+  .rappel{ display:flex; gap:14px; justify-content:center; flex-wrap:wrap; font-size:2rem; font-weight:700; color:#1565c0; }
+  .rappel span{ padding:4px 16px; border-radius:12px; background:#e3f2fd; }
+  .rappel i{ font-style:normal; font-size:1.4rem; color:#607d8b; align-self:center; }
+  /* Karim, 11/11 : « on arrive à peine à lire la phrase, le texte s'adapte au wagon : il faut l'inverse ». La phrase est prioritaire :
+     même taille de lettres partout, pas de largeur minimale, pas de retour à la ligne ; si la phrase est trop longue, tout le train rétrécit (ajusteTrain). */
+  #train .loco, #train .wagon{ min-width:0 !important; white-space:nowrap; font-size:var(--fp, 3rem) !important; padding:18px 22px 14px !important; }
+  #train .loco{ padding-left:34px !important; }
+  #train .loco .etiquette, #train .wagon .etiquette{ font-size:1rem !important; font-weight:700; opacity:.7; }
+  #train .zone-pronom{ font-size:.6em !important; min-width:0 !important; }
+  #train .wagon .inf-w{ font-size:.45em !important; }
+  #train .crochet{ width:18px; }
+  /* les wagons ont la même hauteur, les mots commencent à la même hauteur : la phrase se lit sur une ligne droite */
+  #train{ align-items:stretch !important; }
+  #train .loco, #train .wagon{ display:flex; flex-direction:column; align-items:center; justify-content:flex-start; }
+  #train .crochet{ align-self:flex-end; }
+  .train:not(.depart){ max-width:none; }
+  /* le feu : rouge tant que le verbe n'est pas accordé, vert quand c'est juste (le train repart) */
+  .feu{ position:absolute; left:28px; bottom:40px; width:58px; padding:8px 0; border-radius:14px; background:#263238; display:flex; flex-direction:column; align-items:center; gap:8px; z-index:3; }
+  .feu::after{ content:""; position:absolute; top:100%; left:25px; width:8px; height:40px; background:#455a64; }
+  .feu i{ width:38px; height:38px; border-radius:50%; background:#37474f; }
+  .feu i.r{ background:#e53935; box-shadow:0 0 18px #e53935; }
+  .feu.vert i.r{ background:#37474f; box-shadow:none; } .feu.vert i.v{ background:#43a047; box-shadow:0 0 18px #43a047; }
+  .message{ min-height:1.6em; }
+  .message.etape{ color:#1565c0; }
+  h1 small{ font-size:1.1rem; color:#1565c0; margin-left:14px; font-family:"Quicksand",sans-serif; }
+  #niveaux{ flex-direction:column !important; flex-wrap:nowrap !important; align-items:flex-start; gap:10px !important; }
+  #niveaux .nv-g{ display:flex; flex-wrap:wrap; align-items:center; gap:8px; }
+  #niveaux .nv-g b{ min-width:100%; font-size:.95rem; color:#607d8b; text-transform:uppercase; letter-spacing:.5px; }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="barre-haut">
+    <div>
+      <h1>🚂 Le train des accords <small id="nomNiv"></small></h1>
+    </div>
+    <div class="droite-haut"><span class="etoiles" id="etoiles">⭐ 0</span>
+      <button class="btn" id="btnAide" type="button">📋 Aide</button><button class="btn" id="btnSon" type="button" title="Son">🔊</button></div>
+  </div>
+  <div class="barre-haut">
+    <!-- Karim, 11/11 : « les noms des niveaux ne disent pas ce qu'on va faire, et ils ne sont pas triés » : une ligne par notion, dans l'ordre de la séance
+         (d'abord la classe à l'ardoise, puis chacun glisse, puis le défi) -->
+    <div class="niveaux" id="niveaux">
+      <div class="nv-g"><b>Verbes en -er</b>
+        <button type="button" data-niveau="decouverte" class="actif">1. Je glisse le pronom, puis la fin</button>
+        <button type="button" data-niveau="defi">2. Défi : sujets longs</button></div>
+      <div class="nv-g"><b>Être et avoir</b>
+        <button type="button" data-niveau="trie">1. Je range : être ou avoir ?</button>
+        <button type="button" data-niveau="montre">2. Le maître montre</button>
+        <button type="button" data-niveau="avous">3. À l'ardoise</button>
+        <button type="button" data-niveau="verifie">4. À l'ardoise : je vérifie</button>
+        <button type="button" data-niveau="conjugue">5. Je glisse le pronom, puis la forme</button>
+        <button type="button" data-niveau="defi-ea">6. Défi : sujets longs</button></div>
+      <div class="nv-g"><b>Dictée 6 : l'accord sujet-verbe</b>
+        <button type="button" data-niveau="d6-montre">1. Le maître montre</button>
+        <button type="button" data-niveau="d6-ardoise">2. À l'ardoise</button>
+        <button type="button" data-niveau="d6-glisse">3. Je glisse le pronom, puis la fin</button>
+        <button type="button" data-niveau="d6-verifie">4. À l'ardoise : je vérifie</button></div>
+      <div class="nv-g"><b>Verbes en -ir (finir)</b>
+        <button type="button" data-niveau="ardoise-2g">1. À l'ardoise</button>
+        <button type="button" data-niveau="g2">2. Je glisse le pronom, puis la fin</button>
+        <button type="button" data-niveau="defi-2g">3. Défi : sujets longs</button></div>
+    </div>
+    <span id="compteur" hidden></span>
+  </div>
+  <div class="aide" id="aide">
+    <table>
+      <tr><td>je</td><td>‑e</td><td>nous</td><td>‑ons</td></tr>
+      <tr><td>tu</td><td>‑es</td><td>vous</td><td>‑ez</td></tr>
+      <tr><td>il / elle</td><td>‑e</td><td>ils / elles</td><td>‑ent</td></tr>
+    </table>
+  </div>
+
+  <div id="jeu">
+    <div class="panneau" id="panneau"></div>
+
+    <div class="scene" id="scene">
+      <svg class="decor" viewBox="0 0 1000 250" preserveAspectRatio="none" aria-hidden="true">
+        <polygon points="0,140 120,60 220,140" fill="#16405d"/>
+        <polygon points="160,140 300,40 430,140" fill="#123850"/>
+        <polygon points="700,140 760,70 790,90 820,50 900,140" fill="#16405d"/>
+        <polygon points="880,140 1000,30 1000,140" fill="#c9b27a"/>
+        <polygon points="930,140 1000,80 1000,140" fill="#b39a5f"/>
+        <path d="M0,170 C200,150 300,190 500,170 S800,150 1000,175 L1000,188 C800,165 600,200 500,184 S200,165 0,184 Z" fill="#3f8fc0" opacity=".8"/>
+        <circle cx="880" cy="40" r="18" fill="#ffe9a8" opacity=".9"/>
+      </svg>
+      <div class="rails"></div>
+      <div class="feu" id="feu"><i class="r"></i><i class="v"></i></div>
+      <div class="train" id="train">
+        <div class="loco" id="loco"><span class="cheminee"></span><span class="fumee">💨</span>
+          <span class="etiquette">groupe sujet</span><span id="texteSujet"></span><br>
+          <span class="zone-pronom" id="zonePronom">pronom ?</span>
+          <div class="roues"><span class="roue"></span><span class="roue"></span><span class="roue"></span></div></div>
+        <div class="crochet"></div>
+        <div class="wagon" id="wagon"><span class="etiquette">verbe</span>
+          <span class="mot-verbe"><span id="radical"></span><span class="slot-term cache" id="slotTerm">…</span></span>
+          <span class="inf-w" id="infW"></span>
+          <div class="roues"><span class="roue"></span><span class="roue"></span></div></div>
+        <div class="crochet"></div>
+        <div class="wagon reste" id="wagon3"><span class="etiquette">la suite</span><span id="texteSuite"></span>
+          <div class="roues"><span class="roue"></span><span class="roue"></span></div></div>
+      </div>
+    </div>
+    <div class="cartes" id="cartes"></div>
+    <div class="message" id="message"></div>
+    <div class="bas"><button class="btn principal grand" id="btnMontrer" type="button" hidden></button><button class="btn principal" id="btnSuivant" type="button" hidden>➜</button></div>
+  </div>
+
+  <div id="jeuTrie" style="display:none">
+    <div class="scene" id="sceneTrie">
+      <svg class="decor" viewBox="0 0 1000 250" preserveAspectRatio="none" aria-hidden="true">
+        <polygon points="0,140 120,60 220,140" fill="#16405d"/>
+        <polygon points="160,140 300,40 430,140" fill="#123850"/>
+        <polygon points="700,140 760,70 790,90 820,50 900,140" fill="#16405d"/>
+        <polygon points="880,140 1000,30 1000,140" fill="#c9b27a"/>
+        <polygon points="930,140 1000,80 1000,140" fill="#b39a5f"/>
+        <path d="M0,170 C200,150 300,190 500,170 S800,150 1000,175 L1000,188 C800,165 600,200 500,184 S200,165 0,184 Z" fill="#3f8fc0" opacity=".8"/>
+        <circle cx="880" cy="40" r="18" fill="#ffe9a8" opacity=".9"/>
+      </svg>
+      <div class="rails"></div>
+      <div class="train trie" id="trainTrie">
+        <div class="loco"><span class="cheminee"></span><span class="fumee">💨</span>
+          <span class="etiquette">je trie</span>être ou avoir ?
+          <div class="roues"><span class="roue"></span><span class="roue"></span><span class="roue"></span></div></div>
+        <div class="crochet"></div>
+        <div class="wagon etre" id="wEtre" data-v="etre"><span class="etiquette">ÊTRE</span><div class="pile" id="pEtre"></div><div class="roues"><span class="roue"></span><span class="roue"></span></div></div>
+        <div class="crochet"></div>
+        <div class="wagon" id="wAvoir" data-v="avoir"><span class="etiquette">AVOIR</span><div class="pile" id="pAvoir"></div><div class="roues"><span class="roue"></span><span class="roue"></span></div></div>
+      </div>
+    </div>
+    <div class="cartes" id="cartesTrie"></div>
+    <div class="message" id="messageTrie"></div>
+  </div>
+  <div class="fin" id="fin">
+    <h2>🎉 Tous les trains sont arrivés !</h2>
+    <button class="btn principal" id="btnRejouer" type="button">Rejouer</button>
+  </div>
+</div>
+
+<script>
+(function () {
+  // sujet / verbe à l'infinitif / suite de la phrase / pronom qui remplace le sujet / terminaison attendue.
+  var PHRASES = {
+    decouverte: [
+      { sujet: "Les agriculteurs de la région", inf: "cultiver", suite: "les champs.", pronom: "ils", term: "ent" },
+      { sujet: "La rivière", inf: "traverser", suite: "la plaine.", pronom: "elle", term: "e" },
+      { sujet: "Tu", inf: "regarder", suite: "les falaises.", pronom: "tu", term: "es" },
+      { sujet: "Nous", inf: "observer", suite: "les oiseaux.", pronom: "nous", term: "ons" },
+      { sujet: "Vous", inf: "habiter", suite: "près de la mer.", pronom: "vous", term: "ez" },
+      { sujet: "Kayabu", inf: "ramer", suite: "sur le fleuve.", pronom: "il", term: "e" },
+      { sujet: "Les enfants du village", inf: "écouter", suite: "le conteur.", pronom: "ils", term: "ent" },
+      { sujet: "Je", inf: "dessiner", suite: "une montagne.", pronom: "je", term: "e" },
+      { sujet: "Le chat", inf: "grimper", suite: "sur le toit.", pronom: "il", term: "e" },
+      { sujet: "Les vagues", inf: "frapper", suite: "les rochers.", pronom: "elles", term: "ent" },
+      { sujet: "Tu", inf: "chanter", suite: "une chanson.", pronom: "tu", term: "es" },
+      { sujet: "Nous", inf: "jouer", suite: "au ballon.", pronom: "nous", term: "ons" },
+      { sujet: "Ma grand-mère", inf: "préparer", suite: "une tarte.", pronom: "elle", term: "e" },
+      { sujet: "Vous", inf: "écouter", suite: "la musique.", pronom: "vous", term: "ez" }
+    ],
+    defi: [
+      { sujet: "Camille et Flora", inf: "imaginer", suite: "un voyage.", pronom: "elles", term: "ent" },
+      { sujet: "Mon frère et moi", inf: "explorer", suite: "la forêt.", pronom: "nous", term: "ons" },
+      { sujet: "Le vieux jardinier, avec son chapeau,", inf: "arroser", suite: "les fleurs.", pronom: "il", term: "e" },
+      { sujet: "Toi et ta sœur", inf: "chanter", suite: "une chanson.", pronom: "vous", term: "ez" },
+      { sujet: "Les élèves de la classe", inf: "ranger", suite: "leurs cahiers.", pronom: "ils", term: "ent" },
+      { sujet: "Léa et sa cousine", inf: "regarder", suite: "les étoiles.", pronom: "elles", term: "ent" },
+      { sujet: "Mes parents et moi", inf: "visiter", suite: "un château.", pronom: "nous", term: "ons" },
+      { sujet: "Ton ami et toi", inf: "porter", suite: "les sacs.", pronom: "vous", term: "ez" },
+      { sujet: "Le chien de mon voisin", inf: "garder", suite: "la maison.", pronom: "il", term: "e" },
+      { sujet: "Les longues plages de sable", inf: "border", suite: "le littoral.", pronom: "elles", term: "ent" },
+      { sujet: "Le petit garçon aux cheveux roux", inf: "dessiner", suite: "un dragon.", pronom: "il", term: "e" },
+      { sujet: "Julie et Tom", inf: "danser", suite: "sur la scène.", pronom: "ils", term: "ent" }
+    ]
+  };
+  // Être et avoir (4/11). deb = le début de la phrase avant le trou (si ce n'est pas « sujet + espace »), form = la forme attendue.
+  // Phrases de la fiche et du corrigé P1 p. 23 : Mes sœurs, Nous…contents, Tu…sûr de toi, Louise…un ballon, J'…une dent qui bouge,
+  // Tu n'…pas le droit, Ces téléphones…de nouvelles applications, Édouard et toi, Sabine et moi. Les suites des autres phrases sont de moi.
+  PHRASES["conjugue"] = [
+    { sujet: "Mes sœurs", inf: "être", suite: "gentilles.", pronom: "elles", form: "sont" },
+    { sujet: "Nous", inf: "être", suite: "contents.", pronom: "nous", form: "sommes" },
+    { sujet: "Tu", inf: "être", suite: "sûr de toi ?", pronom: "tu", form: "es" },
+    { sujet: "Je", inf: "être", suite: "en retard.", pronom: "je", form: "suis" },
+    { sujet: "Mon frère", inf: "être", suite: "malade.", pronom: "il", form: "est" },
+    { sujet: "Vous", inf: "être", suite: "prêts.", pronom: "vous", form: "êtes" },
+    { sujet: "Louise", inf: "avoir", suite: "un ballon.", pronom: "elle", form: "a" },
+    { sujet: "J'", deb: "J'", inf: "avoir", suite: "une dent qui bouge.", pronom: "je", form: "ai" },
+    { sujet: "Tu", deb: "Tu n'", inf: "avoir", suite: "pas le droit.", pronom: "tu", form: "as" },
+    { sujet: "Ces téléphones", inf: "avoir", suite: "de nouvelles applications.", pronom: "ils", form: "ont" },
+    { sujet: "Nous", inf: "avoir", suite: "faim.", pronom: "nous", form: "avons" },
+    { sujet: "Vous", inf: "avoir", suite: "de la chance.", pronom: "vous", form: "avez" }
+  ];
+  PHRASES["defi-ea"] = [
+    { sujet: "Édouard et toi", inf: "être", suite: "très gentils.", pronom: "vous", form: "êtes" },
+    { sujet: "Sabine et moi", inf: "avoir", suite: "le même âge.", pronom: "nous", form: "avons" },
+    { sujet: "Mes parents et moi", inf: "être", suite: "en vacances.", pronom: "nous", form: "sommes" },
+    { sujet: "Ton frère et toi", inf: "avoir", suite: "un beau vélo.", pronom: "vous", form: "avez" },
+    { sujet: "Les enfants de mon quartier", inf: "être", suite: "sages.", pronom: "ils", form: "sont" },
+    { sujet: "Le chat de ma voisine", inf: "avoir", suite: "faim.", pronom: "il", form: "a" },
+    { sujet: "Camille et Flora", inf: "être", suite: "amies.", pronom: "elles", form: "sont" },
+    { sujet: "Mes cousins", inf: "avoir", suite: "deux chiens.", pronom: "ils", form: "ont" },
+    { sujet: "Toi et moi", inf: "être", suite: "dans la même classe.", pronom: "nous", form: "sommes" },
+    { sujet: "Le vieux jardinier, avec son chapeau,", inf: "être", suite: "content.", pronom: "il", form: "est" },
+    { sujet: "Les fleurs du jardin", inf: "être", suite: "belles.", pronom: "elles", form: "sont" },
+    { sujet: "Mon voisin et sa fille", inf: "avoir", suite: "un jardin.", pronom: "ils", form: "ont" }
+  ];
+  // Karim, 9/11 : les phrases que les diapos montraient sont ici, dans un mode « à l'ardoise » : pas de cartes ;
+  // la classe écrit sur l'ardoise, puis je touche ① (le pronom apparaît dans la locomotive), puis ② (la forme arrive dans le wagon).
+  // #montre : les 2 phrases que je fais à voix haute ; #avous : leurs 2 phrases ; #verifie : le « Je vérifie » (fiche et mémo de la banque).
+  PHRASES["montre"] = [
+    { sujet: "Les fleurs", inf: "être", suite: "belles.", pronom: "elles", form: "sont" },
+    { sujet: "Mon frère", inf: "avoir", suite: "un vélo.", pronom: "il", form: "a" }
+  ];
+  PHRASES["avous"] = [
+    { sujet: "Léo et toi", inf: "être", suite: "contents.", pronom: "vous", form: "êtes" },
+    { sujet: "Les chats", inf: "avoir", suite: "faim.", pronom: "ils", form: "ont" }
+  ];
+  PHRASES["verifie"] = [
+    { sujet: "Mes sœurs", inf: "être", suite: "gentilles.", pronom: "elles", form: "sont" },
+    { sujet: "Nous", inf: "être", suite: "contents.", pronom: "nous", form: "sommes" },
+    { sujet: "Louise", inf: "avoir", suite: "un ballon.", pronom: "elle", form: "a" },
+    { sujet: "Tu", inf: "être", suite: "sûr de toi ?", pronom: "tu", form: "es" }
+  ];
+  // 2e groupe (11/11, Karim : « le diapo ne sert pas à ça, il devrait y avoir un lien vers une activité ») : les verbes de la fiche (p. 17-18) et du mémo CONJ 3.
+  // g2 : la terminaison avec -iss- au pluriel ; « ardoise-2g » : la classe écrit sur l'ardoise, puis ① le pronom, ② la fin.
+  PHRASES["g2"] = [
+    { sujet: "Les élèves", inf: "finir", suite: "leur dessin.", pronom: "ils", term: "issent", g2: 1 },
+    { sujet: "Tu", inf: "choisir", suite: "un livre.", pronom: "tu", term: "is", g2: 1 },
+    { sujet: "Nous", inf: "grandir", suite: "vite.", pronom: "nous", term: "issons", g2: 1 },
+    { sujet: "Le public", inf: "applaudir", suite: "les acteurs.", pronom: "il", term: "it", g2: 1 },
+    { sujet: "Vous", inf: "réussir", suite: "l'exercice.", pronom: "vous", term: "issez", g2: 1 },
+    { sujet: "Je", inf: "rougir", suite: "de plaisir.", pronom: "je", term: "is", g2: 1 },
+    { sujet: "Ma petite sœur", inf: "obéir", suite: "à ses parents.", pronom: "elle", term: "it", g2: 1 },
+    { sujet: "Les fleurs", inf: "fleurir", suite: "au printemps.", pronom: "elles", term: "issent", g2: 1 },
+    { sujet: "Le chat", inf: "bondir", suite: "sur la souris.", pronom: "il", term: "it", g2: 1 },
+    { sujet: "Les soignants", inf: "nourrir", suite: "les malades.", pronom: "ils", term: "issent", g2: 1 }
+  ];
+  PHRASES["ardoise-2g"] = [
+    { sujet: "Elles", inf: "grandir", suite: "vite.", pronom: "elles", term: "issent", g2: 1 },
+    { sujet: "Tu", inf: "finir", suite: "ton repas.", pronom: "tu", term: "is", g2: 1 },
+    { sujet: "Nous", inf: "choisir", suite: "un cadeau.", pronom: "nous", term: "issons", g2: 1 },
+    { sujet: "Le public", inf: "applaudir", suite: "le chanteur.", pronom: "il", term: "it", g2: 1 }
+  ];
+  PHRASES["defi-2g"] = [
+    { sujet: "Mon frère et moi", inf: "remplir", suite: "les verres.", pronom: "nous", term: "issons", g2: 1 },
+    { sujet: "Toi et ton ami", inf: "réunir", suite: "vos jouets.", pronom: "vous", term: "issez", g2: 1 },
+    { sujet: "Les enfants du quartier", inf: "salir", suite: "leurs chaussures.", pronom: "ils", term: "issent", g2: 1 },
+    { sujet: "La petite fille aux nattes", inf: "réfléchir", suite: "avant de répondre.", pronom: "elle", term: "it", g2: 1 },
+    { sujet: "Léa et Inès", inf: "ralentir", suite: "dans la descente.", pronom: "elles", term: "issent", g2: 1 },
+    { sujet: "Le vieux jardinier", inf: "agir", suite: "avec patience.", pronom: "il", term: "it", g2: 1 }
+  ];
+  // Dictée 6 (Karim, 14/11 : l'accord sujet-verbe sur les phrases de la dictée 6) : les verbes de la dictée, sans encourager ni avancer (ge, ç)
+  PHRASES["d6-montre"] = [
+    { sujet: "Le public", inf: "applaudir", suite: "les athlètes.", pronom: "il", term: "it", g2: 1 },
+    { sujet: "Les spectateurs", inf: "applaudir", suite: "les athlètes.", pronom: "ils", term: "issent", g2: 1 }
+  ];
+  PHRASES["d6-ardoise"] = [
+    { sujet: "Les équipes", inf: "respecter", suite: "les règles.", pronom: "elles", term: "ent" },
+    { sujet: "Nous", inf: "regarder", suite: "les anneaux olympiques.", pronom: "nous", term: "ons" },
+    { sujet: "Les drapeaux de chaque pays", inf: "flotter", suite: "dans le stade.", pronom: "ils", term: "ent" },
+    { sujet: "Le public", inf: "applaudir", suite: "les équipes.", pronom: "il", term: "it", g2: 1 }
+  ];
+  PHRASES["d6-glisse"] = [
+    { sujet: "Le drapeau", inf: "flotter", suite: "au vent.", pronom: "il", term: "e" },
+    { sujet: "Les sportifs", inf: "arriver", suite: "dans le stade.", pronom: "ils", term: "ent" },
+    { sujet: "Nous", inf: "applaudir", suite: "les athlètes.", pronom: "nous", term: "issons", g2: 1 },
+    { sujet: "Tu", inf: "regarder", suite: "la cérémonie.", pronom: "tu", term: "es" },
+    { sujet: "Les spectateurs", inf: "applaudir", suite: "les équipes.", pronom: "ils", term: "issent", g2: 1 },
+    { sujet: "L'équipe", inf: "jouer", suite: "correctement.", pronom: "elle", term: "e" }
+  ];
+  PHRASES["d6-verifie"] = [
+    { sujet: "Le public", inf: "applaudir", suite: "les sportifs.", pronom: "il", term: "it", g2: 1 },
+    { sujet: "Les équipes", inf: "jouer", suite: "correctement.", pronom: "elles", term: "ent" },
+    { sujet: "Ces cinq anneaux colorés", inf: "représenter", suite: "les continents.", pronom: "ils", term: "ent" }
+  ];
+  var MONTRER = { montre: 1, avous: 1, verifie: 1, "ardoise-2g": 1, "d6-montre": 1, "d6-ardoise": 1, "d6-verifie": 1 };
+  var TERMINAISONS2 = ["is", "it", "issons", "issez", "issent"];
+  var FORM = { "être": ["suis", "es", "est", "sommes", "êtes", "sont"], "avoir": ["ai", "as", "a", "avons", "avez", "ont"] };
+  var FORMES12 = FORM["être"].map(function (f) { return [f, "etre"]; }).concat(FORM["avoir"].map(function (f) { return [f, "avoir"]; }));
+  var PRON_EA = ["je · j'", "tu", "il / elle", "nous", "vous", "ils / elles"];
+  var PRONOMS = ["je", "tu", "il", "elle", "nous", "vous", "ils", "elles"];
+  var TERMINAISONS = ["e", "es", "ons", "ez", "ent"];
+
+  var el = function (id) { return document.getElementById(id); };
+  var niveau = "decouverte", index = 0, etoiles = 0, etape = 1, sonActif = true, erreurs = 0;
+  var ctxAudio = null, fait = 0, AIDE_1ER = "";
+  function melange(a) { for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)), x = a[i]; a[i] = a[j]; a[j] = x; } return a; }
+  function estEA() { return niveau === "trie" || niveau === "conjugue" || niveau === "defi-ea" || (!!MONTRER[niveau] && niveau.indexOf("d6-") !== 0); }
+  function son(type) {
+    if (!sonActif) return;
+    try {
+      ctxAudio = ctxAudio || new (window.AudioContext || window.webkitAudioContext)();
+      var t = ctxAudio.currentTime;
+      function bip(f, debut, duree, forme) {
+        var o = ctxAudio.createOscillator(), g = ctxAudio.createGain();
+        o.type = forme || "triangle"; o.frequency.setValueAtTime(f, t + debut);
+        o.connect(g); g.connect(ctxAudio.destination);
+        g.gain.setValueAtTime(0.15, t + debut); g.gain.exponentialRampToValueAtTime(0.001, t + debut + duree);
+        o.start(t + debut); o.stop(t + debut + duree);
+      }
+      if (type === "tchou") { bip(523, 0, .35, "square"); bip(659, .4, .5, "square"); }
+      else if (type === "bien") { bip(660, 0, .15); bip(880, .12, .2); }
+      else { bip(180, 0, .4, "sawtooth"); }
+    } catch (e) { /* pas de son */ }
+  }
+  function P() { return PHRASES[niveau][index]; }
+  // l'aide (le tableau des terminaisons) : celle du 2e groupe quand la phrase est du 2e groupe
+  var AIDE1 = null;
+  function aide2g() { var a = el("aide"); if (AIDE1 === null) AIDE1 = a.innerHTML;
+    a.innerHTML = P() && P().g2 ? '<table><tr><td>je</td><td>‑is</td><td>nous</td><td>‑issons</td></tr><tr><td>tu</td><td>‑is</td><td>vous</td><td>‑issez</td></tr><tr><td>il / elle</td><td>‑it</td><td>ils / elles</td><td>‑issent</td></tr></table>' : AIDE1; }
+  function radical(p) { return p.form ? "" : p.inf.slice(0, -2); }
+  // Consignes données à l'oral : seuls les retours courts (bien / pas bien) s'affichent.
+  function message(t, c) { if (!c) t = ""; var m = el(niveau === "trie" ? "messageTrie" : "message"); m.textContent = t; m.className = "message " + (c || ""); }
+  // la phrase tient sur une ligne : si le train dépasse le paysage, toutes les lettres rétrécissent ensemble (jamais sous 1,6rem)
+  function ajusteTrain() {
+    var tr = el("train"), sc = el("scene"), fp = 3; tr.style.setProperty("--fp", fp + "rem");
+    while (fp > 1.6 && tr.scrollWidth > sc.clientWidth - 40) { fp -= 0.1; tr.style.setProperty("--fp", fp.toFixed(1) + "rem"); }
+  }
+  var NOMS = {};
+  Array.prototype.forEach.call(document.querySelectorAll("#niveaux .nv-g"), function (g) { var t = g.querySelector("b").textContent;
+    Array.prototype.forEach.call(g.querySelectorAll("button"), function (b) { NOMS[b.dataset.niveau] = t + " · " + b.textContent; }); });
+
+  function glissable(objet, cibleSelecteur, auDepot) {
+    objet.addEventListener("pointerdown", function (ev) {
+      ev.preventDefault();
+      var clone = objet.cloneNode(true); clone.classList.add("en-vol"); document.body.appendChild(clone);
+      objet.style.visibility = "hidden";
+      function placer(x, y) { clone.style.left = (x - clone.offsetWidth / 2) + "px"; clone.style.top = (y - clone.offsetHeight / 2) + "px"; }
+      placer(ev.clientX, ev.clientY);
+      var survole = null;
+      function cibleSous(x, y) {
+        var l = document.elementsFromPoint(x, y);
+        for (var k = 0; k < l.length; k++) { if (l[k].matches && l[k].matches(cibleSelecteur)) return l[k]; }
+        return null;
+      }
+      function bouge(e) {
+        placer(e.clientX, e.clientY);
+        var c = cibleSous(e.clientX, e.clientY);
+        if (survole && survole !== c) survole.classList.remove("survol");
+        if (c) c.classList.add("survol"); survole = c;
+      }
+      function lache(e) {
+        document.removeEventListener("pointermove", bouge); document.removeEventListener("pointerup", lache);
+        clone.remove(); objet.style.visibility = "";
+        if (survole) survole.classList.remove("survol");
+        var c = cibleSous(e.clientX, e.clientY);
+        if (c) auDepot(c);
+      }
+      document.addEventListener("pointermove", bouge); document.addEventListener("pointerup", lache);
+    });
+  }
+
+  function afficherPhrase() {
+    var p = P();
+    el("panneau").innerHTML = (p.deb || (p.sujet + " ")) + '<span class="trou" id="trou">…</span> ' + p.suite + ' <span class="inf">(' + p.inf + ')</span>';
+    el("texteSujet").textContent = p.deb ? p.deb.replace(/\s+$/, "") : p.sujet;
+    el("infW").textContent = "(" + p.inf + ")"; el("texteSuite").textContent = p.suite;
+    var zp = el("zonePronom"); zp.className = "zone-pronom"; zp.textContent = "pronom ?";
+    el("radical").textContent = radical(p);
+    var slot = el("slotTerm"); slot.className = "slot-term cache"; slot.textContent = "…";
+    el("train").className = "train"; aide2g();
+    el("btnSuivant").hidden = true;
+    el("compteur").textContent = "Train " + (index + 1) + " / " + PHRASES[niveau].length;
+    el("btnMontrer").hidden = true;
+    el("feu").className = "feu";
+    setTimeout(ajusteTrain, 0);
+    if (MONTRER[niveau]) { montrer1(); return; }
+    etapePronom();
+  }
+
+  function montrer1() {
+    etape = 1; message("Sur l'ardoise : j'écris le verbe accordé. On lève. Puis ① le pronom, ② la fin.");
+    // la liste des pronoms, en rappel, pendant qu'on cherche le pronom (Karim, 9/11)
+    el("cartes").innerHTML = '<div class="rappel"><i>Les pronoms :</i>' + PRONOMS.map(function (p) { return "<span>" + p + "</span>"; }).join("") + "</div>";
+    el("aide").classList.toggle("visible", niveau === "montre");
+    aide2g();   // quand je montre, le tableau est ouvert : je cherche la forme dedans
+    el("slotTerm").className = "slot-term"; el("slotTerm").textContent = "?";
+    var b = el("btnMontrer"); b.hidden = false; b.textContent = "① Le pronom";
+    b.onclick = function () {
+      var zp = el("zonePronom"); zp.className = "zone-pronom pose"; zp.textContent = "= " + P().pronom; son("bien");
+      b.textContent = P().term ? "② La fin du verbe" : "② La forme"; el("cartes").innerHTML = "";
+      b.onclick = function () { b.hidden = true; poserTerminaison(P().form || P().term); };
+    };
+  }
+  function etapePronom() {
+    etape = 1;
+    var zone = el("cartes"); zone.innerHTML = "";
+    PRONOMS.forEach(function (pr) {
+      var c = document.createElement("div"); c.className = "carte pronom"; c.textContent = pr; zone.appendChild(c);
+      glissable(c, "#loco", function () {
+        if (pr === P().pronom) {
+          var zp = el("zonePronom"); zp.className = "zone-pronom pose"; zp.textContent = "= " + pr;
+          son("bien");
+          etapeTerminaison();
+        } else {
+          erreurs++; son("non");
+          message("🤔 " + pr + " ?", "pas-bien");
+        }
+      });
+    });
+    message("① Quel pronom remplace le sujet ? Je le glisse dans la locomotive.");
+  }
+
+  function etapeTerminaison() {
+    etape = 2;
+    var slot = el("slotTerm"); slot.className = "slot-term"; slot.textContent = "?";
+    var zone = el("cartes"); zone.innerHTML = "";
+    (P().form ? melange((niveau === "defi-ea" ? FORM["être"].concat(FORM["avoir"]) : FORM[P().inf]).slice()) : P().g2 ? TERMINAISONS2 : TERMINAISONS).forEach(function (t) {
+      var c = document.createElement("div"); c.className = "carte term"; c.textContent = t; zone.appendChild(c);
+      glissable(c, "#wagon", function () { poserTerminaison(t); });
+    });
+    message(P().form ? "② Avec « " + P().pronom + " », quelle forme ? Je la glisse dans le wagon." : "② Avec « " + P().pronom + " », comment finit le verbe ? Je glisse la fin au bout de « " + radical(P()) + " ».");
+  }
+
+  function poserTerminaison(t) {
+    var p = P(), slot = el("slotTerm");
+    if (t === (p.form || p.term)) {
+      var verbe = radical(p) + (p.form || p.term);
+      slot.className = "slot-term pose"; slot.textContent = t;
+      el("trou").textContent = verbe;
+      el("cartes").innerHTML = "";
+      if (!erreurs) { etoiles++; el("etoiles").textContent = "⭐ " + etoiles; }
+      son("tchou");
+      message("✅", "bien");
+      el("feu").className = "feu vert";
+      setTimeout(function () { el("train").classList.add("depart"); }, 700);
+      setTimeout(function () { el("btnSuivant").hidden = false; }, 2500);
+    } else {
+      erreurs++; son("non");
+      slot.textContent = t; slot.className = "slot-term casse";
+      el("train").classList.add("secoue");
+      message("💥", "pas-bien");
+      setTimeout(function () { slot.className = "slot-term"; slot.textContent = "?"; el("train").classList.remove("secoue"); }, 900);
+      if (erreurs >= 3) el("aide").classList.add("visible");
+    }
+  }
+
+  function suivant() {
+    index++; erreurs = 0;
+    if (index >= PHRASES[niveau].length) { el("jeu").style.display = "none"; el("fin").classList.add("visible"); return; }
+    afficherPhrase();
+  }
+  function majAide() {
+    var tb = el("aide").querySelector("table");
+    if (!AIDE_1ER) AIDE_1ER = tb.innerHTML;
+    if (!estEA()) { tb.innerHTML = AIDE_1ER; return; }
+    var h = "<tr><th></th><th>être</th><th>avoir</th></tr>";
+    for (var i = 0; i < 6; i++) h += "<tr><td>" + PRON_EA[i] + "</td><td>" + FORM["être"][i] + "</td><td>" + FORM["avoir"][i] + "</td></tr>";
+    tb.innerHTML = h;
+  }
+  function majBoutons() {
+    Array.prototype.forEach.call(document.querySelectorAll("#niveaux button"), function (x) { x.classList.toggle("actif", x.dataset.niveau === niveau); });
+    el("nomNiv").textContent = NOMS[niveau] || "";
+  }
+  function poserForme(f, pile) {
+    var el2 = el(f[1] === "etre" ? "pEtre" : "pAvoir"), chip = document.createElement("span");
+    chip.className = "chip"; var pr = PRON_EA[FORM[f[1] === "etre" ? "être" : "avoir"].indexOf(f[0])]; chip.textContent = f[0] === "ai" ? "j'ai" : pr.replace("je · j'", "je") + " " + f[0]; chip.dataset.o = FORMES12.indexOf(f);
+    var apres = null;
+    Array.prototype.forEach.call(el2.children, function (c) { if (!apres && +c.dataset.o > +chip.dataset.o) apres = c; });
+    el2.insertBefore(chip, apres);
+  }
+  function lancerTrie() {
+    erreurs = 0; fait = 0;
+    el("pEtre").innerHTML = ""; el("pAvoir").innerHTML = "";
+    el("trainTrie").className = "train trie";
+    var zone = el("cartesTrie"); zone.innerHTML = ""; message("", "");
+    melange(FORMES12.slice()).forEach(function (f) {
+      var c = document.createElement("div"); c.className = "carte term"; c.textContent = f[0]; zone.appendChild(c);
+      glissable(c, "#wEtre, #wAvoir", function (cible) {
+        if (cible.dataset.v === f[1]) {
+          son("bien"); c.remove(); fait++; poserForme(f); message("", "");
+          if (fait === FORMES12.length) finTrie();
+        } else {
+          erreurs++; son("non"); message("🤔 " + f[0] + " ?", "pas-bien");
+          el("trainTrie").classList.add("secoue"); setTimeout(function () { el("trainTrie").classList.remove("secoue"); }, 900);
+          if (erreurs >= 3) el("aide").classList.add("visible");
+        }
+      });
+    });
+  }
+  function finTrie() {
+    if (!erreurs) { etoiles++; el("etoiles").textContent = "⭐ " + etoiles; }
+    son("tchou"); message("✅", "bien");
+    setTimeout(function () { el("trainTrie").classList.add("depart"); }, 700);
+    setTimeout(function () { el("jeuTrie").style.display = "none"; el("fin").classList.add("visible"); }, 3300);
+  }
+  function demarrer() {
+    index = 0; erreurs = 0; majBoutons(); majAide();
+    el("fin").classList.remove("visible"); el("aide").classList.remove("visible");
+    var trie = niveau === "trie";
+    el("jeu").style.display = trie ? "none" : ""; el("jeuTrie").style.display = trie ? "" : "none";
+    if (trie) lancerTrie(); else afficherPhrase();
+  }
+  function lireHash() {   // #decouverte, #defi, #trie, #conjugue, #defi-ea
+    var h = ""; try { h = decodeURIComponent(location.hash.slice(1)); } catch (e) { }   // aussi #montre, #avous, #verifie (à l'ardoise)
+    if (h === "trie" || Object.prototype.hasOwnProperty.call(PHRASES, h)) niveau = h;
+  }
+  el("btnSuivant").addEventListener("click", suivant);
+  el("btnRejouer").addEventListener("click", function () { demarrer(); });
+  el("btnAide").addEventListener("click", function () { el("aide").classList.toggle("visible"); });
+  el("btnSon").addEventListener("click", function () { sonActif = !sonActif; el("btnSon").textContent = sonActif ? "🔊" : "🔇"; });
+  Array.prototype.forEach.call(document.querySelectorAll("#niveaux button"), function (b) {
+    b.addEventListener("click", function () {
+      niveau = b.dataset.niveau; demarrer();
+    });
+  });
+  window.addEventListener("hashchange", function () { lireHash(); demarrer(); });
+  lireHash(); demarrer();
+})();
+</script>
+<!-- DEUX GESTES -->
+<script>
+/* ==== DEUX GESTES (GTH) : chaque jeu se joue en glissant OU en touchant (demande de Karim du 01/10) ====
+   REGLES  : jeu au glisser-déposer → on peut aussi toucher l'objet (il s'entoure), puis toucher sa place ; s'il n'a qu'une place
+             possible (une case réponse), un seul toucher le pose (10/10) :
+             le module rejoue exactement le même glisser-déposer, le jeu garde ses règles.
+   INVERSE : jeu au toucher (toucher la carte, puis la zone) → on peut aussi glisser la carte sur la zone.
+   Installé par .claude/outils/deux-gestes/injecter.py ; ne pas modifier dans le jeu, mais dans ce fichier. */
+(function () {
+  var REGLES = [{"source": ".carte", "cible": "#loco, #wagon, #wEtre, #wAvoir"}], INVERSE = [];
+  // setPointerCapture refuse les pointeurs rejoués : on ignore l'erreur
+  ["setPointerCapture", "releasePointerCapture"].forEach(function (m) {
+    var o = Element.prototype[m]; if (!o) return;
+    Element.prototype[m] = function (id) { try { return o.call(this, id); } catch (e) { return undefined; } };
+  });
+  var st = document.createElement("style");
+  st.textContent = ".dg-choisi{outline:7px solid #1f7a8c !important; outline-offset:4px !important;}" +
+    ".dg-vol{position:fixed !important; z-index:9999; pointer-events:none; opacity:.92; transform:scale(1.05) rotate(-2deg); margin:0 !important;}";
+  document.head.appendChild(st);
+
+  var choix = null, bas = null, rejeu = false, avalerClic = 0;
+  function sous(x, y) { return document.elementFromPoint(x, y); }
+  function trouver(el, liste, cle) {
+    if (!el || !el.closest) return null;
+    for (var i = 0; i < liste.length; i++) { var e = el.closest(liste[i][cle]); if (e) return { regle: liste[i], el: e }; }
+    return null;
+  }
+  function oublier() { if (choix) choix.el.classList.remove("dg-choisi"); choix = null; }
+  function evt(type, cible, x, y) {
+    var e = new PointerEvent(type, { bubbles: true, cancelable: true, composed: true, clientX: x, clientY: y, pointerId: 777,
+      pointerType: "touch", isPrimary: true, button: 0, buttons: type === "pointerup" ? 0 : 1 });
+    (cible && cible.isConnected ? cible : document).dispatchEvent(e);
+  }
+  // Rejoue le glisser-déposer du jeu : de l'objet jusqu'au point touché
+  function rejouer(src, x, y) {
+    if (!src.isConnected) return;
+    var r = src.getBoundingClientRect(), x0 = r.left + r.width / 2, y0 = r.top + r.height / 2;
+    var depart = sous(x0, y0); if (!depart || !src.contains(depart)) depart = src;
+    rejeu = true;
+    try {
+      evt("pointerdown", depart, x0, y0);
+      for (var k = 1; k <= 12; k++) evt("pointermove", depart, x0 + (x - x0) * k / 12, y0 + (y - y0) * k / 12);
+      evt("pointerup", depart, x, y);
+    } finally { rejeu = false; }
+  }
+
+  // ---------- REGLES : toucher l'objet, puis sa place ----------
+  document.addEventListener("pointerdown", function (e) {
+    if (rejeu || !e.isTrusted || !REGLES.length) return;
+    if (choix && !choix.el.isConnected) oublier();
+    // l'objet touché est repéré dès que le doigt se pose : ensuite, le jeu le cache pour le faire glisser
+    bas = { x: e.clientX, y: e.clientY, cible: null, src: trouver(e.target, REGLES, "source") };
+    if (choix) {
+      var c = e.target.closest && e.target.closest(choix.regle.cible);
+      if (c && !(e.target.closest(choix.regle.source))) { bas.cible = c; e.stopImmediatePropagation(); e.preventDefault(); }
+    }
+  }, true);
+  document.addEventListener("pointerup", function (e) {
+    if (rejeu || !e.isTrusted || !bas || !REGLES.length) return;
+    var b = bas; bas = null;
+    var tap = Math.hypot(e.clientX - b.x, e.clientY - b.y) < 12;
+    if (b.cible) {   // le toucher sur la place : le jeu ne le voit pas, on rejoue le glisser à cet endroit
+      e.stopImmediatePropagation(); e.preventDefault(); avalerClic = Date.now();
+      if (tap && choix) { var s = choix.el; oublier(); var x = e.clientX, y = e.clientY; setTimeout(function () { rejouer(s, x, y); }, 0); }
+      return;
+    }
+    if (!tap) { oublier(); return; }   // un vrai glisser : le jeu s'en occupe
+    var src = b.src;
+    setTimeout(function () {   // après le jeu : l'objet touché est choisi (ou ne l'est plus)
+      if (!src || !src.el.isConnected) { return; }
+      // une seule place où le poser (une case réponse) : un toucher suffit, la réponse part dans la case (Karim, 10/10)
+      var places = Array.prototype.filter.call(document.querySelectorAll(src.regle.cible), function (c) {
+        var r = c.getBoundingClientRect(); return r.width > 0 && r.height > 0 && !src.el.contains(c) && getComputedStyle(c).visibility !== "hidden"; });
+      if (places.length === 1) { oublier(); var r = places[0].getBoundingClientRect(); rejouer(src.el, r.left + r.width / 2, r.top + r.height / 2); return; }
+      if (choix && choix.el === src.el) { oublier(); return; }
+      oublier(); choix = src; src.el.classList.add("dg-choisi");
+    }, 0);
+  }, true);
+  document.addEventListener("click", function (e) {
+    if (Date.now() - avalerClic < 500 && e.isTrusted) { e.stopImmediatePropagation(); e.preventDefault(); }
+  }, true);
+
+  // ---------- INVERSE : glisser la carte sur la zone = la toucher, puis toucher la zone ----------
+  var g = null;
+  document.addEventListener("pointerdown", function (e) {
+    if (rejeu || !e.isTrusted || !INVERSE.length) return;
+    var src = trouver(e.target, INVERSE, "source"); if (!src) return;
+    g = { src: src, x: e.clientX, y: e.clientY, vol: null };
+  }, true);
+  document.addEventListener("pointermove", function (e) {
+    if (!g || rejeu) return;
+    if (!g.vol && Math.hypot(e.clientX - g.x, e.clientY - g.y) < 12) return;
+    if (!g.vol) {
+      var r = g.src.el.getBoundingClientRect();
+      g.vol = g.src.el.cloneNode(true); g.vol.classList.add("dg-vol"); g.vol.style.width = r.width + "px";
+      g.dx = g.x - r.left; g.dy = g.y - r.top; document.body.appendChild(g.vol);
+    }
+    g.vol.style.left = (e.clientX - g.dx) + "px"; g.vol.style.top = (e.clientY - g.dy) + "px";
+  }, true);
+  document.addEventListener("pointerup", function (e) {
+    if (!g || rejeu || !e.isTrusted) return;
+    var d = g; g = null;
+    if (!d.vol) return;   // simple toucher : le jeu s'en occupe
+    d.vol.remove(); e.stopImmediatePropagation(); e.preventDefault(); avalerClic = Date.now();
+    var dessous = sous(e.clientX, e.clientY), zone = dessous && dessous.closest ? dessous.closest(d.src.regle.cible) : null;
+    if (!zone) return;
+    rejeu = true;
+    try { evt("pointerup", d.src.el, e.clientX, e.clientY); evt("pointerup", zone, e.clientX, e.clientY); }
+    finally { rejeu = false; }
+  }, true);
+})();
+</script>
+<!-- /DEUX GESTES -->
+<!-- MENU -->
+<script>
+/* ==== LE MENU ☰ (GTH, 10/10) : interface épurée — à l'écran, seulement le titre, le score, la consigne et l'activité ====
+   Tout le reste (niveaux, onglets de méthode, ✏️, 🔊, 🖨️, aide…) part dans un menu ☰, ouvert d'un toucher.
+   Réglage par outil (CONF, posé par l'injecteur) : ancre = où mettre le bouton ☰ (sinon en haut à droite de l'écran) ;
+   cacher = ce qui part dans le menu (sinon : tout ce qui, dans « .barre .droite », n'est pas un score).
+   Installé par .claude/outils/menu-outil/injecter.py ; ne pas modifier dans l'outil, mais dans ce fichier. */
+(function () {
+  var CONF = {"ancre": ".barre-haut .droite-haut", "cacher": ["#niveaux", "#btnAide", "#btnSon"]};
+  var st = document.createElement("style");
+  st.textContent =
+    ".menu-btn{width:58px; height:58px; border-radius:16px; border:2px solid rgba(0,0,0,.15); background:#fff; color:#1f2a33; font-size:2rem; line-height:1; cursor:pointer; flex:none; padding:0;}" +
+    ".menu-btn.fixe{position:fixed; top:10px; right:12px; z-index:150; box-shadow:0 4px 14px rgba(0,0,0,.15);}" +
+    ".menu-btn.ouvert{background:#1f2a33; color:#fff;}" +
+    ".menu-panneau{position:fixed; top:76px; right:16px; z-index:200; background:#fff; color:#1f2a33; border-radius:18px; box-shadow:0 18px 50px rgba(0,0,0,.28); padding:16px 18px;" +
+    "  display:flex; flex-direction:column; align-items:flex-start; gap:12px; max-width:min(620px, 92vw); max-height:80vh; overflow:auto;}" +
+    ".menu-panneau[hidden]{display:none !important;}" +
+    ".menu-panneau h4{margin:0; font-family:sans-serif; font-size:.85rem; text-transform:uppercase; letter-spacing:.6px; color:#6d7a85;}" +
+    ".menu-panneau > *{position:static !important; margin:0 !important;}" +
+    ".menu-panneau > div,.menu-panneau > nav{display:flex; flex-wrap:wrap; gap:8px;}";
+  document.head.appendChild(st);
+  function installer() {
+    var autres = [];
+    if (CONF.cacher) CONF.cacher.forEach(function (s) { document.querySelectorAll(s).forEach(function (e) { if (autres.indexOf(e) === -1) autres.push(e); }); });
+    else { var d = document.querySelector(".barre .droite"); if (d) autres = Array.prototype.filter.call(d.children, function (e) { return !e.classList.contains("score"); }); }
+    if (!autres.length) return;
+    var btn = document.createElement("button"); btn.type = "button"; btn.className = "menu-btn"; btn.title = "Niveaux et réglages"; btn.textContent = "☰";
+    var pan = document.createElement("div"); pan.className = "menu-panneau"; pan.hidden = true;
+    var t = document.createElement("h4"); t.textContent = "Niveaux et réglages"; pan.appendChild(t);
+    autres.forEach(function (e) { pan.appendChild(e); });
+    var ancre = document.querySelector(CONF.ancre || ".barre .droite");
+    if (ancre) ancre.appendChild(btn); else { btn.classList.add("fixe"); document.body.appendChild(btn); }
+    document.body.appendChild(pan);
+    function ouvrir(o) { pan.hidden = !o; btn.classList.toggle("ouvert", o); }
+    btn.addEventListener("click", function (e) { e.stopPropagation(); ouvrir(pan.hidden); });
+    // un niveau choisi, ou une fenêtre ouverte (✏️, 🖨️) : le menu se referme ; on garde le menu ouvert pour choisir un type de jeu
+    pan.addEventListener("click", function (e) { var b = e.target.closest("button"); if (b && !b.closest(CONF.garderOuvert || ".types")) setTimeout(function () { ouvrir(false); }, 120); });
+    document.addEventListener("pointerdown", function (e) { if (!pan.hidden && !pan.contains(e.target) && e.target !== btn) ouvrir(false); });
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", installer); else installer();
+})();
+</script>
+<!-- /MENU -->
+</body>
+</html>

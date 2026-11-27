@@ -1,0 +1,303 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Le groupe nominal qui grandit</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath d='M18 44h28l-4 16H22z' fill='%23d84315'/%3E%3Cpath d='M32 44V14' stroke='%232e7d32' stroke-width='5'/%3E%3Cellipse cx='22' cy='24' rx='10' ry='5' fill='%2366bb6a'/%3E%3Cellipse cx='42' cy='18' rx='10' ry='5' fill='%2366bb6a'/%3E%3C/svg%3E">
+<!--
+  🌱 Le groupe nominal qui grandit — le groupe nominal et ses expansions, P2 📅 4, 5 et 6 (GTH v2 : donnees/seances/francais/fr-s4-grammaire.js,
+  fr-s5-grammaire.js, fr-s6-orthographe.js). Maquette validée par Karim le 28/10 (Rapports/Jeux de la P2 — ce qui existe, ce qui manque.md, C n° 4).
+  Termes du guide Eduscol (Terminologie grammaticale, p. 19 et 94) et des séances : groupe nominal, nom noyau, déterminant, adjectif, complément du nom.
+  Univers : la serre. Le déterminant = le pot, le nom noyau = la tige, l'adjectif = une feuille, le complément du nom = une branche. La plante
+  grandit avec les expansions ; on peut la tailler (enlever adjectifs et compléments du nom) : il reste un groupe nominal minimal ; sans la tige
+  ou sans le pot, ce n'est plus un groupe nominal.
+  Gestes (glisser, ou toucher puis toucher) : l'arrosoir sur le nom noyau ; les étiquettes sous les mots ; la feuille accordée sur la plante ;
+  les mots au compost (tailler).
+  Onglets : Le noyau (#noyau), D, N, Adj (#dna), J'accroche un adjectif (#adjectif : choisir la forme accordée parmi 4), Le complément du nom
+  (#cdn : feuille ou branche ?), Défi (#defi : tailler jusqu'au groupe nominal minimal). Le défi « faire pousser jusqu'au modèle » de la
+  maquette n'est pas fait : J'accroche un adjectif le couvre en partie.
+  Contenu : manuel P2 p. 65-66, 72-73, 78-79, 84 (= exercices différenciés P2) et séances 📅 4-5 ; pour J'accroche un adjectif, la banque
+  donne les noms (« enrichis ») mais pas les adjectifs : les adjectifs sont de moi (marqués). Hors ligne (ENI, Chromebook). Sans son.
+-->
+<style>
+:root{--serre:#eef7e6;--encre:#1f3320;--vert:#2e7d32;--rouge:#c62828;--talbot:#1f7a8c;--pot:#d84315;--tige:#388e3c;--feuille:#66bb6a;--branche:#8d6e63}
+html,body{margin:0;height:100%;background:#1f3320;overflow:hidden;font-family:Arial,Helvetica,sans-serif;color:var(--encre)}
+#scene{position:absolute;left:0;top:0;width:1920px;height:1080px;transform-origin:0 0;background:#bbdefb}
+#decor{position:absolute;left:0;top:0;width:1920px;height:1080px;z-index:-1;pointer-events:none}
+
+#barre{height:84px;display:flex;align-items:center;gap:20px;padding:0 28px;background:#2e7d32;color:#fff}
+#barre h1{margin:0;font-size:31px;display:flex;align-items:center;gap:12px;white-space:nowrap}
+#barre h1 svg{width:50px;height:50px}
+.onglets{display:flex;gap:8px;margin-left:12px}
+.onglets button{font:inherit;font-size:21px;padding:10px 15px;border-radius:10px;border:2px solid #81c784;background:#43a047;color:#fff;cursor:pointer;white-space:nowrap}
+.onglets button.on{background:#fff;color:var(--encre);font-weight:700;border-color:#fff}
+#coin{margin-left:auto;font-size:21px;white-space:nowrap}
+#coin b{font-size:28px;color:#fff59d}
+#consigne{height:96px;display:flex;align-items:center;justify-content:center;font-size:44px;font-weight:700;text-align:center;padding:0 130px}
+#consigne .q{color:#b23a00}
+svg#plante{position:absolute;left:40px;top:200px;width:520px;height:660px}
+#gn{position:absolute;left:600px;right:60px;top:300px;height:240px;display:flex;align-items:flex-end;justify-content:center;gap:18px;flex-wrap:nowrap}
+.mot{position:relative;font-size:56px;font-weight:700;padding:14px 20px;background:#fff;border:4px solid #a5d6a7;border-radius:14px;white-space:nowrap;cursor:pointer;touch-action:none;user-select:none}
+.mot.cible{border-color:var(--talbot)}
+.mot.choisi{outline:6px solid var(--talbot);outline-offset:3px}
+.mot.ko{animation:secoue .45s 2;border-color:var(--rouge)}
+.mot .lab{position:absolute;left:50%;top:-74px;transform:translateX(-50%);width:66px;height:66px}
+.mot .nature{position:absolute;left:50%;bottom:-46px;transform:translateX(-50%);font-size:24px;color:#33691e;font-weight:700}
+.mot.noyau{background:#e8f5e9;border-color:var(--tige)}
+.mot.taille{opacity:.25}
+#lecture{position:absolute;left:600px;right:60px;top:220px;text-align:center;font-size:30px;color:#1b5e20;font-style:italic}
+#outils{position:absolute;left:600px;right:60px;top:620px;height:220px;display:flex;gap:30px;justify-content:center;align-items:center}
+.outil{display:flex;flex-direction:column;align-items:center;gap:8px;cursor:grab;touch-action:none;user-select:none;padding:12px 16px;border-radius:16px;background:rgba(255,255,255,.75);border:3px solid #c5e1a5}
+.outil svg{width:90px;height:90px}
+.outil span{font-size:26px;font-weight:700}
+.outil.feuille-adj span{font-size:40px}
+.outil.choisi{outline:6px solid var(--talbot);outline-offset:3px}
+.outil.fane{animation:secoue .45s 2;filter:grayscale(1);opacity:.5}
+#compost{position:absolute;left:600px;right:60px;top:620px;height:200px;display:none;align-items:center;justify-content:center;border:5px dashed #8d6e63;border-radius:20px;background:rgba(255,248,225,.8);font-size:32px;font-weight:700;color:#5d4037}
+.vole{position:fixed;z-index:60;pointer-events:none;opacity:.92;transform-origin:0 0}
+@keyframes secoue{0%,100%{transform:translateX(0)}25%{transform:translateX(-10px)}75%{transform:translateX(10px)}}
+#bas{position:absolute;left:0;right:0;bottom:0;height:120px;display:flex;align-items:center;justify-content:center}
+#verdict{font-size:36px;font-weight:700;text-align:center;max-width:1700px}
+#verdict:not(:empty){background:rgba(255,255,255,.93);padding:10px 28px;border-radius:16px}
+#verdict.ok{color:var(--vert)} #verdict.ko{color:var(--rouge)}
+#indice{position:absolute;right:26px;top:94px;width:82px;height:82px;padding:0;border-radius:50%;font-size:44px;line-height:1;z-index:20;border:2px solid #d4b106;background:#fff8c4;cursor:pointer}
+#bulle{position:absolute;right:124px;top:98px;max-width:660px;background:#fff8c4;border:2px solid #d4b106;border-radius:18px;padding:16px 26px;font-size:28px;display:none;box-shadow:0 6px 18px rgba(0,0,0,.25);z-index:20}
+</style>
+</head>
+<body>
+<div id="scene">
+  <svg id="decor" viewBox="0 0 1920 1080" aria-hidden="true"><defs><linearGradient id="ciel" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#64b5f6"/><stop offset="1" stop-color="#e3f2fd"/></linearGradient><linearGradient id="terre" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8d6e63"/><stop offset="1" stop-color="#5d4037"/></linearGradient></defs><rect x="0" y="84" width="1920" height="770" fill="url(#ciel)"/><g transform="translate(330 210) scale(0.9)" fill="#fff" opacity=".9"><ellipse cx="0" cy="0" rx="70" ry="30"/><ellipse cx="-40" cy="8" rx="44" ry="24"/><ellipse cx="44" cy="8" rx="48" ry="24"/><ellipse cx="6" cy="-20" rx="40" ry="28"/></g><g transform="translate(1420 205) scale(0.8)" fill="#fff" opacity=".9"><ellipse cx="0" cy="0" rx="70" ry="30"/><ellipse cx="-40" cy="8" rx="44" ry="24"/><ellipse cx="44" cy="8" rx="48" ry="24"/><ellipse cx="6" cy="-20" rx="40" ry="28"/></g><path d="M1870 290 L1896 290" stroke="#fdd835" stroke-width="7" stroke-linecap="round"/><path d="M1861 325 L1883 338" stroke="#fdd835" stroke-width="7" stroke-linecap="round"/><path d="M1835 351 L1848 373" stroke="#fdd835" stroke-width="7" stroke-linecap="round"/><path d="M1800 360 L1800 386" stroke="#fdd835" stroke-width="7" stroke-linecap="round"/><path d="M1765 351 L1752 373" stroke="#fdd835" stroke-width="7" stroke-linecap="round"/><path d="M1739 325 L1717 338" stroke="#fdd835" stroke-width="7" stroke-linecap="round"/><path d="M1730 290 L1704 290" stroke="#fdd835" stroke-width="7" stroke-linecap="round"/><path d="M1739 255 L1717 242" stroke="#fdd835" stroke-width="7" stroke-linecap="round"/><path d="M1765 229 L1752 207" stroke="#fdd835" stroke-width="7" stroke-linecap="round"/><path d="M1800 220 L1800 194" stroke="#fdd835" stroke-width="7" stroke-linecap="round"/><path d="M1835 229 L1848 207" stroke="#fdd835" stroke-width="7" stroke-linecap="round"/><path d="M1861 255 L1883 242" stroke="#fdd835" stroke-width="7" stroke-linecap="round"/><circle cx="1800" cy="290" r="56" fill="#ffee58" stroke="#fbc02d" stroke-width="4"/><rect x="0" y="840" width="1920" height="240" fill="url(#terre)"/><ellipse cx="673" cy="918" rx="11" ry="3" fill="#795548"/><ellipse cx="1691" cy="1017" rx="6" ry="5" fill="#4e342e"/><ellipse cx="128" cy="1009" rx="8" ry="3" fill="#795548"/><ellipse cx="898" cy="987" rx="6" ry="4" fill="#795548"/><ellipse cx="1138" cy="988" rx="5" ry="7" fill="#795548"/><ellipse cx="467" cy="1041" rx="5" ry="7" fill="#4e342e"/><ellipse cx="822" cy="892" rx="8" ry="3" fill="#4e342e"/><ellipse cx="1768" cy="914" rx="9" ry="6" fill="#795548"/><ellipse cx="1117" cy="910" rx="9" ry="7" fill="#4e342e"/><ellipse cx="380" cy="906" rx="8" ry="5" fill="#795548"/><ellipse cx="1131" cy="1062" rx="6" ry="7" fill="#795548"/><ellipse cx="1277" cy="932" rx="12" ry="7" fill="#a1887f"/><ellipse cx="1601" cy="960" rx="12" ry="7" fill="#a1887f"/><ellipse cx="750" cy="956" rx="8" ry="4" fill="#4e342e"/><ellipse cx="1607" cy="942" rx="6" ry="7" fill="#a1887f"/><ellipse cx="1085" cy="1006" rx="10" ry="6" fill="#a1887f"/><ellipse cx="1257" cy="898" rx="6" ry="7" fill="#a1887f"/><ellipse cx="347" cy="967" rx="7" ry="6" fill="#a1887f"/><ellipse cx="90" cy="1051" rx="6" ry="7" fill="#4e342e"/><ellipse cx="1626" cy="960" rx="10" ry="5" fill="#4e342e"/><ellipse cx="1027" cy="1028" rx="12" ry="3" fill="#795548"/><ellipse cx="562" cy="1001" rx="6" ry="3" fill="#4e342e"/><ellipse cx="1446" cy="959" rx="12" ry="5" fill="#4e342e"/><ellipse cx="800" cy="1051" rx="10" ry="3" fill="#a1887f"/><ellipse cx="737" cy="923" rx="6" ry="6" fill="#795548"/><ellipse cx="456" cy="953" rx="7" ry="4" fill="#a1887f"/><ellipse cx="810" cy="1007" rx="6" ry="4" fill="#a1887f"/><ellipse cx="832" cy="1020" rx="9" ry="4" fill="#a1887f"/><ellipse cx="1779" cy="1020" rx="9" ry="6" fill="#a1887f"/><ellipse cx="1408" cy="977" rx="8" ry="4" fill="#795548"/><ellipse cx="370" cy="918" rx="8" ry="4" fill="#795548"/><ellipse cx="1003" cy="1030" rx="7" ry="5" fill="#a1887f"/><ellipse cx="18" cy="917" rx="11" ry="7" fill="#a1887f"/><ellipse cx="1258" cy="1024" rx="10" ry="4" fill="#4e342e"/><ellipse cx="1769" cy="1011" rx="5" ry="6" fill="#4e342e"/><ellipse cx="1644" cy="1023" rx="11" ry="6" fill="#a1887f"/><ellipse cx="817" cy="906" rx="12" ry="6" fill="#795548"/><ellipse cx="400" cy="897" rx="8" ry="6" fill="#795548"/><ellipse cx="235" cy="967" rx="5" ry="3" fill="#795548"/><ellipse cx="1170" cy="918" rx="6" ry="5" fill="#4e342e"/><ellipse cx="62" cy="898" rx="8" ry="7" fill="#a1887f"/><ellipse cx="314" cy="1042" rx="9" ry="5" fill="#4e342e"/><ellipse cx="755" cy="1001" rx="6" ry="3" fill="#a1887f"/><ellipse cx="964" cy="1002" rx="12" ry="5" fill="#795548"/><ellipse cx="305" cy="906" rx="10" ry="5" fill="#a1887f"/><ellipse cx="1707" cy="1057" rx="7" ry="7" fill="#795548"/><ellipse cx="430" cy="1015" rx="10" ry="4" fill="#4e342e"/><ellipse cx="1122" cy="886" rx="9" ry="3" fill="#4e342e"/><ellipse cx="1741" cy="946" rx="10" ry="4" fill="#a1887f"/><ellipse cx="1590" cy="937" rx="10" ry="4" fill="#4e342e"/><ellipse cx="1671" cy="929" rx="8" ry="6" fill="#4e342e"/><ellipse cx="1655" cy="938" rx="8" ry="7" fill="#a1887f"/><ellipse cx="738" cy="1067" rx="5" ry="3" fill="#a1887f"/><ellipse cx="977" cy="946" rx="8" ry="7" fill="#a1887f"/><ellipse cx="925" cy="1065" rx="10" ry="5" fill="#795548"/><ellipse cx="461" cy="906" rx="8" ry="6" fill="#795548"/><ellipse cx="701" cy="932" rx="12" ry="7" fill="#4e342e"/><ellipse cx="1731" cy="880" rx="12" ry="5" fill="#4e342e"/><ellipse cx="183" cy="1049" rx="6" ry="6" fill="#4e342e"/><ellipse cx="1546" cy="931" rx="12" ry="4" fill="#a1887f"/><ellipse cx="1626" cy="1042" rx="10" ry="3" fill="#4e342e"/><ellipse cx="820" cy="998" rx="11" ry="3" fill="#4e342e"/><ellipse cx="335" cy="923" rx="7" ry="3" fill="#795548"/><ellipse cx="1219" cy="999" rx="7" ry="7" fill="#4e342e"/><ellipse cx="981" cy="1048" rx="10" ry="4" fill="#4e342e"/><ellipse cx="1132" cy="913" rx="5" ry="3" fill="#4e342e"/><ellipse cx="1340" cy="906" rx="7" ry="6" fill="#795548"/><ellipse cx="1701" cy="934" rx="5" ry="5" fill="#795548"/><ellipse cx="609" cy="1008" rx="8" ry="7" fill="#a1887f"/><ellipse cx="541" cy="1019" rx="11" ry="4" fill="#795548"/><rect x="0" y="834" width="1920" height="14" fill="#7cb342"/><path d="M8 846l6 -16 4 16M20 846l4 -12 5 12" stroke="#558b2f" stroke-width="4" fill="none" stroke-linecap="round"/><path d="M54 846l6 -16 4 16M66 846l4 -12 5 12" stroke="#558b2f" stroke-width="4" fill="none" stroke-linecap="round"/><path d="M100 846l6 -16 4 16M112 846l4 -12 5 12" stroke="#558b2f" stroke-width="4" fill="none" stroke-linecap="round"/><path d="M146 846l6 -16 4 16M158 846l4 -12 5 12" stroke="#558b2f" stroke-width="4" fill="none" stroke-linecap="round"/><path d="M192 846l6 -16 4 16M204 846l4 -12 5 12" stroke="#558b2f" stroke-width="4" fill="none" stroke-linecap="round"/><path d="M238 846l6 -16 4 16M250 846l4 -12 5 12" stroke="#558b2f" stroke-width="4" fill="none" stroke-linecap="round"/><path d="M284 846l6 -16 4 16M296 846l4 -12 5 12" stroke="#558b2f" stroke-width="4" fill="none" stroke-linecap="round"/><path d="M330 846l6 -16 4 16M342 846l4 -12 5 12" stroke="#558b2f" stroke-width="4" fill="none" stroke-linecap="round"/><path d="M376 846l6 -16 4 16M388 846l4 -12 5 12" stroke="#558b2f" stroke-width="4" fill="none" stroke-linecap="round"/><path d="M422 846l6 -16 4 16M434 846l4 -12 5 12" stroke="#558b2f" stroke-width="4" fill="none" stroke-linecap="round"/><path d="M468 846l6 -16 4 16M480 846l4 -12 5 12" stroke="#558b2f" stroke-width="4" fill="none" stroke-linecap="round"/><path d="M514 846l6 -16 4 16M526 846l4 -12 5 12" stroke="#558b2f" stroke-width="4" fill="none" stroke-linecap="round"/><path d="M560 846l6 -16 4 16M572 846l4 -12 5 12" stroke="#558b2f" stroke-width="4" fill="none" stroke-linecap="round"/><path d="M606 846l6 -16 4 16M618 846l4 -12 5 12" stroke="#558b2f" stroke-width="4" fill="none" stroke-linecap="round"/><path d="M652 846l6 -16 4 16M664 846l4 -12 5 12" stroke="#558b2f" stroke-width="4" fill="none" stroke-linecap="round"/><path d="M698 846l6 -16 4 16M710 846l4 -12 5 12" stroke="#558b2f" stroke-width="4" fill="none" stroke-linecap="round"/><path d="M744 846l6 -16 4 16M756 846l4 -12 5 12" stroke="#558b2f" stroke-width="4" fill="none" stroke-linecap="round"/><path d="M790 846l6 -16 4 16M802 846l4 -12 5 12" stroke="#558b2f" stroke-width="4" fill="none" stroke-linecap="round"/><path d="M836 846l6 -16 4 16M848 846l4 -12 5 12" stroke="#558b2f" stroke-width="4" fill="none" stroke-linecap="round"/><path d="M882 846l6 -16 4 16M894 846l4 -12 5 12" stroke="#558b2f" stroke-width="4" fill="none" stroke-linecap="round"/><path d="M928 846l6 -16 4 16M940 846l4 -12 5 12" stroke="#558b2f" stroke-width="4" fill="none" stroke-linecap="round"/><path d="M974 846l6 -16 4 16M986 846l4 -12 5 12" stroke="#558b2f" stroke-width="4" fill="none" stroke-linecap="round"/><path d="M1020 846l6 -16 4 16M1032 846l4 -12 5 12" stroke="#558b2f" stroke-width="4" fill="none" stroke-linecap="round"/><path d="M1066 846l6 -16 4 16M1078 846l4 -12 5 12" stroke="#558b2f" stroke-width="4" fill="none" stroke-linecap="round"/><path d="M1112 846l6 -16 4 16M1124 846l4 -12 5 12" stroke="#558b2f" stroke-width="4" fill="none" stroke-linecap="round"/><path d="M1158 846l6 -16 4 16M1170 846l4 -12 5 12" stroke="#558b2f" stroke-width="4" fill="none" stroke-linecap="round"/><path d="M1204 846l6 -16 4 16M1216 846l4 -12 5 12" stroke="#558b2f" stroke-width="4" fill="none" stroke-linecap="round"/><path d="M1250 846l6 -16 4 16M1262 846l4 -12 5 12" stroke="#558b2f" stroke-width="4" fill="none" stroke-linecap="round"/><path d="M1296 846l6 -16 4 16M1308 846l4 -12 5 12" stroke="#558b2f" stroke-width="4" fill="none" stroke-linecap="round"/><path d="M1342 846l6 -16 4 16M1354 846l4 -12 5 12" stroke="#558b2f" stroke-width="4" fill="none" stroke-linecap="round"/><path d="M1388 846l6 -16 4 16M1400 846l4 -12 5 12" stroke="#558b2f" stroke-width="4" fill="none" stroke-linecap="round"/><path d="M1434 846l6 -16 4 16M1446 846l4 -12 5 12" stroke="#558b2f" stroke-width="4" fill="none" stroke-linecap="round"/><path d="M1480 846l6 -16 4 16M1492 846l4 -12 5 12" stroke="#558b2f" stroke-width="4" fill="none" stroke-linecap="round"/><path d="M1526 846l6 -16 4 16M1538 846l4 -12 5 12" stroke="#558b2f" stroke-width="4" fill="none" stroke-linecap="round"/><path d="M1572 846l6 -16 4 16M1584 846l4 -12 5 12" stroke="#558b2f" stroke-width="4" fill="none" stroke-linecap="round"/><path d="M1618 846l6 -16 4 16M1630 846l4 -12 5 12" stroke="#558b2f" stroke-width="4" fill="none" stroke-linecap="round"/><path d="M1664 846l6 -16 4 16M1676 846l4 -12 5 12" stroke="#558b2f" stroke-width="4" fill="none" stroke-linecap="round"/><path d="M1710 846l6 -16 4 16M1722 846l4 -12 5 12" stroke="#558b2f" stroke-width="4" fill="none" stroke-linecap="round"/><path d="M1756 846l6 -16 4 16M1768 846l4 -12 5 12" stroke="#558b2f" stroke-width="4" fill="none" stroke-linecap="round"/><path d="M1802 846l6 -16 4 16M1814 846l4 -12 5 12" stroke="#558b2f" stroke-width="4" fill="none" stroke-linecap="round"/><path d="M1848 846l6 -16 4 16M1860 846l4 -12 5 12" stroke="#558b2f" stroke-width="4" fill="none" stroke-linecap="round"/><path d="M1894 846l6 -16 4 16M1906 846l4 -12 5 12" stroke="#558b2f" stroke-width="4" fill="none" stroke-linecap="round"/></svg>
+  <div id="barre">
+    <h1><svg viewBox="0 0 64 64"><path d="M18 44h28l-4 16H22z" fill="#ff8a65" stroke="#fff" stroke-width="2"/><path d="M32 44V14" stroke="#fff" stroke-width="5"/><ellipse cx="22" cy="24" rx="10" ry="5" fill="#c5e1a5"/><ellipse cx="42" cy="18" rx="10" ry="5" fill="#c5e1a5"/></svg>Le groupe nominal qui grandit</h1>
+    <div class="onglets"><button data-o="noyau">Le noyau</button><button data-o="dna">D, N, Adj</button><button data-o="adjectif">J'accroche un adjectif</button><button data-o="cdn">Le complément du nom</button><button data-o="defi">Défi</button></div>
+    <div id="coin">Plantes réussies : <b id="score">0</b> · 🏆 Record : <b id="record">0</b></div>
+  </div>
+  <div id="consigne"></div>
+  <svg id="plante" viewBox="0 0 520 660"></svg>
+  <div id="lecture"></div>
+  <div id="gn"></div>
+  <div id="outils"></div>
+  <div id="compost">🗑 Le compost : glisse ici ce qu'on peut tailler</div>
+  <div id="bulle"></div>
+  <button id="indice" title="Indice">💡</button>
+  <div id="bas"><div id="verdict"></div></div>
+</div>
+<script>
+"use strict";
+// ---------- les groupes nominaux : D déterminant · N nom noyau · A adjectif · C complément du nom ; « | » sépare les blocs ----------
+const L = {
+  noyau: [
+    ["D:un|A:grand|N:arbre|A:vert", "manuel P2 p. 65, ex. 1 d"], ["D:de|A:vieux|N:livres|A:poussiéreux", "manuel P2 p. 65, ex. 1 e"],
+    ["D:cette|A:belle|N:lumière|A:dorée", "manuel P2 p. 65, ex. 1 f"], ["D:la|A:longue|N:route|A:sinueuse", "manuel P2 p. 65, ex. 1 g"],
+    ["D:ce|A:grand|N:aigle|A:noir", "manuel P2 p. 65, ex. 2 d (séance 📅 4)"], ["D:le|A:jeune|N:étudiant|A:brillant", "manuel P2 p. 65, ex. 2 e"],
+    ["D:un|A:vieux|N:chêne|A:majestueux", "manuel P2 p. 65, ex. 3"], ["D:une|A:petite|N:table|A:ronde", "manuel P2 p. 65, ex. 3"],
+    ["D:un|A:adorable|N:chiot|A:espiègle", "manuel P2 p. 65, ex. 3"], ["D:les|N:lumières|C:de ma salle de bain", "manuel P2 p. 79, ex. 3 b"],
+    ["D:le|N:chat|C:de mes cousins", "manuel P2 p. 79, ex. 3 a"], ["D:le|A:pauvre|N:bûcheron|C:en fièvre", "manuel P2 p. 78, ex. 1 c"]
+  ],
+  dna: [
+    ["D:mon|A:petit|N:frère", "manuel P2 p. 65, ex. 1 c (séance 📅 4)"], ["D:cette|N:sortie|A:scolaire", "manuel P2 p. 65, ex. 1 b"],
+    ["D:un|A:grand|N:arbre|A:vert", "manuel P2 p. 65, ex. 1 d"], ["D:cette|A:belle|N:lumière|A:dorée", "manuel P2 p. 65, ex. 1 f"],
+    ["D:quelle|A:belle|N:histoire", "manuel P2 p. 65, ex. 1 h"], ["D:un|N:pays|A:fascinant", "manuel P2 p. 73, ex. 1"],
+    ["D:ses|N:déserts|A:immenses", "manuel P2 p. 73, ex. 1"], ["D:les|N:pyramides|A:imposantes", "manuel P2 p. 73, ex. 1"],
+    ["D:de|A:nombreux|N:touristes|A:curieux", "manuel P2 p. 73, ex. 1"], ["D:des|N:épices|A:colorées", "manuel P2 p. 73, ex. 1"],
+    ["D:une|A:belle|N:robe|A:rouge", "manuel P2 p. 65, ex. 2 b"]
+  ],
+  // J'accroche un adjectif : le GN, l'adjectif (masc. sing., fém. sing., masc. plur., fém. plur.), avant ou après le nom, le genre et le nombre du nom
+  adjectif: [
+    ["D:ma|N:bague", ["doré", "dorée", "dorés", "dorées"], "apres", "fs", "manuel P2 p. 66, ex. 1 b (séance 📅 5)"],
+    ["D:des|N:chênes", ["feuillu", "feuillue", "feuillus", "feuillues"], "apres", "mp", "séance 📅 5 (Je vérifie) ; adjectif de moi (« des grands chênes » s'écrit plutôt « de grands chênes »)"],
+    ["D:un|N:écolier", ["sage", "sage", "sages", "sages", "joyeux", "joyeuse", "joyeux", "joyeuses"], "apres", "ms", "manuel P2 p. 66, ex. 1 a (adjectif de moi)"],
+    ["D:cette|N:flûte", ["léger", "légère", "légers", "légères"], "apres", "fs", "manuel P2 p. 66, ex. 1 c (adjectif de moi)"],
+    ["D:la|N:pochette", ["bleu", "bleue", "bleus", "bleues"], "apres", "fs", "manuel P2 p. 66, ex. 1 e (adjectif de moi)"],
+    ["D:la|N:rivière", ["profond", "profonde", "profonds", "profondes"], "apres", "fs", "manuel P2 p. 66, ex. 2 a (adjectif de moi)"],
+    ["D:la|N:lionne", ["affamé", "affamée", "affamés", "affamées"], "apres", "fs", "manuel P2 p. 66, ex. 2 c (adjectif de moi)"],
+    ["D:un|N:canapé", ["confortable", "confortable", "confortables", "confortables", "neuf", "neuve", "neufs", "neuves"], "apres", "ms", "manuel P2 p. 66, ex. 2 d (adjectif de moi)"],
+    ["D:mes|N:livres", ["ancien", "ancienne", "anciens", "anciennes"], "apres", "mp", "manuel P2 p. 66, ex. 2 e (adjectif de moi)"],
+    ["D:les|N:montagnes", ["enneigé", "enneigée", "enneigés", "enneigées"], "apres", "fp", "manuel P2 p. 73, ex. 2 (adjectif de moi)"],
+    ["D:les|N:châteaux", ["ancien", "ancienne", "anciens", "anciennes"], "apres", "mp", "manuel P2 p. 73, ex. 2 (adjectif de moi)"],
+    ["D:sa|N:table", ["petit", "petite", "petits", "petites"], "avant", "fs", "séance 📅 5 (sa petite table vieille)"]
+  ],
+  cdn: [
+    ["D:un|N:chat|C:de gouttière", "manuel P2 p. 65, ex. 1 a (CM2)"], ["D:cette|N:lune|A:ronde", "manuel P2 p. 65, ex. 1 b (CM2)"],
+    ["D:le|N:livre|C:d'histoire", "manuel P2 p. 65, ex. 1 c (CM2) ; séance 📅 4"], ["D:une|A:bonne|N:soupe|A:salée", "manuel P2 p. 65, ex. 1 d (CM2)"],
+    ["D:un|N:stylo|C:en or", "manuel P2 p. 65, ex. 1 e (CM2)"], ["D:une|N:machine|C:à laver", "manuel P2 p. 65, ex. 1 f (CM2)"],
+    ["D:ton|N:idée|C:de sortie", "manuel P2 p. 65, ex. 1 h (CM2)"], ["D:ces|A:jolies|N:lunettes|C:de soleil", "manuel P2 p. 65, ex. 2 d (CM2)"],
+    ["D:cette|A:large|N:allée|C:de chênes", "manuel P2 p. 65, ex. 2 e (CM2)"], ["D:le|N:pouvoir|C:des fleurs", "manuel P2 p. 72, ex. 1 a"],
+    ["D:un|N:hibou|C:sans gêne", "manuel P2 p. 78, ex. 1 b"], ["D:le|A:pauvre|N:bûcheron|C:en fièvre", "manuel P2 p. 78, ex. 1 c"],
+    ["D:des|N:griffes|C:en bronze", "manuel P2 p. 84, ex. 1 b"]
+  ],
+  defi: [
+    ["D:le|A:jeune|N:étudiant|A:brillant", "manuel P2 p. 65, ex. 2 e"], ["D:une|A:petite|N:table|A:ronde", "manuel P2 p. 65, ex. 3"],
+    ["D:les|N:lumières|C:de ma salle de bain", "manuel P2 p. 79, ex. 3 b"], ["D:cette|A:large|N:allée|C:de chênes", "manuel P2 p. 65, ex. 2 e (CM2)"],
+    ["D:le|A:pauvre|N:bûcheron|C:en fièvre", "manuel P2 p. 78, ex. 1 c"], ["D:ses|A:ignobles|N:cheveux|C:de serpent", "manuel P2 p. 84, ex. 1 c"],
+    ["D:un|A:vieux|N:chêne|A:majestueux", "manuel P2 p. 65, ex. 3"], ["D:une|A:belle|N:robe|A:rouge", "manuel P2 p. 65, ex. 2 b"],
+    ["D:le|A:petit|N:garçon|C:aux cheveux roux", "manuel P2 p. 79, ex. 1 d (CM2)"], ["D:tes|N:chaussures|C:de sport", "manuel P2 p. 79, ex. 1 c (CM2)"],
+    ["D:la|N:lampe|C:de mon frère", "manuel P2 p. 79, ex. 1 a (CM2)"], ["D:une|A:belle|N:nappe|A:blanche", "manuel P2 p. 65, ex. 3"]
+  ]
+};
+const NATURE = { D: "déterminant", N: "nom", A: "adjectif", C: "complément du nom" };
+const ICONE = {   // le pot, la tige, la feuille, la branche
+  D: '<svg viewBox="0 0 64 64"><path d="M12 22h40l-6 34H18z" fill="#d84315"/><rect x="8" y="16" width="48" height="10" rx="3" fill="#bf360c"/></svg>',
+  N: '<svg viewBox="0 0 64 64"><path d="M32 60V8" stroke="#388e3c" stroke-width="8" stroke-linecap="round"/><circle cx="32" cy="8" r="6" fill="#81c784"/></svg>',
+  A: '<svg viewBox="0 0 64 64"><path d="M8 40C20 10 50 8 58 12 54 30 36 52 8 40z" fill="#66bb6a" stroke="#2e7d32" stroke-width="3"/><path d="M10 40L50 16" stroke="#2e7d32" stroke-width="3"/></svg>',
+  C: '<svg viewBox="0 0 64 64"><path d="M6 50C24 44 40 30 58 10" stroke="#8d6e63" stroke-width="7" fill="none" stroke-linecap="round"/><ellipse cx="34" cy="26" rx="9" ry="5" fill="#81c784" transform="rotate(-40 34 26)"/><ellipse cx="50" cy="16" rx="8" ry="4" fill="#81c784" transform="rotate(-30 50 16)"/></svg>',
+  arrosoir: '<svg viewBox="0 0 64 64"><path d="M14 26h28v28H14z" fill="#4fc3f7" stroke="#0277bd" stroke-width="3"/><path d="M42 32l16-12" stroke="#0277bd" stroke-width="5"/><circle cx="58" cy="20" r="4" fill="#0277bd"/><path d="M18 26c0-12 20-12 20 0" stroke="#0277bd" stroke-width="4" fill="none"/></svg>'
+};
+const lire = s => s.split("|").map((b, i) => ({ id: "b" + i, r: b[0], t: b.slice(2) }));
+const etat = { o: "noyau", i: 0, score: 0, blocs: [], lab: {}, taille: {}, fini: false };
+window.SERRE = etat;
+const $ = id => document.getElementById(id);
+const mem = { lire(k) { try { return +localStorage.getItem(k) || 0; } catch (e) { return 0; } }, ecrire(k, v) { try { localStorage.setItem(k, v); } catch (e) {} } };
+const cleRecord = () => "serre-record-" + etat.o;
+function afficheScore() { $("score").textContent = etat.score; $("record").textContent = mem.lire(cleRecord()); }
+function marque() { etat.score++; if (etat.score > mem.lire(cleRecord())) mem.ecrire(cleRecord(), etat.score); afficheScore(); }
+function verdict(t, cls) { const v = $("verdict"); v.textContent = t; v.className = cls || ""; }
+function consigne(h) { $("consigne").innerHTML = "<span>" + h + "</span>"; }
+function bulle(t) { const b = $("bulle"); b.textContent = t; b.style.display = "block"; clearTimeout(bulle.t); bulle.t = setTimeout(() => b.style.display = "none", 8000); }
+let minuteur = 0; const plusTard = (f, ms) => { clearTimeout(minuteur); minuteur = setTimeout(f, ms || 2000); };
+const ex = () => L[etat.o][etat.i % L[etat.o].length];
+const echelle = () => +($("scene").dataset.ech || 1);
+const gnTexte = bs => bs.map(b => b.t).join(" ").replace(/' /g, "'").replace(/^de ([aeéèiouyh])/i, "d'$1");
+
+// ---------- la plante : un pot, une tige, une feuille par adjectif, une branche par complément du nom ----------
+function dessinePlante(nA, nC, avecN, avecD, tombe) {
+  let s = "";
+  const h = 200 + (nA + nC) * 70, haut = 560 - h;
+  if (avecD !== false) s += '<path d="M150 560h220l-30 90H180z" fill="#d84315"/><ellipse cx="260" cy="541" rx="116" ry="10" fill="#4e342e"/><rect x="134" y="540" width="252" height="34" rx="8" fill="#bf360c"/>';
+  if (avecN !== false) {
+    s += '<path d="M260 548C' + (tombe ? '330 520 420 540 470 600' : '262 460 256 380 260 ' + haut) + '" stroke="#388e3c" stroke-width="16" fill="none" stroke-linecap="round"/>';
+    if (!tombe) { let k = 0;
+      for (let j = 0; j < nA + nC; j++) {
+        const y = 520 - (j + 1) * (h - 60) / (nA + nC + .5), cote = j % 2 ? 1 : -1;
+        if (j < nA) s += '<path d="M260 ' + y + 'C' + (260 + cote * 60) + ' ' + (y - 70) + ' ' + (260 + cote * 150) + ' ' + (y - 50) + ' ' + (260 + cote * 170) + ' ' + (y - 40) + 'C' + (260 + cote * 130) + ' ' + (y + 10) + ' ' + (260 + cote * 60) + ' ' + (y + 20) + ' 260 ' + y + 'z" fill="#66bb6a" stroke="#2e7d32" stroke-width="3"/>';
+        else { s += '<path d="M260 ' + y + 'Q' + (260 + cote * 90) + ' ' + (y - 30) + ' ' + (260 + cote * 200) + ' ' + (y - 90) + '" stroke="#8d6e63" stroke-width="10" fill="none" stroke-linecap="round"/>';
+          s += '<ellipse cx="' + (260 + cote * 150) + '" cy="' + (y - 68) + '" rx="22" ry="11" fill="#81c784"/><ellipse cx="' + (260 + cote * 200) + '" cy="' + (y - 92) + '" rx="20" ry="10" fill="#81c784"/>'; }
+        k++;
+      }
+      s += '<circle cx="260" cy="' + haut + '" r="14" fill="#81c784"/>';
+    }
+  }
+  $("plante").innerHTML = s;
+}
+function plante() {   // la plante dit ce qui est trouvé (ou présent) dans le groupe nominal
+  const bs = etat.blocs.filter(b => !etat.taille[b.id]);
+  const vu = etat.o === "noyau" ? (etat.fini ? bs : bs.filter(b => b.r !== "A" && b.r !== "C")) : bs;
+  dessinePlante(vu.filter(b => b.r === "A").length, vu.filter(b => b.r === "C").length, true, true, false);
+}
+// ---------- un groupe nominal ----------
+function nouvel() {
+  clearTimeout(minuteur); verdict(""); etat.fini = false; etat.lab = {}; etat.taille = {};
+  const E = ex(); etat.blocs = lire(E[0]);
+  $("compost").style.display = etat.o === "defi" ? "flex" : "none"; $("outils").style.display = etat.o === "defi" ? "none" : "flex";
+  const O = $("outils");
+  if (etat.o === "noyau") O.innerHTML = outil("arrosoir", "L'arrosoir", ICONE.arrosoir);
+  else if (etat.o === "dna") O.innerHTML = outil("D", "Déterminant (le pot)", ICONE.D) + outil("N", "Nom (la tige)", ICONE.N) + outil("A", "Adjectif (la feuille)", ICONE.A);
+  else if (etat.o === "cdn") { O.innerHTML = outil("A", "Adjectif (la feuille)", ICONE.A) + outil("C", "Complément du nom (la branche)", ICONE.C); etat.blocs.forEach(b => { if (b.r === "D" || b.r === "N") etat.lab[b.id] = b.r; }); }
+  else if (etat.o === "adjectif") { const F = E[1], formes = [...new Set(F)]; O.innerHTML = formes.sort(() => Math.random() - .5).map(f => outil("forme:" + f, f, ICONE.A, "feuille-adj")).join(""); }
+  const c = { noyau: "Arrose le <span class=\"q\">nom noyau</span>", dna: "Pose déterminant, nom ou adjectif sur chaque mot", adjectif: "Accroche la feuille qui <span class=\"q\">s'accorde</span> avec le nom", cdn: "Adjectif ou complément du nom ? Pose la feuille ou la branche", defi: "Taille la plante : garde un <span class=\"q\">groupe nominal minimal</span>" };
+  consigne(c[etat.o]); dessiner();
+}
+function outil(k, t, ic, cl) { return '<div class="outil ' + (cl || "") + '" data-k="' + k + '">' + ic + '<span>' + t + '</span></div>'; }
+function dessiner() {
+  const bs = etat.blocs.filter(b => !etat.taille[b.id]);
+  $("gn").innerHTML = bs.map(b => '<div class="mot' + (etat.o === "noyau" && etat.fini && b.r === "N" ? " noyau" : "") + '" data-id="' + b.id + '">' + b.t
+    + (etat.lab[b.id] ? '<div class="lab">' + ICONE[etat.lab[b.id]] + '</div><div class="nature">' + NATURE[etat.lab[b.id]] + '</div>' : "") + '</div>').join("");
+  $("lecture").textContent = gnTexte(bs);
+  const w = $("gn").scrollWidth; $("gn").style.scale = w > 1260 ? String(1260 / w) : "1";
+  plante();
+}
+// ---------- les gestes ----------
+let tient = null, choix = null;
+const source = el => el && el.closest && el.closest(etat.o === "defi" ? ".mot" : ".outil");
+function choisir(e) { if (choix) choix.classList.remove("choisi"); choix = e; if (e) e.classList.add("choisi"); }
+document.addEventListener("pointerdown", ev => { const s = source(ev.target); if (!s || etat.fini) return; ev.preventDefault(); tient = { el: s, x: ev.clientX, y: ev.clientY, vole: null }; });
+document.addEventListener("pointermove", ev => {
+  if (!tient) return;
+  if (!tient.vole && Math.hypot(ev.clientX - tient.x, ev.clientY - tient.y) > 12) {
+    const r = tient.el.getBoundingClientRect(), v = tient.el.cloneNode(true); v.classList.add("vole"); v.classList.remove("choisi");
+    v.style.transform = "scale(" + (r.width / tient.el.offsetWidth) + ")"; document.body.appendChild(v); tient.vole = v; tient.dx = ev.clientX - r.left; tient.dy = ev.clientY - r.top; choisir(null);
+  }
+  if (tient.vole) { tient.vole.style.left = (ev.clientX - tient.dx) + "px"; tient.vole.style.top = (ev.clientY - tient.dy) + "px"; }
+});
+document.addEventListener("pointerup", ev => {
+  const t = tient; tient = null;
+  if (t && t.vole) { t.vole.remove(); return deposer(t.el, document.elementFromPoint(ev.clientX, ev.clientY)); }
+  if (t) { choisir(choix === t.el ? null : t.el); return; }
+  if (choix) { const c = choix; choisir(null); deposer(c, ev.target); }
+});
+function deposer(src, cible) {
+  if (!cible || etat.fini) return;
+  if (etat.o === "defi") { if (cible.closest("#compost")) tailler(src.dataset.id); return; }
+  const k = src.dataset.k, m = cible.closest(".mot");
+  if (etat.o === "adjectif") { if (cible.closest("#plante") || cible.closest("#gn") || m) accroche(k.slice(6), src); return; }
+  if (!m) return;
+  const b = etat.blocs.find(x => x.id === m.dataset.id);
+  if (etat.o === "noyau") return arroser(b, m);
+  return etiqueter(b, k, m);
+}
+const non = (m, msg) => { verdict(msg, "ko"); if (m) { m.classList.add("ko"); setTimeout(() => m.classList.remove("ko"), 1000); } };
+// ---------- les actions ----------
+function arroser(b, m) {
+  if (b.r !== "N") {
+    const sans = gnTexte(etat.blocs.filter(x => x.id !== b.id));
+    return non(m, b.r === "D" ? "🤪 « " + b.t + " » est le pot : un déterminant, pas le nom." : "🤪 Sans « " + b.t + " », il reste « " + sans + " » : ce n'est pas le noyau.");
+  }
+  etat.fini = true; dessiner(); marque();
+  verdict("✅ « " + b.t + " » est le nom noyau : tout le groupe nominal pousse autour de lui.", "ok"); suite();
+}
+function etiqueter(b, k, m) {
+  if (etat.lab[b.id]) return;
+  if (b.r !== k) return non(m, etat.o === "cdn" ? (k === "A" ? "🤪 « " + b.t + " » commence par une préposition : c'est une branche." : "🤪 « " + b.t + " » est un seul mot qui s'accorde avec le nom : c'est une feuille.") : "🤪 « " + b.t + " » n'est pas " + (k === "A" ? "un adjectif" : k === "N" ? "un nom" : "un déterminant") + ".");
+  etat.lab[b.id] = k; verdict(""); dessiner();
+  if (etat.blocs.every(x => etat.lab[x.id])) { etat.fini = true; marque(); verdict("✅ Chaque mot a sa nature.", "ok"); suite(); }
+}
+function accroche(forme, el) {
+  const E = ex(), F = E[1], col = { ms: 0, fs: 1, mp: 2, fp: 3 }[E[3]];
+  const bonnes = []; for (let j = col; j < F.length; j += 4) bonnes.push(F[j]);
+  const N = etat.blocs.find(b => b.r === "N");
+  if (!bonnes.includes(forme)) { el.classList.add("fane"); setTimeout(() => el.classList.remove("fane"), 1000); return non(null, "🤪 La feuille fane : « " + forme + " » ne s'accorde pas avec « " + N.t + " »."); }
+  const A = { id: "adj", r: "A", t: forme }, k = etat.blocs.indexOf(N);
+  etat.blocs.splice(E[2] === "avant" ? k : k + 1, 0, A);
+  etat.fini = true; dessiner(); marque();
+  verdict("✅ « " + gnTexte(etat.blocs) + " » : l'adjectif s'accorde avec le nom.", "ok"); suite();
+}
+function tailler(id) {
+  const b = etat.blocs.find(x => x.id === id), m = document.querySelector('.mot[data-id="' + id + '"]');
+  if (b.r === "N" || b.r === "D") { dessinePlante(0, 0, b.r !== "N", b.r !== "D", b.r === "N"); setTimeout(plante, 1200);
+    return non(m, b.r === "N" ? "🤪 Sans la tige, la plante tombe : sans le nom noyau, plus de groupe nominal." : "🤪 Sans le pot, la plante ne tient pas : il faut le déterminant."); }
+  etat.taille[id] = true; verdict(""); dessiner();
+  if (etat.blocs.every(x => etat.taille[x.id] || x.r === "N" || x.r === "D")) { etat.fini = true; marque(); verdict("✅ « " + gnTexte(etat.blocs.filter(x => !etat.taille[x.id])) + " » : le groupe nominal minimal, un déterminant et un nom.", "ok"); suite(); }
+}
+function suite() { consigne("Bravo !"); plusTard(() => { etat.i++; nouvel(); }, 2400); }
+// l'indice donne la méthode de la classe, jamais la réponse
+$("indice").onclick = () => {
+  const c = {
+    noyau: "J'enlève les mots un par un : si le groupe nominal reste un groupe nominal, ce n'était pas le noyau. Le nom noyau, on ne peut pas l'enlever ; on peut mettre « un » ou « le » devant.",
+    dna: "Le déterminant est devant le nom (un, le, ce, mon…). Le nom : je peux mettre « un » ou « le » devant. L'adjectif dit comment est le nom, et il s'accorde avec lui.",
+    adjectif: "Je dis le genre et le nombre du nom (masculin ou féminin, singulier ou pluriel), puis je choisis la forme de l'adjectif qui va avec.",
+    cdn: "L'adjectif est un seul mot qui s'accorde avec le nom. Le complément du nom commence par une préposition (de, à, en, sans…) et ne s'accorde pas.",
+    defi: "Je peux enlever les adjectifs et les compléments du nom : il reste un groupe nominal. Le déterminant et le nom noyau restent toujours."
+  };
+  bulle(c[etat.o]);
+};
+// ---------- démarrer ----------
+function ouvre(o) {
+  etat.o = o; etat.i = 0; etat.score = 0; choisir(null);
+  document.querySelectorAll(".onglets button").forEach(b => b.classList.toggle("on", b.dataset.o === o));
+  history.replaceState(null, "", "#" + o);
+  afficheScore(); $("bulle").style.display = "none"; nouvel();
+}
+document.querySelectorAll(".onglets button").forEach(b => b.onclick = () => ouvre(b.dataset.o));
+function ajuste() {
+  const e = Math.min(innerWidth / 1920, innerHeight / 1080), s = $("scene");
+  s.style.transform = "scale(" + e + ")"; s.style.left = ((innerWidth - 1920 * e) / 2) + "px"; s.style.top = ((innerHeight - 1080 * e) / 2) + "px"; s.dataset.ech = e;
+}
+addEventListener("resize", ajuste); ajuste();
+function depuisLien() { const m = location.hash.slice(1); ouvre(L[m] ? m : "noyau"); }
+addEventListener("hashchange", depuisLien);
+depuisLien();
+window.SERRE_API = { L, lire, ex };
+</script>
+</body>
+</html>

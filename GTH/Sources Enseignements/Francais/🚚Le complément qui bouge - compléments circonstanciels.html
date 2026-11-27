@@ -1,0 +1,319 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Le complément qui bouge</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect x='4' y='22' width='38' height='20' fill='%23ef6c00'/%3E%3Crect x='42' y='26' width='16' height='16' rx='3' fill='%23c62828'/%3E%3Ccircle cx='16' cy='46' r='6'/%3E%3Ccircle cx='50' cy='46' r='6'/%3E%3C/svg%3E">
+<!--
+  🚚 Le complément qui bouge — le complément circonstanciel, P2 📅 6 et 7 (GTH v2 : donnees/seances/francais/fr-s6-grammaire.js, fr-s7-grammaire.js).
+  Maquette validée par Karim le 28/10 (Rapports/Jeux de la P2 — ce qui existe, ce qui manque.md, C n° 3), avec un changement : les groupes
+  de mots sont tous des caisses pareilles sur le plateau du camion (et non des remorques reconnaissables), sinon l'écran donnerait la réponse.
+  Termes et tests du guide Eduscol « Terminologie grammaticale » (p. 12-18 et 87) : phrase = groupe sujet + groupe verbal (+ groupe circonstanciel) ;
+  le complément circonstanciel se supprime et se déplace ; le complément du verbe (« à Paris » dans « Elle va à Paris ») ne bouge pas.
+  Univers : le camion livre la phrase. Les caisses qu'on peut décharger (le parking) ou porter à l'autre bout du plateau sans que la phrase
+  tombe en panne sont les compléments circonstanciels. La phrase se relit au-dessus du camion à chaque geste ; une phrase cassée s'écrit en rouge.
+  Gestes : glisser une caisse (ou la toucher, puis toucher sa place) : vers le parking, au début ou à la fin du plateau, vers un dépôt.
+  Onglets : J'enlève (#enleve), Je déplace (#deplace), Quand, où, pourquoi ? (#qoq : CC de temps, de lieu, de cause), J'enrichis (#enrichis),
+  Défi (#defi : les pièges, des compléments du verbe qui ressemblent à des CC).
+  Contenu : manuel P2 p. 79-80 et 85 (= exercices différenciés P2 CM1 et CM2 p. 20-26), fichier des chantiers n° 8, séances 📅 6 et 7,
+  exemples du guide Eduscol ; les phrases de moi sont marquées « de moi ». Jamais les bilans (évaluations). Hors ligne (ENI, Chromebook). Sans son.
+-->
+<style>
+:root{--route:#eceff1;--encre:#1f2a30;--caisse:#d7a86e;--caisse2:#b07d45;--vert:#2e7d32;--rouge:#c62828;--talbot:#1f7a8c;--orange:#ef6c00}
+html,body{margin:0;height:100%;background:#263238;overflow:hidden;font-family:Arial,Helvetica,sans-serif;color:var(--encre)}
+#scene{position:absolute;left:0;top:0;width:1920px;height:1080px;transform-origin:0 0;background:linear-gradient(#90caf9 84px,#e3f2fd 560px,#757575 560px 640px,#b0bec5 640px)}
+#decor{position:absolute;left:0;top:0;width:1920px;height:1080px;z-index:-1;pointer-events:none}
+
+#barre{height:84px;display:flex;align-items:center;gap:20px;padding:0 28px;background:#37474f;color:#fff}
+#barre h1{margin:0;font-size:32px;display:flex;align-items:center;gap:12px;white-space:nowrap}
+#barre h1 svg{width:60px;height:44px}
+.onglets{display:flex;gap:8px;margin-left:12px}
+.onglets button{font:inherit;font-size:22px;padding:10px 16px;border-radius:10px;border:2px solid #78909c;background:#455a64;color:#fff;cursor:pointer;white-space:nowrap}
+.onglets button.on{background:#fff;color:var(--encre);font-weight:700;border-color:#fff}
+#coin{margin-left:auto;font-size:21px;white-space:nowrap}
+#coin b{font-size:28px;color:#ffd54f}
+#consigne{height:96px;display:flex;align-items:center;justify-content:center;font-size:44px;font-weight:700;text-align:center;padding:0 130px}
+#consigne .q{color:#b23a00}
+#lecture{position:absolute;left:60px;right:60px;top:196px;height:80px;display:flex;align-items:center;justify-content:center;font-size:46px;font-family:Georgia,serif;text-align:center}
+#lecture.casse{color:var(--rouge);text-decoration:line-through wavy}
+/* le camion : le plateau avec les caisses, la cabine à droite */
+#camion{position:absolute;left:0;right:0;top:300px;height:260px;display:flex;align-items:flex-end;justify-content:center;transition:transform 1.4s ease-in}
+#camion.part{transform:translateX(2200px)}
+#camion.panne{animation:panne .5s 2}
+@keyframes panne{0%,100%{transform:rotate(0)}30%{transform:rotate(-1.5deg)}70%{transform:rotate(1.5deg)}}
+#plateau{display:flex;align-items:flex-end;gap:10px;padding:0 14px 14px;min-width:300px;min-height:150px;border-bottom:22px solid #455a64;border-radius:0 0 0 10px;position:relative}
+#plateau.cible{background:rgba(31,122,140,.12)}
+#cabine{width:190px;height:200px;flex:none}
+.roues{position:absolute;bottom:-58px;left:0;right:0;display:flex;justify-content:space-between;padding:0 50px;pointer-events:none}
+.roues i{width:60px;height:60px;border-radius:50%;background:#212121;border:8px solid #616161;box-sizing:border-box}
+.caisse{font-size:38px;font-weight:700;padding:22px 22px;background:var(--caisse);border:5px solid var(--caisse2);border-radius:8px;cursor:grab;touch-action:none;user-select:none;white-space:nowrap;
+  background-image:repeating-linear-gradient(90deg,transparent 0 46px,rgba(0,0,0,.08) 46px 50px);box-shadow:0 5px 0 rgba(0,0,0,.25)}
+.caisse.cc-visible{background:#ffcc80;border-color:var(--orange)}
+.caisse.choisi{outline:6px solid var(--talbot);outline-offset:3px}
+.caisse.revient{animation:secoue .45s 2}
+.vole{position:fixed;z-index:60;pointer-events:none;opacity:.92;transform-origin:0 0}
+@keyframes secoue{0%,100%{transform:translateX(0)}25%{transform:translateX(-10px)}75%{transform:translateX(10px)}}
+/* le sol : le parking, les dépôts, le stock */
+#sol{position:absolute;left:40px;right:40px;top:660px;height:290px;display:flex;gap:26px;justify-content:center}
+.zone{flex:1;max-width:620px;border:5px dashed #78909c;border-radius:18px;background:rgba(255,255,255,.55);display:flex;flex-direction:column;align-items:center;padding:10px;gap:10px}
+.zone h3{margin:0;font-size:30px;color:#37474f}
+.zone .contenu{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;align-items:center;flex:1}
+.zone.cible{border-color:var(--talbot);border-style:solid}
+#bas{position:absolute;left:0;right:0;bottom:0;height:120px;display:flex;align-items:center;justify-content:center}
+#verdict{font-size:36px;font-weight:700;text-align:center}
+#verdict.ok{color:var(--vert)} #verdict.ko{color:var(--rouge)}
+#indice{position:absolute;right:26px;top:94px;width:82px;height:82px;padding:0;border-radius:50%;font-size:44px;line-height:1;z-index:20;border:2px solid #d4b106;background:#fff8c4;cursor:pointer}
+#bulle{position:absolute;right:124px;top:98px;max-width:660px;background:#fff8c4;border:2px solid #d4b106;border-radius:18px;padding:16px 26px;font-size:28px;display:none;box-shadow:0 6px 18px rgba(0,0,0,.25);z-index:20}
+</style>
+</head>
+<body>
+<div id="scene">
+  <svg id="decor" viewBox="0 0 1920 1080" aria-hidden="true"><circle cx="1660" cy="190" r="46" fill="#ffee58" stroke="#fbc02d" stroke-width="4"/><g transform="translate(260 200) scale(0.7)" fill="#fff" opacity=".9"><ellipse cx="0" cy="0" rx="70" ry="30"/><ellipse cx="-40" cy="8" rx="44" ry="24"/><ellipse cx="44" cy="8" rx="48" ry="24"/><ellipse cx="6" cy="-20" rx="40" ry="28"/></g><g transform="translate(1220 300) scale(0.55)" fill="#fff" opacity=".9"><ellipse cx="0" cy="0" rx="70" ry="30"/><ellipse cx="-40" cy="8" rx="44" ry="24"/><ellipse cx="44" cy="8" rx="48" ry="24"/><ellipse cx="6" cy="-20" rx="40" ry="28"/></g><g transform="translate(1880 330) scale(0.6)" fill="#fff" opacity=".9"><ellipse cx="0" cy="0" rx="70" ry="30"/><ellipse cx="-40" cy="8" rx="44" ry="24"/><ellipse cx="44" cy="8" rx="48" ry="24"/><ellipse cx="6" cy="-20" rx="40" ry="28"/></g><path d="M0 560 Q240 450 520 525 Q800 470 1100 512 Q1500 455 1920 520 V560z" fill="#c5e1a5"/><g transform="translate(1545 560)"><rect x="0" y="-70" width="70" height="70" fill="#ffe0b2"/><path d="M-8 -70 L35 -108 L78 -70z" fill="#bf5b3a"/><rect x="26" y="-34" width="18" height="34" fill="#795548"/></g><g transform="translate(260 560)"><rect x="0" y="-70" width="70" height="70" fill="#f8bbd0"/><path d="M-8 -70 L35 -108 L78 -70z" fill="#bf5b3a"/><rect x="26" y="-34" width="18" height="34" fill="#795548"/></g><g transform="translate(120 540)"><rect x="-5" y="-30" width="10" height="30" fill="#6d4c41"/><circle cy="-46" r="26" fill="#66bb6a"/></g><g transform="translate(190 540)"><rect x="-5" y="-30" width="10" height="30" fill="#6d4c41"/><circle cy="-46" r="20" fill="#43a047"/></g><g transform="translate(1665 540)"><rect x="-5" y="-30" width="10" height="30" fill="#6d4c41"/><circle cy="-46" r="28" fill="#66bb6a"/></g><g transform="translate(1720 540)"><rect x="-5" y="-30" width="10" height="30" fill="#6d4c41"/><circle cy="-46" r="22" fill="#43a047"/></g><g transform="translate(1800 540)"><rect x="-5" y="-30" width="10" height="30" fill="#6d4c41"/><circle cy="-46" r="26" fill="#4caf50"/></g><rect x="0" y="597" width="70" height="8" fill="#fff"/><rect x="130" y="597" width="70" height="8" fill="#fff"/><rect x="260" y="597" width="70" height="8" fill="#fff"/><rect x="390" y="597" width="70" height="8" fill="#fff"/><rect x="520" y="597" width="70" height="8" fill="#fff"/><rect x="650" y="597" width="70" height="8" fill="#fff"/><rect x="780" y="597" width="70" height="8" fill="#fff"/><rect x="910" y="597" width="70" height="8" fill="#fff"/><rect x="1040" y="597" width="70" height="8" fill="#fff"/><rect x="1170" y="597" width="70" height="8" fill="#fff"/><rect x="1300" y="597" width="70" height="8" fill="#fff"/><rect x="1430" y="597" width="70" height="8" fill="#fff"/><rect x="1560" y="597" width="70" height="8" fill="#fff"/><rect x="1690" y="597" width="70" height="8" fill="#fff"/><rect x="1820" y="597" width="70" height="8" fill="#fff"/><rect x="60" y="660" width="8" height="300" fill="#fff" opacity=".8"/><rect x="200" y="660" width="8" height="300" fill="#fff" opacity=".8"/><rect x="1712" y="660" width="8" height="300" fill="#fff" opacity=".8"/><rect x="1852" y="660" width="8" height="300" fill="#fff" opacity=".8"/><g transform="translate(130 690)"><rect x="-6" y="40" width="12" height="190" fill="#78909c"/><rect x="-42" y="-30" width="84" height="84" rx="12" fill="#1565c0" stroke="#fff" stroke-width="5"/><text x="0" y="34" text-anchor="middle" font-family="Arial" font-weight="700" font-size="60" fill="#fff">P</text></g></svg>
+  <div id="barre">
+    <h1><svg viewBox="0 0 60 44"><rect x="2" y="12" width="36" height="22" fill="#d7a86e" stroke="#fff" stroke-width="2"/><rect x="38" y="16" width="18" height="18" rx="3" fill="#c62828" stroke="#fff" stroke-width="2"/><circle cx="12" cy="38" r="5" fill="#fff"/><circle cx="48" cy="38" r="5" fill="#fff"/></svg>Le complément qui bouge</h1>
+    <div class="onglets"><button data-o="enleve">J'enlève</button><button data-o="deplace">Je déplace</button><button data-o="qoq">Quand, où, pourquoi ?</button><button data-o="enrichis">J'enrichis</button><button data-o="defi">Défi</button></div>
+    <div id="coin">Phrases livrées : <b id="score">0</b> · 🏆 Record : <b id="record">0</b></div>
+  </div>
+  <div id="consigne"></div>
+  <div id="lecture"></div>
+  <div id="camion"><div id="plateau"><div class="roues"><i></i><i></i></div></div>
+    <svg id="cabine" viewBox="0 0 190 200"><path d="M10 40h110l50 60v78H10z" fill="#c62828" stroke="#7f0000" stroke-width="5"/><path d="M120 52h4l40 48h-44z" fill="#b3e5fc" stroke="#7f0000" stroke-width="4"/><rect x="0" y="170" width="190" height="14" fill="#455a64"/><circle cx="120" cy="190" r="26" fill="#212121" stroke="#616161" stroke-width="8"/></svg></div>
+  <div id="sol"></div>
+  <div id="bulle"></div>
+  <button id="indice" title="Indice">💡</button>
+  <div id="bas"><div id="verdict"></div></div>
+</div>
+<script>
+"use strict";
+// ---------- les phrases : [s:…] groupe sujet · [v:…] verbe · [o:…] complément du verbe (ne bouge pas) · [t:…] [l:…] [c:…] complément circonstanciel de temps, de lieu, de cause ----------
+const P = {
+  enleve: [
+    ["[t:tous les soirs] [s:les élèves] [v:font] [o:leurs devoirs] [c:pour apprendre]", "séance 📅 6 (chantier n° 8)"],
+    ["[s:nous] [v:nous sommes rencontrés] [l:au parc]", "manuel P2 p. 79, ex. 2 a"],
+    ["[s:Marie] [v:a réussi] [o:son examen] [c:grâce à ses nombreuses révisions]", "manuel P2 p. 79, ex. 2 c"],
+    ["[t:le matin] [s:je] [v:bois toujours] [o:un café] [t:avant de partir au travail]", "manuel P2 p. 79, ex. 2 d"],
+    ["[t:tous les soirs] [s:Paul] [v:lit] [o:son roman]", "manuel P2 p. 80, ex. 2 a"],
+    ["[s:les élèves] [v:jouent] [l:dans la cour de l'école]", "manuel P2 p. 80, ex. 2 b"],
+    ["[s:les feuilles] [v:sont tombées] [c:à cause du vent]", "manuel P2 p. 80, ex. 2 c"],
+    ["[t:chaque matin] [s:je] [v:prends] [o:le bus]", "manuel P2 p. 80, ex. 1 a (CM2)"],
+    ["[s:les enfants] [v:ont chuté] [c:à cause du gel]", "manuel P2 p. 80, ex. 1 c (CM2)"],
+    ["[t:tout à l'heure] [s:il] [v:a garé] [o:sa moto] [l:dans le garage]", "fichier des chantiers, n° 8"],
+    ["[t:demain] [s:je] [v:partirai] [l:à la campagne]", "fichier des chantiers, n° 8"]
+  ],
+  deplace: [
+    ["[s:nous] [v:nous sommes rencontrés] [l:au parc]", "manuel P2 p. 79, ex. 2 a"],
+    ["[s:Marie] [v:a réussi] [o:son examen] [c:grâce à ses nombreuses révisions]", "manuel P2 p. 79, ex. 2 c"],
+    ["[t:tous les soirs] [s:Paul] [v:lit] [o:son roman]", "manuel P2 p. 80, ex. 2 a"],
+    ["[s:les feuilles] [v:sont tombées] [c:à cause du vent]", "manuel P2 p. 80, ex. 2 c"],
+    ["[t:au printemps] [s:les fleurs] [v:poussent]", "manuel P2 p. 80, ex. 2 d"],
+    ["[s:elle] [v:a commencé] [o:son dessin] [t:après le déjeuner]", "manuel P2 p. 80, ex. 1 a"],
+    ["[s:le chat] [v:s'est caché] [l:sous le lit]", "manuel P2 p. 80, ex. 1 b"],
+    ["[t:pendant les vacances] [s:je] [v:ferai] [o:un stage de basket]", "manuel P2 p. 80, ex. 1 c"],
+    ["[s:le match] [v:a été annulé] [c:à cause de la pluie]", "manuel P2 p. 80, ex. 1 d"],
+    ["[s:les amis] [v:se retrouvent] [l:au restaurant]", "manuel P2 p. 80, ex. 1 b (CM2)"],
+    ["[s:la sortie] [v:est reportée] [c:à cause des orages]", "manuel P2 p. 79 (l'exemple)"]
+  ],
+  qoq: [
+    ["[c:à cause de toi] [s:mon chat] [v:s'est enfui]", "manuel P2 p. 79, ex. 1 a (CM2)"],
+    ["[s:son mariage] [v:a eu lieu] [l:à Saint-Raphaël]", "manuel P2 p. 79, ex. 1 c (CM2)"],
+    ["[s:ma tante] [v:partira] [t:dans trois semaines]", "manuel P2 p. 79, ex. 1 d (CM2)"],
+    ["[s:Luna] [v:mangera] [o:une poire] [l:dans son jardin]", "manuel P2 p. 79 (l'exemple)"],
+    ["[s:le trésor] [v:était caché] [l:dans la grotte]", "manuel P2 p. 80, ex. 2 a (CM2)"],
+    ["[s:l'école] [v:a fermé] [c:à cause de la neige]", "manuel P2 p. 80, ex. 2 b (CM2)"],
+    ["[t:depuis plusieurs jours] [s:il] [v:pleut sans arrêt]", "manuel P2 p. 80, ex. 2 c (CM2)"],
+    ["[s:les touristes] [v:se promènent] [l:au bord de la mer]", "manuel P2 p. 80, ex. 2 d (CM2)"],
+    ["[s:le facteur] [v:a laissé] [o:un colis] [l:devant la porte]", "manuel P2 p. 80, ex. 2 e (CM2)"],
+    ["[t:tous les soirs] [s:les élèves] [v:font] [o:leurs devoirs] [c:pour apprendre]", "séance 📅 6 (chantier n° 8)"],
+    ["[s:les feuilles] [v:sont tombées] [c:à cause du vent]", "manuel P2 p. 80, ex. 2 c"]
+  ],
+  // J'enrichis : la phrase courte, ce qu'on demande (t, l, c), les caisses du dépôt (les bonnes et d'autres)
+  enrichis: [
+    ["[s:je] [v:suis arrivée] [o:à Strasbourg]", "t", ["t:lundi", "c:à cause de la pluie", "l:dans le jardin"], "manuel P2 p. 85, ex. 1 a (de moi : les deux autres caisses)"],
+    ["[s:Pauline] [v:a rejoint] [o:ses amies]", "tl", ["t:la semaine dernière", "l:à la montagne", "c:pour son anniversaire"], "manuel P2 p. 85, ex. 1 b"],
+    ["[s:mes parents] [v:se promènent]", "lc", ["l:près du canal", "c:comme il fait beau", "t:ce matin"], "manuel P2 p. 85, ex. 1 c"],
+    ["[s:les enfants] [v:sortent] [o:de l'école]", "t", ["t:à 16 h 30", "l:dans la rue", "c:à cause du bruit"], "manuel P2 p. 85, ex. 1 d (de moi : deux caisses)"],
+    ["[s:Kenzo] [v:est allé] [o:à l'hôpital]", "tc", ["t:à 10 ans", "c:à cause de ses blessures", "l:près de chez lui"], "manuel P2 p. 85, ex. 1 e"],
+    ["[s:j'] [v:ai écouté] [o:un podcast]", "t", ["t:lundi soir", "l:dans ma chambre", "c:pour me détendre"], "manuel P2 p. 80, ex. 3 a"],
+    ["[s:Nisma] [v:promène] [o:son chien]", "l", ["l:dans le parc", "t:chaque soir", "c:parce qu'il aboie"], "manuel P2 p. 80, ex. 3 b"],
+    ["[s:Persée] [v:affronte] [o:les Gorgones]", "tlc", ["t:cette fois", "l:sur leur île glaciale", "c:pour les vaincre"], "séance 📅 7"],
+    ["[s:le petit garçon] [v:a perdu] [o:sa peluche]", "l", ["l:dans le bus", "t:hier", "c:à cause de son frère"], "manuel P2 p. 80, ex. 3 a (CM2) ; caisses de moi"],
+    ["[s:Emma] [v:fera] [o:un spectacle]", "lt", ["l:au théâtre de la ville", "t:samedi prochain", "c:pour l'école"], "manuel P2 p. 80, ex. 3 b (CM2) ; caisses de moi"],
+    ["[s:Valentine] [v:a] [o:un rendez-vous]", "l", ["l:chez le dentiste", "t:demain", "c:à cause de sa dent"], "manuel P2 p. 85, ex. 1 c (CM2) ; caisses de moi"]
+  ],
+  // Défi : des compléments du verbe qui ressemblent à des CC (Eduscol, Terminologie grammaticale p. 40 et 87) : on ne peut ni les enlever ni les déplacer
+  defi: [
+    ["[s:elle] [v:va] [o:à Paris] [c:grâce à sa victoire]", "manuel P2 p. 79, ex. 1 e ; Eduscol p. 40"],
+    ["[s:nous] [v:irons] [o:au cinéma] [t:après le dîner]", "manuel P2 p. 79, ex. 2 b"],
+    ["[t:demain soir] [s:nous] [v:irons] [o:au théâtre]", "manuel P2 p. 79, ex. 1 b"],
+    ["[s:le facteur] [v:distribue] [o:le courrier] [t:à huit heures]", "Eduscol, Terminologie p. 12"],
+    ["[t:chaque jour] [s:le facteur] [v:distribue] [o:le courrier] [t:à huit heures]", "Eduscol, Terminologie p. 90"],
+    ["[t:en hiver] [s:nous] [v:allons] [o:skier]", "manuel P2 p. 80, ex. 1 d (CM2)"],
+    ["[s:il] [v:habite] [o:à Lyon] [t:depuis deux ans]", "de moi"],
+    ["[s:mon frère] [v:reste] [o:à la maison] [t:pendant les vacances]", "de moi"],
+    ["[s:les élèves] [v:vont] [o:à la piscine] [t:le mardi]", "de moi"],
+    ["[s:Camille et Leona] [v:téléphonent] [o:à leur grand-père] [t:le dimanche]", "manuel P2 p. 79, ex. 2 a (le CC est de moi)"],
+    ["[s:je] [v:pense] [o:à mes vacances] [l:dans mon lit]", "de moi"]
+  ]
+};
+const QUESTION = { t: "quand ?", l: "où ?", c: "pourquoi ?" }, NOM = { t: "de temps", l: "de lieu", c: "de cause" };
+const lire = s => [...s.matchAll(/\[(\w):([^\]]+)\]/g)].map((m, i) => ({ id: "g" + i, r: m[1], t: m[2] }));
+const estCC = g => /^[tlc]$/.test(g.r);
+
+const etat = { o: "enleve", i: 0, score: 0, plateau: [], ailleurs: {}, fini: false };
+window.CAMION = etat;
+const $ = id => document.getElementById(id);
+const mem = { lire(k) { try { return +localStorage.getItem(k) || 0; } catch (e) { return 0; } }, ecrire(k, v) { try { localStorage.setItem(k, v); } catch (e) {} } };
+const cleRecord = () => "camion-record-" + etat.o;
+function afficheScore() { $("score").textContent = etat.score; $("record").textContent = mem.lire(cleRecord()); }
+function marque() { etat.score++; if (etat.score > mem.lire(cleRecord())) mem.ecrire(cleRecord(), etat.score); afficheScore(); }
+function verdict(t, cls) { const v = $("verdict"); v.textContent = t; v.className = cls || ""; }
+function consigne(h) { $("consigne").innerHTML = "<span>" + h + "</span>"; }
+function bulle(t) { const b = $("bulle"); b.textContent = t; b.style.display = "block"; clearTimeout(bulle.t); bulle.t = setTimeout(() => b.style.display = "none", 8000); }
+let minuteur = 0; const plusTard = (f, ms) => { clearTimeout(minuteur); minuteur = setTimeout(f, ms || 2000); };
+const ex = () => { const L = P[etat.o]; return L[etat.i % L.length]; };
+const echelle = () => +($("scene").dataset.ech || 1);
+
+// ---------- la phrase lue : majuscule, virgule après les compléments du début, point ----------
+function phrase(gs) {
+  let s = "";
+  gs.forEach((g, k) => {
+    let t = g.t;
+    if (k === 0) t = t.charAt(0).toUpperCase() + t.slice(1);
+    s += (k && !/'$/.test(gs[k - 1].t) ? " " : "") + t;
+    if (estCC(g) && gs[k + 1] && !estCC(gs[k + 1]) && k === gs.findIndex(x => !estCC(x)) - 1) s += ",";
+    else if (estCC(g) && gs[k + 1] && estCC(gs[k + 1]) && k < gs.findIndex(x => !estCC(x))) s += ",";
+  });
+  return s + ".";
+}
+function relire(casse) { const l = $("lecture"); l.textContent = phrase(casse || etat.plateau.map(id => etat.groupes[id])); l.classList.toggle("casse", !!casse); }
+
+// ---------- un exercice ----------
+function nouvel() {
+  clearTimeout(minuteur); verdict(""); etat.fini = false;
+  const E = ex(); etat.groupes = {}; etat.ailleurs = {};
+  const G = lire(E[0]); G.forEach(g => etat.groupes[g.id] = g);
+  etat.plateau = G.map(g => g.id); etat.depart = {}; G.forEach((g, k) => etat.depart[g.id] = k === 0 ? "debut" : k === G.length - 1 ? "fin" : "milieu");
+  const sol = $("sol");
+  if (etat.o === "qoq") sol.innerHTML = ["t", "l", "c"].map(q => '<div class="zone" data-z="' + q + '"><h3>' + QUESTION[q].charAt(0).toUpperCase() + QUESTION[q].slice(1) + '</h3><div class="contenu"></div></div>').join("");
+  else if (etat.o === "enrichis") {
+    sol.innerHTML = '<div class="zone" data-z="stock" style="max-width:1400px"><h3>Le dépôt</h3><div class="contenu"></div></div>';
+    E[2].forEach((c, k) => { const [r, t] = c.split(":"); const id = "s" + k; etat.groupes[id] = { id, r, t }; etat.ailleurs[id] = "stock"; });
+  } else sol.innerHTML = '<div class="zone" data-z="parking" style="max-width:1100px"><h3>Le parking</h3><div class="contenu"></div></div>';
+  const c = { enleve: "Mets au parking les caisses qu'on peut enlever", deplace: "Porte le complément à l'autre bout de la phrase", qoq: "Range chaque complément : quand ? où ? pourquoi ?", defi: "Attention aux pièges : mets au parking les caisses qu'on peut enlever" };
+  consigne(etat.o === "enrichis" ? consigneEnrichir() : c[etat.o]);
+  const cam = $("camion"); cam.style.transition = "none"; cam.classList.remove("part"); void cam.offsetWidth; cam.style.transition = "";   // le camion suivant est là tout de suite (il ne recule pas)
+  dessiner(); relire();
+}
+function consigneEnrichir() {
+  const E = ex(), manque = [...E[1]].filter(q => !etat.plateau.some(id => etat.groupes[id].r === q));
+  return manque.length ? "Ajoute une caisse qui dit <span class=\"q\">" + QUESTION[manque[0]] + "</span>" : "";
+}
+function caisse(id) { const g = etat.groupes[id]; return '<div class="caisse' + ((etat.o === "qoq" || etat.o === "enrichis") && estCC(g) ? " cc-visible" : "") + '" data-id="' + id + '">' + g.t + '</div>'; }
+function dessiner() {
+  const pl = $("plateau"); pl.querySelectorAll(".caisse").forEach(e => e.remove());
+  pl.insertAdjacentHTML("afterbegin", etat.plateau.map(caisse).join(""));
+  document.querySelectorAll("#sol .zone").forEach(z => z.querySelector(".contenu").innerHTML = Object.keys(etat.ailleurs).filter(id => etat.ailleurs[id] === z.dataset.z).map(caisse).join(""));
+  // le camion trop long rétrécit pour tenir dans l'écran
+  const w = pl.scrollWidth + 220; $("camion").style.scale = w > 1860 ? String(1860 / w) : "1";
+}
+// ---------- les gestes : glisser, ou toucher puis toucher ----------
+let tient = null, choix = null;
+function choisir(e) { if (choix) choix.classList.remove("choisi"); choix = e; if (e) e.classList.add("choisi"); }
+document.addEventListener("pointerdown", ev => { const c = ev.target.closest && ev.target.closest(".caisse"); if (!c || etat.fini) return; ev.preventDefault(); tient = { el: c, x: ev.clientX, y: ev.clientY, vole: null }; });
+document.addEventListener("pointermove", ev => {
+  if (!tient) return;
+  if (!tient.vole && Math.hypot(ev.clientX - tient.x, ev.clientY - tient.y) > 12) {
+    const r = tient.el.getBoundingClientRect(), v = tient.el.cloneNode(true); v.classList.add("vole"); v.classList.remove("choisi");
+    v.style.transform = "scale(" + (r.width / tient.el.offsetWidth) + ")"; document.body.appendChild(v); tient.vole = v; tient.dx = ev.clientX - r.left; tient.dy = ev.clientY - r.top; choisir(null);
+  }
+  if (tient.vole) { tient.vole.style.left = (ev.clientX - tient.dx) + "px"; tient.vole.style.top = (ev.clientY - tient.dy) + "px"; }
+});
+document.addEventListener("pointerup", ev => {
+  const t = tient; tient = null;
+  if (t && t.vole) { t.vole.remove(); return deposer(t.el.dataset.id, ev.clientX, ev.clientY); }
+  if (t) {   // toucher une caisse alors qu'une autre est choisie : la choisie va là (au parking, au début ou à la fin du plateau)
+    if (choix && choix !== t.el) { const id = choix.dataset.id; choisir(null); return deposer(id, ev.clientX, ev.clientY); }
+    choisir(choix === t.el ? null : t.el); return;
+  }
+  if (choix) { const id = choix.dataset.id; choisir(null); deposer(id, ev.clientX, ev.clientY); }
+});
+function deposer(id, x, y) {
+  if (etat.fini) return;
+  const sous = document.elementFromPoint(x, y), z = sous && sous.closest && sous.closest(".zone"), surCamion = sous && sous.closest && sous.closest("#camion");
+  if (z) return versZone(id, z.dataset.z);
+  if (surCamion) { const r = $("plateau").getBoundingClientRect(); return versPlateau(id, x < r.left + r.width / 2 ? "debut" : "fin"); }
+}
+const g = id => etat.groupes[id];
+function revient(id, msg, casse) {
+  verdict(msg, "ko"); if (casse) relire(casse);
+  $("camion").classList.add("panne"); setTimeout(() => $("camion").classList.remove("panne"), 1000);
+  const e = document.querySelector('.caisse[data-id="' + id + '"]'); if (e) e.classList.add("revient");
+  setTimeout(() => { relire(); dessiner(); }, 1300);
+}
+// vers le parking ou un dépôt
+function versZone(id, zone) {
+  const G = g(id);
+  if (zone === "stock") { if (G.id[0] === "s") { etat.plateau = etat.plateau.filter(x => x !== id); etat.ailleurs[id] = "stock"; dessiner(); relire(); consigne(consigneEnrichir()); } return; }
+  if (zone === "parking") {
+    if (!estCC(G)) { const sans = etat.plateau.filter(x => x !== id).map(g); return revient(id, "🤪 Sans « " + G.t + " », la phrase ne tient plus.", sans); }
+    etat.plateau = etat.plateau.filter(x => x !== id); etat.ailleurs[id] = "parking"; verdict(""); dessiner(); relire(); return fin();
+  }
+  // un dépôt quand / où / pourquoi
+  if (!estCC(G)) return revient(id, "🤪 « " + G.t + " » ne se déplace pas : ce n'est pas un complément circonstanciel.");
+  if (G.r !== zone) return revient(id, "🤪 Pose la question à la phrase : « " + G.t + " » répond-il à " + QUESTION[zone] + " ?");
+  etat.plateau = etat.plateau.filter(x => x !== id); etat.ailleurs[id] = zone; verdict(""); dessiner(); relire(); fin();
+}
+// au début ou à la fin du plateau
+function versPlateau(id, bout) {
+  const G = g(id), sans = etat.plateau.filter(x => x !== id), essai = bout === "debut" ? [id].concat(sans) : sans.concat(id);
+  if (etat.ailleurs[id] && etat.ailleurs[id] !== "stock" && etat.o !== "enrichis") { delete etat.ailleurs[id]; etat.plateau = essai; verdict(""); dessiner(); relire(); return; }   // une caisse reprise du parking
+  if (etat.o === "enrichis") {
+    const E = ex(); if (!E[1].includes(G.r) || etat.plateau.some(x => g(x).r === G.r)) return revient(id, "🤪 Cette caisse ne répond pas à la question demandée.");
+    delete etat.ailleurs[id]; etat.plateau = essai; verdict(""); dessiner(); relire(); consigne(consigneEnrichir()); return fin();
+  }
+  if (!estCC(G)) return revient(id, "🤪 La phrase ne tient plus : « " + G.t + " » ne se déplace pas.", essai.map(g));
+  etat.plateau = essai; verdict(""); dessiner(); relire(); fin();
+}
+// ---------- c'est fini ? ----------
+function fin() {
+  const ids = Object.keys(etat.groupes), E = ex();
+  let ok = false;
+  if (etat.o === "enleve" || etat.o === "defi") ok = ids.every(id => estCC(g(id)) ? etat.ailleurs[id] === "parking" : etat.plateau.includes(id));
+  else if (etat.o === "deplace") ok = ids.filter(id => estCC(g(id))).every(id => { const k = etat.plateau.indexOf(id); return etat.depart[id] === "debut" ? k === etat.plateau.length - 1 : k === 0; });
+  else if (etat.o === "qoq") ok = ids.filter(id => estCC(g(id))).every(id => etat.ailleurs[id] === g(id).r);
+  else ok = [...E[1]].every(q => etat.plateau.some(id => g(id).r === q));
+  if (!ok) return;
+  etat.fini = true; marque();
+  verdict(etat.o === "qoq" ? "✅ Chaque complément est rangé." : etat.o === "deplace" ? "✅ Le complément a bougé, la phrase tient toujours." : etat.o === "enrichis" ? "✅ La phrase est enrichie." : "✅ Il reste le groupe sujet et le groupe verbal : la phrase tient.", "ok");
+  consigne("La phrase est livrée !");
+  setTimeout(() => $("camion").classList.add("part"), 900);
+  plusTard(() => { etat.i++; nouvel(); }, 2800);
+}
+// l'indice donne la méthode de la classe, jamais la réponse
+$("indice").onclick = () => {
+  if (etat.o === "qoq") bulle("Je pose la question à la phrase avec le verbe : « Quand ? », « Où ? », « Pourquoi ? ». Le complément qui répond est de temps, de lieu ou de cause.");
+  else if (etat.o === "enrichis") bulle("Je pose la question (quand ? où ? pourquoi ?), je choisis la caisse qui répond, je la place au début ou à la fin. Au début, une virgule la suit.");
+  else if (etat.o === "defi") bulle("Je garde le groupe sujet et le verbe. J'essaie d'enlever un groupe : si la phrase a encore du sens, c'est un complément circonstanciel. « Elle va » tout seul ne suffit pas : « à Paris » complète le verbe.");
+  else bulle("Je garde le groupe sujet et le verbe. J'essaie d'enlever un groupe, puis de le déplacer : si la phrase a encore du sens, c'est un complément circonstanciel.");
+};
+// ---------- démarrer ----------
+function ouvre(o) {
+  etat.o = o; etat.i = 0; etat.score = 0; choisir(null);
+  document.querySelectorAll(".onglets button").forEach(b => b.classList.toggle("on", b.dataset.o === o));
+  history.replaceState(null, "", "#" + o);
+  afficheScore(); $("bulle").style.display = "none"; nouvel();
+}
+document.querySelectorAll(".onglets button").forEach(b => b.onclick = () => ouvre(b.dataset.o));
+function ajuste() {
+  const e = Math.min(innerWidth / 1920, innerHeight / 1080), s = $("scene");
+  s.style.transform = "scale(" + e + ")"; s.style.left = ((innerWidth - 1920 * e) / 2) + "px"; s.style.top = ((innerHeight - 1080 * e) / 2) + "px"; s.dataset.ech = e;
+}
+addEventListener("resize", ajuste); ajuste();
+function depuisLien() { const m = location.hash.slice(1); ouvre(P[m] ? m : "enleve"); }
+addEventListener("hashchange", depuisLien);
+depuisLien();
+window.CAMION_API = { P, lire, ex, phrase };
+</script>
+</body>
+</html>

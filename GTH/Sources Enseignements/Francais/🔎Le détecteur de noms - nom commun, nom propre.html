@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Le détecteur de noms</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='26' cy='26' r='17' fill='%23fff' stroke='%231f5f8b' stroke-width='6'/%3E%3Crect x='38' y='38' width='22' height='9' rx='4' transform='rotate(45 38 38)' fill='%231f5f8b'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Quicksand:wght@600;700&display=swap">
+<style>
+  /* Univers : le bureau du détective. Une vraie phrase de la classe (dictées 1 à 5) en grand. Deux outils, les tests de la leçon
+     (guide Eduscol « La grammaire du français du CP à la 6e », p. 75-77) :
+       🎩 le chapeau « un / le » : posé devant un mot, s'il va (« un jardin »), le mot est un NOM COMMUN ; sinon le chapeau tombe ;
+       🔍 la loupe « majuscule » : posée sur un mot, s'il garde sa majuscule au milieu de la phrase, c'est un NOM PROPRE.
+     Une majuscule en début de phrase ne prouve rien : on essaie le chapeau. On trouve tous les noms de la phrase. */
+  :root{ --encre:#22303c; --gris:#66737f; --bord:#d9e2ea; --bien:#1a8f5c; --faux:#d6455d; --commun:#1f6fb2; --propre:#c0392b; --talbot:#1f7a8c; }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{margin:0; color:var(--encre); font-family:"Quicksand",system-ui,sans-serif; overflow:hidden; height:100vh; display:flex; flex-direction:column;
+    background:#eef3f7 repeating-linear-gradient(90deg,rgba(31,95,139,.05) 0 1px,transparent 1px 48px); user-select:none; -webkit-user-select:none; touch-action:none;}
+  .barre{display:grid; grid-template-columns:1fr auto; align-items:center; gap:16px; padding:10px 26px; background:#fff; border-bottom:3px solid var(--bord);}
+  .titre{display:flex; align-items:center; gap:12px;} .titre svg{width:50px; height:50px;}
+  .titre h1{font-family:"Baloo 2",cursive; font-weight:800; font-size:1.9rem; margin:0;}
+  .droite{display:flex; align-items:center; gap:12px;}
+  .score{display:flex; flex-direction:column; align-items:center; padding:2px 14px; border-radius:12px; background:#fff; border:2px solid var(--bord); min-width:130px;}
+  .score small{font-size:.8rem; font-weight:700; color:var(--gris); text-transform:uppercase; letter-spacing:.5px;}
+  .score b{font-family:"Baloo 2",cursive; font-size:1.8rem; line-height:1.05;}
+  .niveaux{display:flex; gap:4px;}
+  .niveaux button{font:inherit; font-weight:700; font-size:.95rem; padding:3px 14px; border-radius:999px; cursor:pointer; background:#fff; color:var(--gris); border:2px solid var(--bord);}
+  .niveaux button.actif{background:var(--encre); color:#fff; border-color:var(--encre);}
+  .btn-son{width:44px; height:44px; border-radius:50%; font-size:1.2rem; cursor:pointer; background:#fff; border:2px solid var(--bord);}
+  .consigne{display:flex; justify-content:center; padding:12px 20px 0;}
+  .consigne p{margin:0; font-family:"Baloo 2",cursive; font-weight:700; font-size:2.1rem; text-align:center; background:#fff; padding:2px 22px; border-radius:16px; border:2px solid var(--bord);}
+  .consigne p:empty{display:none;}
+
+  .jeu{flex:1; min-height:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:46px; padding:10px 40px;}
+  /* la phrase */
+  .phrase{display:flex; flex-wrap:wrap; justify-content:center; align-items:flex-end; gap:8px 22px; max-width:1700px; background:#fff; border-radius:26px;
+    border:4px solid var(--bord); padding:70px 40px 40px; box-shadow:0 10px 30px rgba(31,95,139,.08);}
+  .mot{position:relative; font-family:"Baloo 2",cursive; font-weight:700; font-size:3.6rem; line-height:1.1; padding:0 8px; border-radius:12px; cursor:pointer;}
+  .mot.ponct{padding:0; margin-left:-18px; cursor:default;}
+  .mot.survol{background:#fff3c4; outline:4px dashed #e0a800;}
+  .mot .etiq{position:absolute; left:50%; bottom:100%; transform:translateX(-50%) scale(.3); white-space:nowrap; font-family:"Quicksand",sans-serif; font-weight:700;
+    font-size:1.25rem; padding:2px 12px; border-radius:10px; opacity:0; transition:all .3s ease;}
+  .mot.commun{color:var(--commun); box-shadow:inset 0 -6px 0 rgba(31,111,178,.35);}
+  .mot.commun .etiq{background:var(--commun); color:#fff; opacity:1; transform:translateX(-50%) translateY(-6px);}
+  .mot.propre{color:var(--propre); box-shadow:inset 0 -6px 0 rgba(192,57,43,.35);}
+  .mot.propre .etiq{background:var(--propre); color:#fff; opacity:1; transform:translateX(-50%) translateY(-6px) rotate(-3deg);}
+  .mot .essai{position:absolute; left:50%; bottom:100%; transform:translateX(-50%); white-space:nowrap; font-size:1.6rem; font-weight:800; color:var(--faux); pointer-events:none;
+    animation:tombe 1.1s ease forwards;}
+  @keyframes tombe{0%{opacity:1; transform:translateX(-50%)}60%{opacity:1; transform:translateX(-50%) translateY(-6px) rotate(-8deg)}100%{opacity:0; transform:translateX(-50%) translateY(70px) rotate(40deg)}}
+  .secoue{animation:secoue .4s ease;} @keyframes secoue{0%,100%{transform:none}25%{transform:translateX(-10px)}75%{transform:translateX(10px)}}
+  /* les outils */
+  .outils{display:flex; gap:40px; align-items:center;}
+  .outil{display:flex; align-items:center; gap:12px; padding:14px 28px; border-radius:22px; background:#fff; border:5px solid var(--encre); font-family:"Baloo 2",cursive; font-weight:800;
+    font-size:2.4rem; cursor:grab; touch-action:none; box-shadow:0 8px 0 rgba(34,48,60,.2);}
+  .outil svg{width:62px; height:62px;}
+  .outil.chapeau{border-color:var(--commun); color:var(--commun);}
+  .outil.loupe{border-color:var(--propre); color:var(--propre);}
+  .outil.choisi{outline:7px solid var(--talbot); outline-offset:4px;}
+  .outil.parti{visibility:hidden;}
+  .en-vol{position:fixed !important; z-index:50; pointer-events:none; margin:0 !important; transform:rotate(-6deg) scale(1.05);}
+  [hidden]{display:none !important;}
+
+  .bas{display:flex; align-items:center; justify-content:center; gap:18px; padding:8px 0 14px;}
+  .btn-indice{font:inherit; font-weight:700; font-size:1.2rem; padding:6px 16px; border-radius:999px; cursor:pointer; background:#fff8dc; border:2px solid #f1d27a; color:#7a5b00;}
+  .verdict{min-height:3rem; font-family:"Baloo 2",cursive; font-size:2rem; font-weight:800; text-align:center;}
+  .verdict:not(:empty){background:#fff; padding:0 24px; border-radius:14px;}
+  .verdict.bien{color:var(--bien);} .verdict.faux{color:var(--faux);}
+  .btn-suivant{font:inherit; font-family:"Baloo 2",cursive; font-weight:800; font-size:1.8rem; padding:4px 34px; border-radius:999px; cursor:pointer; background:var(--encre); color:#fff; border:none;}
+</style>
+</head>
+<body>
+<div class="barre">
+  <div class="titre">
+    <svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="26" cy="26" r="17" fill="#fff" stroke="#1f5f8b" stroke-width="6"/><rect x="38" y="38" width="22" height="9" rx="4" transform="rotate(45 38 38)" fill="#1f5f8b"/></svg>
+    <h1>Le détecteur de noms</h1>
+  </div>
+  <div class="droite">
+    <div class="score" title="Phrases où tous les noms ont été trouvés"><small>Phrases réussies</small><b id="score">0</b></div>
+    <div class="score" title="Le meilleur score à ce niveau, gardé sur cet ordinateur"><small>🏆 Record</small><b id="record">0</b></div>
+    <div class="niveaux" id="niveaux">
+      <button type="button" data-niveau="noms" class="actif">Je trouve les noms</button>
+      <button type="button" data-niveau="propre">Propre ou commun</button>
+      <button type="button" data-niveau="defi">Défi</button>
+    </div>
+    <button class="btn-son" id="btnSon" type="button" title="Son">🔊</button>
+  </div>
+</div>
+<div class="consigne"><p id="consigne"></p></div>
+<div class="jeu">
+  <div class="phrase" id="phrase"></div>
+  <div class="outils" id="outils">
+    <div class="outil chapeau" id="chapeau" data-outil="chapeau"><svg viewBox="0 0 64 64" aria-hidden="true"><rect x="18" y="10" width="28" height="30" rx="4" fill="#1f6fb2"/><rect x="6" y="38" width="52" height="9" rx="4" fill="#174f80"/><rect x="18" y="30" width="28" height="5" fill="#e0a800"/></svg>un · le</div>
+    <div class="outil loupe" id="loupe" data-outil="loupe"><svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="26" cy="26" r="17" fill="#fff" stroke="#c0392b" stroke-width="6"/><text x="26" y="34" text-anchor="middle" font-family="Arial Black,Arial" font-weight="900" font-size="22" fill="#c0392b">A</text><rect x="38" y="38" width="22" height="9" rx="4" transform="rotate(45 38 38)" fill="#c0392b"/></svg>majuscule</div>
+  </div>
+</div>
+<div class="bas">
+  <button class="btn-indice" id="btnIndice" type="button">💡 Indice</button>
+  <div class="verdict" id="verdict"></div>
+  <button class="btn-suivant" id="btnSuivant" type="button" hidden>➜</button>
+</div>
+<script>
+(function () {
+  // Une phrase : des mots ; un nom porte [« c » (commun) + sa forme avec un/le, ou « p » (propre)].
+  // Phrases des dictées 1 à 5 de la banque (« Les jardins de Versailles »…), un peu raccourcies ; celles marquées (inv.) sont écrites
+  // par moi pour avoir des noms propres connus de la classe (histoire, poésie, la ville).
+  var C = function (t, forme) { return { t: t, n: "c", f: forme }; }, P = function (t) { return { t: t, n: "p" }; }, M = function (t) { return { t: t }; };
+  var PHRASES = {
+    noms: [
+      [M("Les"), C("fontaines", "une fontaine"), M("brillent"), M("au"), C("soleil", "le soleil"), M(".")],
+      [M("Le"), C("roi", "un roi"), M("est"), M("joyeux"), M(".")],
+      [M("Les"), C("jardiniers", "un jardinier"), M("taillent"), M("les"), C("arbres", "un arbre"), M("avec"), C("soin", "le soin"), M(".")],
+      [M("Du"), C("chèvrefeuille", "le chèvrefeuille"), M("pousse"), M("et"), M("attire"), M("les"), C("abeilles", "une abeille"), M(".")],
+      [M("Dans"), M("le"), C("royaume", "un royaume"), M(","), M("un"), C("jardinier", "un jardinier"), M("taille"), M("les"), C("arbres", "un arbre"), M(".")],
+      [M("Les"), C("visiteurs", "un visiteur"), M("observent"), M("les"), C("statues", "une statue"), M("et"), M("les"), C("bassins", "un bassin"), M(".")],
+      [M("C'est"), M("un"), C("spectacle", "un spectacle"), M("incroyable"), M("!")],
+      [M("Les"), C("acrobates", "un acrobate"), M("donnent"), M("un"), C("spectacle", "un spectacle"), M("dans"), M("les"), C("jardins", "un jardin"), M(".")],
+      [M("Un"), C("apéritif", "un apéritif"), M("accueille"), M("les"), C("visiteurs", "un visiteur"), M("du"), C("château", "le château"), M(".")],
+      [M("Le"), C("maître", "le maître"), M("écrit"), M("au"), C("tableau", "le tableau"), M(".")],
+      [M("Les"), C("élèves", "un élève"), M("rangent"), M("leurs"), C("pupitres", "un pupitre"), M(".")],
+      [M("La"), C("craie"), M("tombe"), M("du"), C("bureau", "le bureau"), M(".")]
+    ],
+    propre: [
+      [P("Louis XIV"), M("se"), M("promène"), M("dans"), M("les"), C("jardins", "un jardin"), M(".")],
+      [M("Les"), C("visiteurs", "un visiteur"), M("admirent"), P("Versailles"), M(".")],
+      [P("Jacques Prévert"), M("écrit"), M("un"), C("poème", "un poème"), M(".")],
+      [P("Jules Ferry"), M("ouvre"), M("des"), C("écoles", "une école"), M(".")],
+      [M("Les"), C("élèves", "un élève"), M("de"), P("Milhaud"), M("visitent"), P("Nîmes"), M(".")],
+      [M("Le"), C("roi", "un roi"), P("Louis XIV"), M("aime"), M("les"), C("fontaines", "une fontaine"), M(".")],
+      [P("Paris"), M("est"), M("la"), C("capitale", "une capitale"), M("de"), M("la"), P("France"), M(".")],
+      [P("Médor"), M("dort"), M("dans"), M("la"), C("niche", "une niche"), M(".")],
+      [P("Lisa"), M("lit"), M("un"), C("livre", "un livre"), M("au"), C("jardin", "le jardin"), M(".")],
+      [C("Fontaines", "une fontaine"), M("et"), C("bassins", "un bassin"), M("brillent"), M("au"), C("soleil", "le soleil"), M(".")],
+      [P("Gambetta"), M("proclame"), M("la"), C("République", "la République"), M(".")],
+      [M("Les"), C("enfants", "un enfant"), M("de"), P("Lyon"), M("chantent"), M(".")]
+    ],
+    defi: [
+      [C("Pierre", "une pierre"), M("qui"), M("roule"), M("n'amasse"), M("pas"), C("mousse", "la mousse"), M(".")],
+      [P("Pierre"), M("lance"), M("une"), C("pierre", "une pierre"), M(".")],
+      [P("Rose"), M("arrose"), M("une"), C("rose", "une rose"), M(".")],
+      [P("Olive"), M("mange"), M("une"), C("olive", "une olive"), M(".")],
+      [C("Roses", "une rose"), M("et"), C("tulipes", "une tulipe"), M("fleurissent"), M("à"), P("Milhaud"), M(".")],
+      [C("Chiens", "un chien"), M("et"), C("chats", "un chat"), M("jouent"), M("avec"), P("Médor"), M(".")],
+      [C("Chien", "un chien"), M("qui"), M("aboie"), M("ne"), M("mord"), M("pas"), M(".")],
+      [M("Hier"), M(","), P("Louis"), M("a"), M("lu"), M("au"), C("soleil", "le soleil"), M(".")],
+      [P("Versailles"), M("accueille"), M("des"), C("visiteurs", "un visiteur"), M("du"), C("monde", "le monde"), M(".")],
+      [C("Étoiles", "une étoile"), M("et"), C("planètes", "une planète"), M("brillent"), M("sur"), P("Paris"), M(".")],
+      [P("Victor Hugo"), M("écrit"), M("des"), C("poèmes", "un poème"), M(".")],
+      [P("Marseille"), M("possède"), M("un"), C("port", "un port"), M(".")]
+    ]
+  };
+  // « La craie » : forme par défaut
+  PHRASES.noms[11][1].f = "la craie";
+  // « la République » : en histoire, la République (avec une majuscule) est un nom propre ; pour ne pas troubler, on la retire du test un/le
+  PHRASES.propre[10][3] = P("République");
+
+  var el = function (id) { return document.getElementById(id); };
+  var niveau = "noms", index = 0, score = 0, erreurs = 0, fini = false, sonActif = true, mots = [], ordre = [];
+
+  var ctx = null;
+  function son(type) {
+    if (!sonActif) return;
+    try {
+      ctx = ctx || new (window.AudioContext || window.webkitAudioContext)();
+      var t = ctx.currentTime;
+      var notes = type === "nom" ? [[660, 0, 0.18], [990, 0.07, 0.25]] : type === "propre" ? [[523, 0, 0.15, "square"], [1047, 0.08, 0.35]]
+        : type === "bien" ? [[784, 0, 0.3], [988, 0.08, 0.3], [1175, 0.16, 0.45]] : type === "fin" ? [[523, 0, 0.2], [659, 0.12, 0.2], [784, 0.24, 0.2], [1047, 0.36, 0.6]]
+        : [[300, 0, 0.35, "sine", 140]];
+      notes.forEach(function (n) { var o = ctx.createOscillator(), g = ctx.createGain(); o.type = n[3] || "triangle"; o.frequency.setValueAtTime(n[0], t + n[1]);
+        if (n[4]) o.frequency.exponentialRampToValueAtTime(n[4], t + n[1] + n[2]);
+        o.connect(g); g.connect(ctx.destination); g.gain.setValueAtTime(0.0001, t + n[1]); g.gain.exponentialRampToValueAtTime(0.14, t + n[1] + 0.01);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + n[1] + n[2]); o.start(t + n[1]); o.stop(t + n[1] + n[2] + 0.05); });
+    } catch (e) {}
+  }
+  function cleRecord() { return "detecteur-noms-record-" + niveau; }
+  function majScore() {
+    var r = 0; try { r = parseInt(localStorage.getItem(cleRecord()), 10) || 0; } catch (e) {}
+    if (score > r) { r = score; try { localStorage.setItem(cleRecord(), String(r)); } catch (e) {} }
+    el("score").textContent = score; el("record").textContent = r;
+  }
+  function verdict(t, c) { el("verdict").textContent = t; el("verdict").className = "verdict" + (c ? " " + c : ""); }
+  function secoue(x) { x.classList.remove("secoue"); void x.offsetWidth; x.classList.add("secoue"); }
+  function melanger(t) { for (var i = t.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)), x = t[i]; t[i] = t[j]; t[j] = x; } return t; }
+
+  function afficher() {
+    erreurs = 0; fini = false; oublier(); verdict(""); el("btnSuivant").hidden = true;
+    var p = PHRASES[niveau][ordre[index]];
+    el("phrase").innerHTML = "";
+    mots = p.map(function (m, i) {
+      var d = document.createElement("span"); d.className = "mot" + (/^[.,!?;:]$/.test(m.t) ? " ponct" : ""); d.dataset.i = i;
+      d.innerHTML = '<span class="etiq"></span>' + m.t; el("phrase").appendChild(d);
+      return { m: m, el: d, trouve: false, premier: i === 0 };
+    });
+    el("loupe").hidden = niveau === "noms";
+    el("consigne").textContent = niveau === "noms" ? "Trouve les noms : glisse le chapeau devant un mot" : "Trouve les noms : le chapeau ou la loupe";
+  }
+  function restants() { return mots.filter(function (x) { return x.m.n && !x.trouve; }).length; }
+  function essai(x, texte) { var s = document.createElement("span"); s.className = "essai"; s.textContent = texte; x.el.appendChild(s); setTimeout(function () { s.remove(); }, 1150); }
+  function rate(x, texte, aide) { erreurs++; secoue(x.el); son("non"); essai(x, texte); verdict(aide || "🤪", "faux"); }
+  function trouve(x, type) {
+    x.trouve = true; x.el.classList.add(type === "c" ? "commun" : "propre");
+    x.el.querySelector(".etiq").textContent = type === "c" ? (niveau === "noms" ? x.m.f : x.m.f + " · nom commun") : "nom propre";
+    son(type === "c" ? "nom" : "propre"); verdict("");
+    if (!restants()) {
+      fini = true; if (!erreurs) score++; majScore(); son(index % 4 === 3 ? "fin" : "bien");
+      verdict(erreurs ? "✅ Tous les noms sont trouvés" : "✅ Tous les noms, du premier coup !", "bien");
+      el("btnSuivant").hidden = false; el("consigne").textContent = "Bravo !";
+    }
+  }
+  function poser(outil, x) {
+    if (fini || x.trouve || x.el.classList.contains("ponct")) return;
+    var m = x.m, mot = m.t, maj = mot.charAt(0) !== mot.charAt(0).toLowerCase();
+    if (outil === "chapeau") {
+      if (m.n === "c") return trouve(x, "c");
+      if (m.n === "p") return rate(x, "le " + mot + " ?", "🤪 Ce mot n'a pas besoin de un ou le : regarde sa majuscule");
+      return rate(x, "un " + mot.toLowerCase() + " ?", "🤪 « un " + mot.toLowerCase() + " » : ça ne va pas");
+    }
+    // la loupe
+    if (!maj) return rate(x, "pas de majuscule", "🤪 Pas de majuscule");
+    if (m.n === "p") return trouve(x, "p");
+    if (x.premier) return rate(x, "début de phrase", "🤪 Majuscule de début de phrase : essaie le chapeau");
+    return rate(x, "?", "🤪");
+  }
+
+  // ---------- deux gestes : glisser l'outil sur le mot, ou toucher l'outil puis le mot ----------
+  var choisi = null, enVol = false;
+  function oublier() { document.querySelectorAll(".choisi").forEach(function (x) { x.classList.remove("choisi"); }); choisi = null; }
+  function motSous(px, py) { var t = document.elementFromPoint(px, py); var w = t && t.closest ? t.closest(".mot") : null; return w ? mots[+w.dataset.i] : null; }
+  ["chapeau", "loupe"].forEach(function (id) {
+    var obj = el(id);
+    obj.addEventListener("pointerdown", function (ev) {
+      if (fini) return; ev.preventDefault();
+      var r = obj.getBoundingClientRect(), vol = obj.cloneNode(true); vol.removeAttribute("id"); vol.classList.remove("choisi"); vol.classList.add("en-vol");
+      vol.style.width = r.width + "px"; document.body.appendChild(vol); obj.classList.add("parti"); enVol = true;
+      var x0 = ev.clientX, y0 = ev.clientY, dx = x0 - r.left, dy = y0 - r.top, bouge = false, survol = null;
+      function pose(px, py) { vol.style.left = (px - dx) + "px"; vol.style.top = (py - dy) + "px"; }
+      pose(x0, y0);
+      function mv(e) { pose(e.clientX, e.clientY); if (Math.hypot(e.clientX - x0, e.clientY - y0) > 12) bouge = true;
+        var c = motSous(e.clientX, e.clientY); if (survol && (!c || survol !== c.el)) survol.classList.remove("survol"); if (c && !c.el.classList.contains("ponct")) { c.el.classList.add("survol"); survol = c.el; } }
+      function up(e) {
+        document.removeEventListener("pointermove", mv); document.removeEventListener("pointerup", up);
+        vol.remove(); obj.classList.remove("parti"); setTimeout(function () { enVol = false; }, 0); if (survol) survol.classList.remove("survol");
+        if (!bouge) { var deja = choisi === id; oublier(); if (!deja) { choisi = id; obj.classList.add("choisi"); } return; }
+        var c = motSous(e.clientX, e.clientY); if (c) poser(id, c);
+      }
+      document.addEventListener("pointermove", mv); document.addEventListener("pointerup", up);
+    });
+  });
+  document.addEventListener("pointerup", function (ev) {
+    if (enVol || !choisi || fini) return;
+    var w = ev.target.closest && ev.target.closest(".mot"); if (!w) return;
+    poser(choisi, mots[+w.dataset.i]);   // l'outil reste dans la main : on peut l'essayer sur plusieurs mots
+  });
+
+  el("btnIndice").addEventListener("click", function () {
+    if (fini) return;
+    verdict(niveau === "noms" ? "💡 Un nom : je peux mettre un ou le devant (un jardin)"
+      : "💡 un ou le devant : nom commun · une majuscule au milieu de la phrase : nom propre");
+  });
+  el("btnSuivant").addEventListener("click", function () {
+    if (index < PHRASES[niveau].length - 1) { index++; afficher(); }
+    else { index = 0; score = 0; ordre = melanger(PHRASES[niveau].map(function (_, i) { return i; })); majScore(); afficher(); }
+  });
+  el("btnSon").addEventListener("click", function () { sonActif = !sonActif; el("btnSon").textContent = sonActif ? "🔊" : "🔇"; });
+  function choisirNiveau(n) {
+    if (!PHRASES[n]) return false;
+    niveau = n; index = 0; score = 0; ordre = melanger(PHRASES[n].map(function (_, i) { return i; }));
+    document.querySelectorAll("#niveaux button").forEach(function (b) { b.classList.toggle("actif", b.dataset.niveau === n); });
+    majScore(); afficher(); return true;
+  }
+  document.querySelectorAll("#niveaux button").forEach(function (b) { b.addEventListener("click", function () { choisirNiveau(b.dataset.niveau); }); });
+  if (!(location.hash && choisirNiveau(decodeURIComponent(location.hash.slice(1))))) choisirNiveau("noms");
+  window.__detecteur = { etat: function () { return { niveau: niveau, index: index, total: PHRASES[niveau].length, fini: fini, score: score,
+    mots: mots.map(function (x) { return { t: x.m.t, n: x.m.n || null, trouve: x.trouve }; }) }; } };
+})();
+</script>
+<!-- MENU -->
+<script>
+/* ==== LE MENU ☰ (GTH, 10/10) : interface épurée — à l'écran, seulement le titre, le score, la consigne et l'activité ====
+   Tout le reste (niveaux, onglets de méthode, ✏️, 🔊, 🖨️, aide…) part dans un menu ☰, ouvert d'un toucher.
+   Réglage par outil (CONF, posé par l'injecteur) : ancre = où mettre le bouton ☰ (sinon en haut à droite de l'écran) ;
+   cacher = ce qui part dans le menu (sinon : tout ce qui, dans « .barre .droite », n'est pas un score).
+   Installé par .claude/outils/menu-outil/injecter.py ; ne pas modifier dans l'outil, mais dans ce fichier. */
+(function () {
+  var CONF = {};
+  var st = document.createElement("style");
+  st.textContent =
+    ".menu-btn{width:58px; height:58px; border-radius:16px; border:2px solid rgba(0,0,0,.15); background:#fff; color:#1f2a33; font-size:2rem; line-height:1; cursor:pointer; flex:none; padding:0;}" +
+    ".menu-btn.fixe{position:fixed; top:10px; right:12px; z-index:150; box-shadow:0 4px 14px rgba(0,0,0,.15);}" +
+    ".menu-btn.ouvert{background:#1f2a33; color:#fff;}" +
+    ".menu-panneau{position:fixed; top:76px; right:16px; z-index:200; background:#fff; color:#1f2a33; border-radius:18px; box-shadow:0 18px 50px rgba(0,0,0,.28); padding:16px 18px;" +
+    "  display:flex; flex-direction:column; align-items:flex-start; gap:12px; max-width:min(620px, 92vw); max-height:80vh; overflow:auto;}" +
+    ".menu-panneau[hidden]{display:none !important;}" +
+    ".menu-panneau h4{margin:0; font-family:sans-serif; font-size:.85rem; text-transform:uppercase; letter-spacing:.6px; color:#6d7a85;}" +
+    ".menu-panneau > *{position:static !important; margin:0 !important;}" +
+    ".menu-panneau > div,.menu-panneau > nav{display:flex; flex-wrap:wrap; gap:8px;}";
+  document.head.appendChild(st);
+  function installer() {
+    var autres = [];
+    if (CONF.cacher) CONF.cacher.forEach(function (s) { document.querySelectorAll(s).forEach(function (e) { if (autres.indexOf(e) === -1) autres.push(e); }); });
+    else { var d = document.querySelector(".barre .droite"); if (d) autres = Array.prototype.filter.call(d.children, function (e) { return !e.classList.contains("score"); }); }
+    if (!autres.length) return;
+    var btn = document.createElement("button"); btn.type = "button"; btn.className = "menu-btn"; btn.title = "Niveaux et réglages"; btn.textContent = "☰";
+    var pan = document.createElement("div"); pan.className = "menu-panneau"; pan.hidden = true;
+    var t = document.createElement("h4"); t.textContent = "Niveaux et réglages"; pan.appendChild(t);
+    autres.forEach(function (e) { pan.appendChild(e); });
+    var ancre = document.querySelector(CONF.ancre || ".barre .droite");
+    if (ancre) ancre.appendChild(btn); else { btn.classList.add("fixe"); document.body.appendChild(btn); }
+    document.body.appendChild(pan);
+    function ouvrir(o) { pan.hidden = !o; btn.classList.toggle("ouvert", o); }
+    btn.addEventListener("click", function (e) { e.stopPropagation(); ouvrir(pan.hidden); });
+    // un niveau choisi, ou une fenêtre ouverte (✏️, 🖨️) : le menu se referme ; on garde le menu ouvert pour choisir un type de jeu
+    pan.addEventListener("click", function (e) { var b = e.target.closest("button"); if (b && !b.closest(CONF.garderOuvert || ".types")) setTimeout(function () { ouvrir(false); }, 120); });
+    document.addEventListener("pointerdown", function (e) { if (!pan.hidden && !pan.contains(e.target) && e.target !== btn) ouvrir(false); });
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", installer); else installer();
+})();
+</script>
+<!-- /MENU -->
+<!-- INDICE-COTE -->
+<script>
+/* 💡 sur le côté (Karim, 21/10) : dans les jeux qui ont un bouton « 💡 Indice » (.btn-indice), le bouton devient une ampoule seule,
+   collée au bord droit de l'écran, à mi-hauteur ; l'indice s'ouvre dans une bulle à côté d'elle, jamais sous le jeu.
+   Le jeu garde son propre code : au toucher, on regarde quel texte il vient d'écrire (zone #indice, ou la ligne de message),
+   on le reprend dans la bulle et on remet la zone comme avant. Installé par injecter.py. */
+(function () {
+  var b = document.querySelector(".btn-indice"); if (!b) return;
+  var st = document.createElement("style");
+  st.textContent =
+    ".btn-indice.cote{position:fixed !important; right:18px; top:50%; transform:translateY(-50%); width:76px; height:76px; padding:0 !important; border-radius:50% !important;" +
+    " font-size:40px !important; line-height:1; z-index:60; margin:0 !important; display:flex; align-items:center; justify-content:center}" +
+    "#bulle-cote{position:fixed; right:110px; top:50%; transform:translateY(-50%); max-width:520px; background:#fff8c4; border:2px solid #d4b106; border-radius:18px;" +
+    " padding:16px 22px; font-size:26px; line-height:1.35; z-index:60; box-shadow:0 6px 18px rgba(0,0,0,.15); display:none}" +
+    "#bulle-cote::after{content:''; position:absolute; right:-14px; top:50%; margin-top:-12px; border:12px solid transparent; border-left:14px solid #d4b106; border-right:none}";
+  document.head.appendChild(st);
+  b.classList.add("cote"); b.textContent = "💡"; b.title = "Indice"; document.body.appendChild(b);
+  var bulle = document.createElement("div"); bulle.id = "bulle-cote"; document.body.appendChild(bulle);
+  var zones = function () { return Array.prototype.slice.call(document.querySelectorAll("#indice, .indice, #message, .message, #verdict, .verdict, #consigne-aide")); };
+  var avant = [], minuteur = null;
+  b.addEventListener("click", function () { avant = zones().map(function (z) { return [z, z.textContent, z.className]; }); }, true);   // avant le code du jeu
+  b.addEventListener("click", function () {
+    setTimeout(function () {
+      var txt = "";
+      avant.forEach(function (a) {
+        var z = a[0], neuf = z.textContent;
+        if (neuf !== a[1] && neuf.trim()) { txt = neuf; z.textContent = a[1]; z.className = a[2]; }
+      });
+      if (!txt) return;   // le jeu montre l'indice autrement : on le laisse faire
+      bulle.textContent = txt.replace(/^\s*💡\s*/, ""); bulle.style.display = "block";
+      clearTimeout(minuteur); minuteur = setTimeout(function () { bulle.style.display = "none"; }, 8000);
+    }, 0);
+  });
+  document.addEventListener("pointerdown", function (e) { if (e.target !== b && e.target !== bulle) bulle.style.display = "none"; });
+})();
+</script>
+<!-- /INDICE-COTE -->
+</body>
+</html>

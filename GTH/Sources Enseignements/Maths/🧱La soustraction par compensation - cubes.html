@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>La soustraction par compensation</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect x='6' y='34' width='16' height='16' fill='%23f2c230' stroke='%23705a00' stroke-width='3'/%3E%3Crect x='24' y='34' width='16' height='16' fill='%23f2c230' stroke='%23705a00' stroke-width='3'/%3E%3Crect x='44' y='8' width='12' height='42' fill='%233a86d4' stroke='%231b4a7a' stroke-width='3'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Quicksand:wght@600;700&display=swap">
+<style>
+  /* Univers de ce jeu : la table aux cubes emboîtables. L'opération est posée en grand ; sous les deux colonnes dont on parle,
+     leurs objets restent dessinés : cube = 1 unité, barre = 10 cubes = 1 dizaine, plaque = 1 centaine… Quand on ne peut pas
+     enlever, on ajoute 10 cubes en haut ET une barre (= 10 cubes) en bas, dans la colonne d'à côté : la même chose des deux
+     côtés, la différence ne change pas. Le petit calcul de chaque colonne se fait avec l'ascenseur 🛗 (7 + ? = 12). */
+  :root{ --encre:#2b2233; --gris:#6d6475; --bord:#d9cfe3; --rouge:#d6455d; --bien:#1a8f5c; --faux:#d6455d;
+    --r0:#f2c230; --r1:#3a86d4; --r2:#3fae5a; --r3:#e4572e; --r4:#8e5bd1; --r5:#ec8a1c; }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{margin:0; color:var(--encre); font-family:"Quicksand",system-ui,sans-serif; overflow:hidden; height:100vh; display:flex; flex-direction:column;
+    background:#f3ede4; user-select:none; -webkit-user-select:none; touch-action:none;}
+  .barre{display:grid; grid-template-columns:1fr auto; align-items:center; gap:16px; padding:10px 26px; background:#fffdf8; border-bottom:3px solid var(--bord);}
+  .titre{display:flex; align-items:center; gap:12px;} .titre svg{width:46px; height:46px;}
+  .titre h1{font-family:"Baloo 2",cursive; font-weight:800; font-size:1.9rem; margin:0;}
+  .droite{display:flex; align-items:center; gap:12px;}
+  .score{display:flex; flex-direction:column; align-items:center; padding:2px 14px; border-radius:12px; background:#fff; border:2px solid var(--bord); min-width:120px;}
+  .score small{font-size:.8rem; font-weight:700; color:var(--gris); text-transform:uppercase; letter-spacing:.5px;}
+  .score b{font-family:"Baloo 2",cursive; font-size:1.7rem; line-height:1.05;}
+  .niveaux{display:flex; flex-direction:column; gap:4px;}
+  .niveaux button{font:inherit; font-weight:700; font-size:.85rem; padding:2px 12px; border-radius:999px; cursor:pointer; background:#fff; color:var(--gris); border:2px solid var(--bord);}
+  .niveaux button.actif{background:var(--encre); color:#fff; border-color:var(--encre);}
+  .consigne{display:flex; justify-content:center; padding:10px 20px 0;}
+  .consigne p{margin:0; font-family:"Baloo 2",cursive; font-weight:700; font-size:2.1rem; text-align:center; background:#fff; padding:2px 22px; border-radius:16px; border:2px solid var(--bord);}
+
+  .jeu{flex:1; min-height:0; display:flex; justify-content:center; align-items:flex-start; gap:24px; padding:8px 20px 0; overflow:hidden;}
+  .op{background:#fff; border-radius:22px; padding:6px 26px 10px; box-shadow:0 6px 0 rgba(43,34,51,.12);}
+  .ligne{display:flex;}
+  .signe{width:80px; font-family:"Baloo 2",cursive; font-weight:800; font-size:5.6rem; display:flex; align-items:center; justify-content:center;}
+  .col{width:170px; display:flex; align-items:center; justify-content:center; position:relative; height:112px;
+    font-family:"Baloo 2",cursive; font-weight:800; font-size:6rem; line-height:1; border-radius:12px;}
+  .rang{height:34px; font-family:"Quicksand",sans-serif; font-size:1.05rem; font-weight:700;}
+  .rang span{padding:2px 12px; border-radius:999px; color:#fff;}
+  .col.encours{}   /* plus de fond jaune (Karim, 21/10 : « ça empêche de bien lire ») : le contour en pointillés suffit */
+  .col .petit{position:absolute; left:16px; top:6px; font-size:2.8rem; color:var(--rouge);}
+  .bas-l .col .petit{top:auto; bottom:4px;}
+  .col.survol,.col.choisie{outline:6px solid #1f7a8c; outline-offset:-3px;}
+  .col.attend{outline:5px dashed #1f7a8c; outline-offset:-5px;}
+  .objets{width:170px; height:126px; padding:4px 6px; overflow:hidden; position:relative;}
+  .objets .dedans{display:flex; flex-wrap:wrap; align-content:flex-start; justify-content:center; gap:4px; width:158px; transform-origin:top center;}
+  .trait{height:7px; background:var(--encre); border-radius:3px; margin:4px 0 4px 80px;}
+  .resultat .col.vide{border:2px dashed var(--bord);}
+  .resultat .col.pose{color:var(--bien);}
+  /* les objets : rien ne se change en chiffre */
+  .cu{width:24px; height:24px; border-radius:4px; border:2px solid rgba(0,0,0,.2); box-shadow:inset -3px -3px 0 rgba(0,0,0,.06);}
+  .ba{width:13px; height:58px; border:2px solid rgba(0,0,0,.2); border-radius:3px; background-image:repeating-linear-gradient(180deg,transparent 0 4.6px,rgba(0,0,0,.15) 4.6px 5.4px);}
+  .pl{width:30px; height:30px; border:2px solid rgba(0,0,0,.2); border-radius:3px; display:flex; align-items:center; justify-content:center; font-size:.62rem; font-weight:800; color:#5f6b75;
+    background-image:repeating-linear-gradient(90deg,transparent 0 2.4px,rgba(0,0,0,.2) 2.4px 2.8px),repeating-linear-gradient(180deg,transparent 0 2.4px,rgba(0,0,0,.2) 2.4px 2.8px);}
+  .ajout{outline:3px solid var(--rouge); outline-offset:2px; animation:tombe .5s ease;}
+  .groupe-ajout{display:flex; flex-wrap:wrap; justify-content:center; gap:3px; padding:3px; border:3px solid var(--rouge); border-radius:8px; animation:tombe .5s ease;}
+  .groupe-ajout .cu{width:20px; height:20px;}
+  @keyframes tombe{0%{transform:translateY(-40px); opacity:0}100%{transform:none; opacity:1}}
+  .lien{font-family:"Baloo 2",cursive; font-weight:800; font-size:1.6rem; color:var(--rouge); text-align:center; min-height:2.2rem;}
+
+  /* l'ascenseur à gauche, ses opérations en grand à sa droite */
+  .cote{height:100%; display:grid; grid-template-columns:530px 250px; gap:10px;}
+  .cote[hidden]{display:none;}
+  .cote .tourbox{height:100%; min-height:0;}
+  .cote .asc-texte{display:flex; flex-direction:column; justify-content:center; gap:22px;}
+  .cote h2{margin:0; font-family:"Baloo 2",cursive; font-weight:800; font-size:3rem; line-height:1.15; color:#2c6aa0;}
+  .cote h2 small{display:block; font-size:2.4rem; color:var(--encre);}
+  .cote .total{font-family:"Baloo 2",cursive; font-weight:800; font-size:2.6rem; line-height:1.2; color:var(--bien); min-height:3rem;}
+  .cote .total span{display:block;}
+  .btn-asc{font:inherit; font-family:"Baloo 2",cursive; font-weight:800; font-size:1.6rem; padding:6px 22px; border-radius:16px; cursor:pointer; background:#eef2f6; border:4px solid #4a5a6a;}
+  .clavier{display:flex; gap:10px; justify-content:center; align-items:center; padding:6px 0; min-height:100px;}
+  .chiffre,.jeton{height:88px; border-radius:16px; background:#fff; border:4px solid var(--encre); display:flex; align-items:center; justify-content:center;
+    font-family:"Baloo 2",cursive; font-weight:800; font-size:3.2rem; cursor:grab; touch-action:none; box-shadow:0 5px 0 rgba(43,34,51,.2);}
+  .chiffre{width:76px;}
+  .jeton{padding:0 18px; gap:12px; font-size:2.6rem; color:var(--rouge); border-color:var(--rouge); height:96px;}
+  .jeton small{font-family:"Quicksand",sans-serif; font-size:1.05rem; font-weight:700; color:var(--encre); width:80px; line-height:1.1;}
+  .jeton .ba{height:70px;}
+  .casse{outline:3px solid var(--rouge); outline-offset:2px; animation:casse .65s ease forwards;}
+  @keyframes casse{0%{transform:translateY(-40px)}35%{transform:none}55%{transform:rotate(-8deg) scale(1.1)}75%{transform:rotate(8deg) scale(1.1)}100%{transform:scale(1.25); opacity:0}}
+  .chiffre.choisi,.jeton.choisi{outline:7px solid #1f7a8c; outline-offset:3px;}
+  .chiffre.parti,.jeton.parti{visibility:hidden;}
+  .en-vol{position:fixed !important; z-index:50; pointer-events:none; transform:scale(1.06) rotate(-3deg); box-shadow:0 18px 30px rgba(0,0,0,.3);}
+  .secoue{animation:secoue .4s ease;} @keyframes secoue{0%,100%{transform:none}25%{transform:translateX(-10px)}75%{transform:translateX(10px)}}
+
+  .bas{display:flex; align-items:center; justify-content:center; gap:18px; padding:4px 0 12px;}
+  .btn-indice{font:inherit; font-weight:700; font-size:1.2rem; padding:6px 16px; border-radius:999px; cursor:pointer; background:#fff8dc; border:2px solid #f1d27a; color:#7a5b00;}
+  .verdict{min-height:3rem; font-family:"Baloo 2",cursive; font-size:2.1rem; font-weight:800; text-align:center;}
+  .verdict:not(:empty){background:#fff; padding:0 24px; border-radius:14px;}
+  .verdict.bien{color:var(--bien);} .verdict.faux{color:var(--faux);}
+  .btn-suivant{font:inherit; font-family:"Baloo 2",cursive; font-weight:800; font-size:1.8rem; padding:4px 34px; border-radius:999px; cursor:pointer; background:var(--encre); color:#fff; border:none;}
+  .btn-suivant[hidden]{display:none;}
+  .btn-perso{font:inherit; font-weight:700; padding:8px 14px; border-radius:12px; cursor:pointer; background:#fff; border:2px solid var(--bord);}
+  .perso{position:fixed; inset:0; background:rgba(43,34,51,.45); display:flex; align-items:center; justify-content:center; z-index:60;}
+  .perso[hidden]{display:none;}
+  .perso-boite{background:#fffdf8; border-radius:24px; padding:20px 34px; display:flex; flex-direction:column; align-items:center; gap:16px; box-shadow:0 20px 50px rgba(0,0,0,.3);}
+  .perso-boite h2{margin:0; font-family:"Baloo 2",cursive; font-size:2rem;}
+  .perso-op{display:flex; align-items:center; gap:18px;}
+  .perso-nb{min-width:330px; height:100px; border:4px dashed var(--bord); border-radius:16px; background:#fff; display:flex; align-items:center; justify-content:flex-end; padding:0 18px;
+    font-family:"Baloo 2",cursive; font-weight:800; font-size:4.4rem; cursor:pointer;}
+  .perso-nb.choisi{border:5px solid #1f7a8c;}
+  .perso-signe{font-family:"Baloo 2",cursive; font-weight:800; font-size:4.4rem;}
+  .perso-touches{display:grid; grid-template-columns:repeat(6, 84px); gap:10px;}
+  .perso-touches button{height:76px; border-radius:14px; border:3px solid var(--encre); background:#fff; font-family:"Baloo 2",cursive; font-weight:800; font-size:2.6rem; cursor:pointer;}
+  .perso-msg{font-weight:700; font-size:1.2rem; color:var(--gris); min-height:1.6rem;}
+  .perso-msg.faux{color:var(--faux);}
+  .perso-actions{display:flex; gap:16px;}
+  .perso-actions button{font:inherit; font-family:"Baloo 2",cursive; font-weight:800; font-size:1.6rem; padding:6px 26px; border-radius:999px; cursor:pointer; border:3px solid var(--encre); background:#fff;}
+  .perso-actions #pOk{background:var(--encre); color:#fff;}
+</style>
+<!-- CALCULETTE -->
+<script>
+/* 🧮 La calculette (Karim, 21/10) : pour répondre par un nombre, l'élève touche les touches d'une petite calculette posée sur le côté
+   (plus d'étiquettes-réponses à glisser). Ce qu'il tape s'écrit dans la case du jeu ; dès que le nombre ne peut plus devenir la
+   réponse, c'est faux ; dès qu'il est juste, le jeu continue. Installé par injecter.py.
+   Calculette.ouvrir({ cible: élément, bon: 42, format: f, siBon: function () {}, siFaux: function (tapé) {} }) ; Calculette.fermer(). */
+(function () {
+  var st = document.createElement("style");
+  st.textContent =
+    "#calculette{position:fixed; right:110px; bottom:28px; display:none; flex-direction:column; gap:6px; padding:8px; background:#eceff1; border:2px solid #cfd8dc; border-radius:14px; z-index:55; opacity:.9}" +
+    "#calculette .ecr{display:none}" +
+    "#calculette .tou{display:grid; grid-template-columns:repeat(3,46px); gap:5px}" +
+    "#calculette button{height:38px; border:1px solid #cfd8dc; border-radius:8px; background:#fff; color:#607d8b; font:700 19px 'Baloo 2',Arial,sans-serif; cursor:pointer}" +
+    "#calculette button:active{transform:translateY(2px); box-shadow:none}" +
+    "#calculette button.eff{color:#c62828}";
+  document.head.appendChild(st);
+  var box = document.createElement("div"); box.id = "calculette";
+  box.innerHTML = '<div class="ecr"></div><div class="tou"></div>';
+  document.addEventListener("DOMContentLoaded", function () { document.body.appendChild(box); });
+  if (document.body) document.body.appendChild(box);
+  var o = null, tape = "", texteAvant = "";
+  ["7", "8", "9", "4", "5", "6", "1", "2", "3", "", "0", "⌫"].forEach(function (k) {
+    var b = document.createElement("button"); b.type = "button"; b.textContent = k; if (!k) b.style.visibility = "hidden"; if (k === "⌫") b.className = "eff";
+    b.addEventListener("click", function () { touche(k); }); box.querySelector(".tou").appendChild(b);
+  });
+  function montre() {
+    box.querySelector(".ecr").textContent = tape;
+    if (o && o.cible) o.cible.textContent = tape ? (o.format ? o.format(+tape) : tape) : texteAvant;
+  }
+  function touche(k) {
+    if (!o || !k) return;
+    if (k === "⌫") tape = tape.slice(0, -1); else if (tape.length < 7) tape += k;
+    montre();
+    var juste = String(o.bon);
+    if (tape === juste) { var f = o.siBon; o = null; tape = ""; box.style.display = "none"; f(+juste); return; }
+    if (tape && juste.indexOf(tape) !== 0) {
+      var t = tape; if (o.siFaux) o.siFaux(+t);
+      setTimeout(function () { tape = ""; montre(); }, 700);
+    }
+  }
+  document.addEventListener("keydown", function (e) { if (!o) return; if (/^[0-9]$/.test(e.key)) touche(e.key); else if (e.key === "Backspace") touche("⌫"); });
+  // si le jeu passe à autre chose (sa case disparaît), la calculette se range
+  setInterval(function () { if (o && o.cible && !document.body.contains(o.cible)) window.Calculette.fermer(); }, 400);
+  window.Calculette = {
+    ouvrir: function (opt) { o = opt; tape = ""; texteAvant = opt.cible ? opt.cible.textContent : ""; box.style.display = "flex"; montre(); },
+    fermer: function () { o = null; tape = ""; box.style.display = "none"; }
+  };
+})();
+</script>
+<!-- /CALCULETTE -->
+<!-- ASCENSEUR -->
+<script>
+/* ==== L'ASCENSEUR (GTH, 10/10) : module commun de 🔟 L'ascenseur du 10 et de 🧱 La soustraction par compensation ====
+   Une cage d'ascenseur, les étages écrits (les dizaines en gros, en couleur). La cabine, pendue à son câble, part d'un étage ;
+   l'élève la fait monter au doigt (glisser vers le haut) ou touche l'étage où l'envoyer : on la voit alors monter étage par
+   étage. Elle doit s'arrêter à chaque arrêt prévu (d'abord la dizaine, puis l'arrivée) : les portes s'ouvrent, « ding »,
+   et le trajet s'écrit à côté (+2, puis +5). Un arrêt faux : 🤪, la cabine redescend au dernier arrêt.
+   Installé par .claude/outils/ascenseur/injecter.py ; ne pas modifier dans l'outil, mais dans ce fichier.
+   Usage : var a = Ascenseur(boite, { bas: 0, haut: 20, depart: 8, arrets: [10, 15], onArret: function (i, etage, plus) {},
+           onFaux: function (etage, attendu) {}, onFini: function () {} }); a.viser(10, "+ ?"); a.detruire();
+   viser(étage, texte) : l'étage où aller est surligné, une accolade en pointillés montre les étages à monter (avec le texte). */
+(function () {
+  var st = document.createElement("style");
+  st.textContent =
+    ".asc{position:relative; display:flex; gap:14px; height:100%; box-sizing:border-box; padding-bottom:62px; user-select:none; touch-action:none;}" +
+    /* un vrai immeuble (Karim, 21/10 : « ça ne ressemble pas à un building ») : tour de verre et de béton, fenêtres de part et d'autre
+       de la gaine vitrée, toit avec antenne, trottoir ; les numéros d'étage sont dehors, à gauche, comme sur un panneau */
+    ".asc-tour{position:relative; flex:0 0 300px; width:300px; height:100%; margin:46px 0 16px 78px; border:4px solid #90a4ae; background:linear-gradient(115deg,rgba(255,255,255,0) 30%,rgba(255,255,255,.55) 42%,rgba(255,255,255,0) 54%), repeating-linear-gradient(90deg,#b0bec5 0 2px,transparent 2px 54px), linear-gradient(180deg,#eef4f8,#d9e5ec); border-bottom:none; box-sizing:border-box;}" +
+    ".asc-tour::before{content:''; position:absolute; left:-5px; right:-5px; top:-46px; height:41px; pointer-events:none;" +
+    "  background:radial-gradient(circle at 72% 5px,#90a4ae 4px,transparent 5px), linear-gradient(#90a4ae,#90a4ae) 72% 6px / 4px 35px no-repeat," +
+    "  linear-gradient(#cfd8dc,#cfd8dc) 18% 100% / 96px 28px no-repeat, linear-gradient(#90a4ae,#90a4ae) 0 100% / 100% 8px no-repeat;}" +   /* toit : antenne et local technique */
+    ".asc-tour::after{content:''; position:absolute; left:-60px; right:-60px; bottom:-16px; height:16px; background:#cfd8dc; border-radius:3px; pointer-events:none;}" +   /* le trottoir */
+    ".asc-cage{position:absolute; top:0; bottom:0; left:50%; width:78px; transform:translateX(-50%); background:linear-gradient(90deg,#90a4ae 0 3px,rgba(207,226,236,.7) 3px calc(100% - 3px),#90a4ae calc(100% - 3px)); z-index:1;}" +   /* la gaine vitrée, au milieu */
+    ".asc-etage{position:absolute; left:0; right:0; display:flex; align-items:center; cursor:pointer; z-index:2;" +
+    "  border-top:1px solid rgba(120,144,156,.45);}" +   /* un trait gris léger à chaque étage : plus lisible */
+    ".asc-etage.rdc{background:linear-gradient(#90a4ae,#90a4ae) 30px 100% / 50px 80% no-repeat, linear-gradient(#f5f9fb,#f5f9fb) 33px 100% / 44px 74% no-repeat," +
+    "  linear-gradient(#90a4ae,#90a4ae) calc(100% - 30px) 100% / 50px 80% no-repeat, linear-gradient(#f5f9fb,#f5f9fb) calc(100% - 33px) 100% / 44px 74% no-repeat;}" +   /* rez-de-chaussée : les portes d'entrée */
+    ".asc-etage span{position:absolute; left:-83px; width:70px; text-align:right; font-family:'Baloo 2',cursive; font-weight:700; font-size:1.35rem; color:#5f7080;}" +
+    ".asc-etage.dix{border-top:3px solid #e8792a;}" +
+    ".asc-etage.ici span{color:#1f7a8c; font-weight:800; font-size:1.9rem;}" +   /* l'étage où est la cabine */
+    ".asc-etage.dix span{font-size:2.5rem; font-weight:800; color:#c2541a;}" +
+    ".asc-etage.vise{box-shadow:inset 0 0 0 3px #ffca28; background-color:rgba(255,236,179,.5);}" +
+    ".asc-etage.vise span{color:#7a5b00; font-weight:800;}" +
+    ".asc-cable{display:none;}" +   /* pas de câble : l'ascenseur moderne monte tout seul */
+    ".asc-cabine{position:absolute; left:50%; transform:translateX(-50%); border-radius:4px; background:linear-gradient(180deg,#eceff1,#b0bec5); border:3px solid #546e7a; box-shadow:0 2px 8px rgba(0,0,0,.18);" +
+    "  display:flex; align-items:flex-start; justify-content:center; cursor:grab; z-index:4; transition:top .12s linear; overflow:hidden;}" +   /* une cabine debout, plus haute que large */
+    ".asc-porte{position:absolute; top:0; bottom:0; width:50%; background:linear-gradient(90deg,#cfd8dc,#eceff1); transition:transform .35s ease;}" +
+    ".asc-porte.g{left:0; border-right:1px solid #607d8b;} .asc-porte.d{right:0; border-left:1px solid #607d8b;}" +
+    ".asc-cabine.ouvert .asc-porte.g{transform:translateX(-100%);} .asc-cabine.ouvert .asc-porte.d{transform:translateX(100%);}" +
+    ".asc-cabine b{position:relative; z-index:1; background:#546e7a; color:#fff; border-radius:0 0 4px 4px; padding:0 6px; font-family:'Baloo 2',cursive; font-weight:800; line-height:1.15;}" +
+    ".asc-cabine.tire{transition:none; cursor:grabbing;}" +
+    ".asc-cabine.secoue{animation:ascSecoue .4s ease;} @keyframes ascSecoue{0%,100%{transform:translateX(-50%)}25%{transform:translateX(calc(-50% - 9px))}75%{transform:translateX(calc(-50% + 9px))}}" +
+    ".asc-trajet{position:relative; width:120px; height:100%; margin-top:46px;}" +
+    ".asc-saut{position:absolute; left:6px; width:26px; border:5px solid #1a8f5c; border-left:none; border-radius:0 14px 14px 0;}" +
+    ".asc-saut b{position:absolute; left:34px; top:50%; transform:translateY(-50%); font-family:'Baloo 2',cursive; font-weight:800; font-size:2.4rem; color:#1a8f5c; white-space:nowrap;}" +
+    ".asc-saut.direct{border-color:#e8792a;} .asc-saut.direct b{color:#c2541a;}" +
+    ".asc-saut.prevu{border-style:dashed; border-color:#e0a800;} .asc-saut.prevu b{color:#7a5b00; font-size:2rem;}";
+  document.head.appendChild(st);
+
+  var ctx = null;
+  function ding(f) {
+    try { ctx = ctx || new (window.AudioContext || window.webkitAudioContext)();
+      var o = ctx.createOscillator(), g = ctx.createGain(), t = ctx.currentTime; o.type = "sine"; o.frequency.value = f || 880;
+      o.connect(g); g.connect(ctx.destination); g.gain.setValueAtTime(.08, t); g.gain.exponentialRampToValueAtTime(.001, t + .25); o.start(t); o.stop(t + .3);
+    } catch (e) {}
+  }
+
+  window.Ascenseur = function (boite, o) {
+    var n = o.haut - o.bas + 1, actuel = o.depart, dernier = o.depart, i = 0, fini = false, roule = null;
+    boite.innerHTML = "";
+    var racine = document.createElement("div"); racine.className = "asc";
+    var tour = document.createElement("div"); tour.className = "asc-tour";
+    var trajet = document.createElement("div"); trajet.className = "asc-trajet";
+    racine.appendChild(tour); racine.appendChild(trajet); boite.appendChild(racine);
+    var cage = document.createElement("div"); cage.className = "asc-cage"; tour.appendChild(cage);
+    var h = function () { return tour.clientHeight / n; };
+    var yDe = function (etage) { return (o.haut - etage) * h(); };
+    var etages = [];
+    for (var e = o.bas; e <= o.haut; e++) {
+      var d = document.createElement("div"); d.className = "asc-etage" + (e % 10 === 0 ? " dix" : "") + (e === o.bas ? " rdc" : ""); d.dataset.etage = e;
+      d.innerHTML = "<span>" + e + "</span>"; tour.appendChild(d); etages.push(d);
+    }
+    var cable = document.createElement("div"); cable.className = "asc-cable"; tour.appendChild(cable);
+    var cab = document.createElement("div"); cab.className = "asc-cabine";
+    cab.innerHTML = '<div class="asc-porte g"></div><div class="asc-porte d"></div><b></b>'; tour.appendChild(cab);
+    var num = cab.querySelector("b");
+    function montrer(etage) {   // la cabine à un étage (sans rien valider)
+      var top = yDe(etage) + h() * 0.06;   // la cabine occupe exactement la rangée de son étage (Karim, 21/10 : elle reste à son étage)
+      cab.style.top = top + "px"; cable.style.height = top + "px"; num.textContent = etage;
+      etages.forEach(function (d) { d.classList.toggle("ici", +d.dataset.etage === etage); });
+    }
+    function placer() {
+      etages.forEach(function (d) { var e = +d.dataset.etage; d.style.top = yDe(e) + "px"; d.style.height = h() + "px"; });
+      cab.style.height = (h() * 0.88) + "px"; cab.style.width = "70px"; num.style.fontSize = Math.min(1.3, h() / 30) + "rem";
+      montrer(actuel);
+      trajet.querySelectorAll(".asc-saut").forEach(function (s) { var a = +s.dataset.de, b = +s.dataset.a;
+        s.style.top = (yDe(b) + h() / 2) + "px"; s.style.height = ((b - a) * h()) + "px"; });
+    }
+    function viser(etage, texte) {
+      etages.forEach(function (d) { d.classList.toggle("vise", +d.dataset.etage === etage); });
+      trajet.querySelectorAll(".asc-saut.prevu").forEach(function (s) { s.remove(); });
+      if (etage === undefined || etage === null) return;
+      var s = document.createElement("div"); s.className = "asc-saut prevu"; s.dataset.de = dernier; s.dataset.a = etage;
+      s.innerHTML = "<b>" + (texte || "+ ?") + "</b>"; trajet.appendChild(s); placer();
+    }
+    function saut(a, b, direct) {
+      var s = document.createElement("div"); s.className = "asc-saut" + (direct ? " direct" : ""); s.dataset.de = a; s.dataset.a = b;
+      s.innerHTML = "<b>+" + (b - a) + "</b>"; trajet.appendChild(s); placer();
+    }
+    // on voit la cabine monter (ou redescendre) étage par étage
+    function rouler(vers, puis) {
+      clearInterval(roule);
+      if (vers === actuel) { if (puis) puis(); return; }
+      var pas = vers > actuel ? 1 : -1;
+      roule = setInterval(function () {
+        actuel += pas; montrer(actuel); if (actuel % 10 === 0) ding(1175);
+        if (actuel === vers) { clearInterval(roule); roule = null; if (puis) setTimeout(puis, 120); }
+      }, 140);
+    }
+    function valider(etage) {
+      var attendu = o.arrets[i];
+      if (etage === dernier) return;
+      if (etage !== attendu) {
+        cab.classList.remove("secoue"); void cab.offsetWidth; cab.classList.add("secoue"); ding(220);
+        if (o.onFaux) o.onFaux(etage, attendu);
+        setTimeout(function () { rouler(dernier); }, 450);
+        return;
+      }
+      ding(880); cab.classList.add("ouvert"); setTimeout(function () { cab.classList.remove("ouvert"); }, 900);
+      viser(null); saut(dernier, etage, i === 0 && etage % 10 === 0);
+      var plus = etage - dernier; dernier = etage; i++;
+      if (o.onArret) o.onArret(i - 1, etage, plus);
+      if (i >= o.arrets.length) { fini = true; if (o.onFini) o.onFini(); }
+    }
+    function envoyer(etage) { if (fini || roule) return; etage = Math.max(dernier, Math.min(o.haut, etage)); rouler(etage, function () { valider(etage); }); }
+    // glisser la cabine vers le haut : elle suit le doigt, étage par étage
+    cab.addEventListener("pointerdown", function (ev) {
+      if (fini || roule) return; ev.preventDefault(); ev.stopPropagation();
+      var r = tour.getBoundingClientRect(), bouge = false, y0 = ev.clientY;
+      cab.classList.add("tire");
+      function etageDe(y) { return Math.max(dernier, Math.min(o.haut, o.haut - Math.floor((y - r.top) / h()))); }
+      function mv(e) { if (Math.abs(e.clientY - y0) > 6) bouge = true; var et = etageDe(e.clientY);
+        if (et !== actuel) { actuel = et; montrer(et); if (et % 10 === 0) ding(1175); } }
+      function up(e) { document.removeEventListener("pointermove", mv); document.removeEventListener("pointerup", up); cab.classList.remove("tire");
+        if (!bouge) { montrer(actuel); return; } valider(actuel); }
+      document.addEventListener("pointermove", mv); document.addEventListener("pointerup", up);
+    });
+    // ou toucher l'étage où l'envoyer : on la voit monter
+    tour.addEventListener("pointerup", function (ev) {
+      if (fini || ev.target.closest(".asc-cabine")) return;
+      var d = ev.target.closest(".asc-etage"); if (!d) return;
+      var et = +d.dataset.etage; if (et < dernier) return;
+      envoyer(et);
+    });
+    var obs = window.ResizeObserver ? new ResizeObserver(function () { placer(); }) : null; if (obs) obs.observe(tour);
+    window.addEventListener("resize", placer);
+    setTimeout(placer, 0); placer();
+    return { detruire: function () { clearInterval(roule); window.removeEventListener("resize", placer); if (obs) obs.disconnect(); boite.innerHTML = ""; },
+      etat: function () { return { actuel: actuel, dernier: dernier, i: i, fini: fini, roule: !!roule }; }, envoyer: envoyer, viser: viser };
+  };
+})();
+</script>
+<!-- /ASCENSEUR -->
+</head>
+<body>
+<div class="barre">
+  <div class="titre">
+    <svg viewBox="0 0 64 64" aria-hidden="true"><rect x="6" y="34" width="16" height="16" fill="#f2c230" stroke="#705a00" stroke-width="3"/><rect x="24" y="34" width="16" height="16" fill="#f2c230" stroke="#705a00" stroke-width="3"/><rect x="44" y="8" width="12" height="42" fill="#3a86d4" stroke="#1b4a7a" stroke-width="3"/></svg>
+    <h1>La soustraction par compensation</h1>
+  </div>
+  <div class="droite">
+    <div class="score" title="Soustractions finies sans erreur"><small>Sans erreur</small><b id="score">0</b></div>
+    <div class="score" title="Le meilleur score à ce niveau, gardé sur cet ordinateur"><small>🏆 Record</small><b id="record">0</b></div>
+    <button class="btn-perso" id="btnPerso" type="button" title="Écrire ma soustraction">✏️ Ma soustraction</button>
+    <div class="niveaux" id="niveaux">
+      <button type="button" data-niveau="2" class="actif">2 chiffres</button>
+      <button type="button" data-niveau="cm1">≤ 99 999</button>
+      <button type="button" data-niveau="cm2">≤ 999 999</button>
+    </div>
+  </div>
+</div>
+<div class="consigne"><p id="consigne"></p></div>
+<div class="jeu">
+  <div id="opbox">
+    <div class="op" id="op"></div>
+    <div class="lien" id="lien"></div>
+  </div>
+  <div class="cote" id="cote" hidden><div class="tourbox" id="tour"></div><div class="asc-texte"><h2 id="ascTitre"></h2><div class="total" id="ascTotal"></div></div></div>
+</div>
+<div class="clavier" id="clavier"></div>
+<div class="perso" id="perso" hidden>
+  <div class="perso-boite">
+    <h2>✏️ Ma soustraction</h2>
+    <div class="perso-op"><div class="perso-nb choisi" id="pHaut" data-champ="haut"></div><div class="perso-signe">−</div><div class="perso-nb" id="pBas" data-champ="bas"></div></div>
+    <div class="perso-touches" id="pTouches"></div>
+    <div class="perso-msg" id="pMsg">Touche un nombre, puis écris-le (jusqu'à 999 999)</div>
+    <div class="perso-actions"><button type="button" id="pAnnuler">Annuler</button><button type="button" id="pOk">C'est parti ➜</button></div>
+  </div>
+</div>
+<div class="bas">
+  <button class="btn-indice" id="btnIndice" type="button">💡 Indice</button>
+  <div class="verdict" id="verdict"></div>
+  <button class="btn-suivant" id="btnSuivant" type="button" hidden>➜</button>
+</div>
+<script>
+(function () {
+  // Soustractions inventées ; technique de la classe : par compensation, « 10 en haut, 1 en bas ».
+  var OPS = {
+    "2": [[52, 27], [43, 18], [61, 35], [70, 26], [84, 59], [93, 47], [35, 19], [62, 38], [81, 46], [74, 28], [56, 29], [90, 54]],
+    "cm1": [[7352, 2816], [43205, 18467], [60000, 23458], [8004, 3567], [52714, 9386], [31650, 12875], [90412, 45236], [6128, 3459],
+            [74053, 28617], [15300, 8742], [82516, 47829], [40731, 26548]],
+    "cm2": [[452316, 187529], [700000, 356482], [615203, 248674], [380145, 92768], [904512, 476835], [523041, 199357], [260718, 85949],
+            [841300, 563427], [375062, 148589], [600450, 237816], [918273, 649385], [487106, 293718]]
+  };
+  var RANGS = ["unités", "dizaines", "centaines", "milliers", "dizaines de mille", "centaines de mille"];
+  var UN = ["1 unité", "1 dizaine", "1 centaine", "1 millier", "1 dizaine de mille", "1 centaine de mille"];
+  var COURT = ["u", "d", "c", "m", "dm", "cm"], PLAQUE = ["", "", "100", "1 000", "10 000", "100 000"];
+  var el = function (id) { return document.getElementById(id); };
+  var niveau = "2", index = 0, score = 0, erreurs = 0, fini = false, asc = null;
+  var T, B, n, i, plusHaut, plusBas, res, etape, lb;
+
+  var coul = function (r) { return "var(--r" + r + ")"; };
+  var doux = function (r) { return "color-mix(in srgb, var(--r" + r + ") 40%, white)"; };
+  function chiffres(x, n) { var t = []; for (var k = 0; k < n; k++) { t.push(x % 10); x = Math.floor(x / 10); } return t; }
+  function cleRecord() { return "soustraction-compensation-record-" + niveau; }
+  function majScore() {
+    var r = 0; try { r = parseInt(localStorage.getItem(cleRecord()), 10) || 0; } catch (e) {}
+    if (score > r) { r = score; try { localStorage.setItem(cleRecord(), String(r)); } catch (e) {} }
+    el("score").textContent = score; el("record").textContent = r;
+  }
+  function verdict(t, c) { el("verdict").textContent = t; el("verdict").className = "verdict" + (c ? " " + c : ""); }
+  function secoue(x) { x.classList.remove("secoue"); void x.offsetWidth; x.classList.add("secoue"); }
+  var basEff = function (k) { return B[k] + (plusBas[k] ? 1 : 0); };
+  var hautEff = function (k) { return T[k] + (plusHaut[k] ? 10 : 0); };
+
+  // un objet du rang r : cube (u), barre de 10 cubes (d), plaque marquée 100, 1 000… (c et au-delà)
+  function objet(r, cls) {
+    var c = cls ? " " + cls : "";
+    if (r === 0) return '<div class="cu' + c + '" style="background:' + doux(0) + '"></div>';
+    if (r === 1) return '<div class="ba' + c + '" style="background-color:' + doux(1) + '"></div>';
+    return '<div class="pl' + c + '" style="background-color:' + doux(r) + '">' + PLAQUE[r] + '</div>';
+  }
+  function objets(nb, r) { var s = ""; for (var k = 0; k < nb; k++) s += objet(r); return s; }
+
+  var casseEn = null;  // la colonne où l'objet ajouté en haut est en train de se casser en 10
+  var perso = null;   // [haut, bas] écrite par le maître (✏️ Ma soustraction)
+  function afficher() {
+    var O = perso || OPS[niveau][index]; n = String(O[0]).length; lb = String(O[1]).length; T = chiffres(O[0], n); B = chiffres(O[1], n);
+    plusHaut = []; plusBas = []; res = []; erreurs = 0; fini = false; i = 0; oublier(); fermerAsc();
+    el("btnSuivant").hidden = true; verdict(""); el("lien").textContent = "";
+    debutColonne(); majScore();
+  }
+  function debutColonne() {
+    if (i >= n) return finir();
+    etape = T[i] < basEff(i) ? "dix" : "calc";
+    dessiner();
+  }
+  function suite() {
+    if (etape === "dix") etape = "un";
+    else if (etape === "un") etape = "calc";
+    else { i++; fermerAsc(); return debutColonne(); }
+    dessiner();
+  }
+  function finir() {
+    fini = true; if (!erreurs) score++; majScore(); fermerAsc();
+    verdict("✅", "bien");
+    el("consigne").textContent = "Bravo !"; el("clavier").innerHTML = ""; if (window.Calculette) Calculette.fermer(); el("lien").textContent = "";
+    dessinerOp(); el("btnSuivant").hidden = false;
+  }
+
+  function dessinerOp() {
+    var h = "", vus = fini ? [] : [i, i + 1];
+    function ligne(cls, signe, f) { var s = '<div class="ligne ' + cls + '"><div class="signe">' + signe + '</div>'; for (var k = n - 1; k >= 0; k--) s += f(k); return s + '</div>'; }
+    var cours = function (k) { return !fini && k === i ? " encours" : ""; };
+    h += ligne("rangs", "", function (k) { return '<div class="col rang"><span style="background:' + coul(k) + '">' + COURT[k] + '</span></div>'; });
+    h += ligne("haut", "", function (k) {
+      var att = !fini && k === i && etape === "dix" ? " attend" : "";
+      return '<div class="col' + cours(k) + att + '" data-r="haut" data-k="' + k + '">' + (plusHaut[k] ? '<span class="petit">1</span>' : "") + T[k] + '</div>';
+    });
+    // les objets du haut, pour la colonne en cours (et celle d'à côté pendant la compensation)
+    h += ligne("obj", "", function (k) {
+      if (vus.indexOf(k) === -1 || k >= n) return '<div class="objets col-obj" data-k="' + k + '"></div>';
+      var s = objets(T[k], k);
+      if (plusHaut[k]) s += casseEn === k ? objet(k + 1, "casse") : '<div class="groupe-ajout" title="10 ' + RANGS[k] + ' ajoutées en haut">' + objets(10, k) + '</div>';
+      return '<div class="objets col-obj" data-k="' + k + '"><div class="dedans">' + s + '</div></div>';
+    });
+    h += ligne("bas-l", "−", function (k) {
+      var att = !fini && etape === "un" && k === i + 1 ? " attend" : "";
+      return '<div class="col' + cours(k) + att + '" data-r="bas" data-k="' + k + '">' + (plusBas[k] ? '<span class="petit">1</span>' : "") + (k >= lb ? "" : B[k]) + '</div>';
+    });
+    h += ligne("obj", "", function (k) {
+      if (vus.indexOf(k) === -1 || k >= n) return '<div class="objets col-obj" data-k="' + k + '"></div>';
+      var s = objets(B[k], k);
+      if (plusBas[k]) s += objet(k, "ajout");
+      return '<div class="objets col-obj" data-k="' + k + '"><div class="dedans">' + s + '</div></div>';
+    });
+    h += '<div class="trait"></div>';
+    var tete = n - 1; while (fini && tete > 0 && res[tete] === 0) tete--;
+    h += ligne("resultat", "", function (k) {
+      if (fini && k > tete) return '<div class="col" data-r="res" data-k="' + k + '"></div>';
+      var att = !fini && etape === "calc" && k === i ? " attend" : "";
+      return '<div class="col' + (res[k] === undefined ? (k < i || fini ? "" : " vide") : " pose") + att + '" data-r="res" data-k="' + k + '">' + (res[k] === undefined ? "" : res[k]) + '</div>';
+    });
+    el("op").innerHTML = h;
+    ajuster();
+    // trop d'objets (9 barres + 10 barres ajoutées…) : la case les rétrécit au lieu de déborder sur la ligne du dessous
+    document.querySelectorAll(".objets .dedans").forEach(function (d) {
+      var H = d.parentNode.clientHeight - 8, W = d.parentNode.clientWidth - 8, hd = d.scrollHeight;
+      if (hd > H) { var k = Math.max(H / hd, 0.45); d.style.width = Math.min(W / k, 158 / k) + "px"; hd = d.scrollHeight;
+        k = Math.min(H / hd, W / d.offsetWidth); d.style.transform = "scale(" + k + ")"; d.style.marginLeft = ((W - d.offsetWidth * k) / 2) + "px"; d.style.transformOrigin = "top left"; }
+    });
+    ouvrirCalc();
+  }
+  // 🧮 la petite calculette (Karim, 22/10 : à la place des grandes tuiles 0 à 10) : ce qu'on tape s'écrit dans la case du résultat
+  // de la colonne en cours ; avant les +10 / +1, on peut taper directement le chiffre (la compensation faite de tête)
+  function ouvrirCalc() {
+    if (fini || !window.Calculette) { if (window.Calculette) Calculette.fermer(); return; }
+    var c = document.querySelector('.resultat .col[data-k="' + i + '"]'); if (!c) return;
+    var bon = etape === "calc" ? hautEff(i) - basEff(i) : T[i] + 10 - basEff(i);
+    var tuile = function (v) { return { dataset: { v: String(v) } }; };
+    Calculette.ouvrir({ cible: c, bon: bon, siBon: function (v) { deposer(tuile(v), c); }, siFaux: function (v) { deposer(tuile(v), c); } });
+  }
+  // si l'opération ne tient pas en hauteur (ou en largeur), on la rétrécit : rien ne passe sous le clavier
+  function ajuster() {
+    var b = el("opbox"), j = b.parentNode; b.style.transform = ""; b.style.transformOrigin = "top center";
+    var dispoH = j.clientHeight - 6, dispoL = j.clientWidth - (el("cote").hidden ? 0 : el("cote").offsetWidth + 24) - 10;
+    var k = Math.min(1, dispoH / b.scrollHeight, dispoL / b.scrollWidth);
+    if (k < 1) b.style.transform = "scale(" + k + ")";
+  }
+  window.addEventListener("resize", function () { ajuster(); });
+  function dessiner() {
+    dessinerOp();
+    var haut = T[i], bas = basEff(i);
+    var c = {
+      dix: "On ne peut pas enlever " + (plusBas[i] ? B[i] + " + 1" : bas) + " à " + haut + " : glisse +10 sur le " + haut + " du haut",
+      un: "Le même en bas : glisse +1 " + COURT[i + 1] + " sur la colonne d'à côté",
+      calc: "Calcule " + hautEff(i) + " − " + (plusBas[i] ? "(" + B[i] + " + 1)" : bas) };
+    el("consigne").textContent = c[etape];
+    el("lien").innerHTML = etape === "calc" && plusBas[i + 1] ? "+10 " + RANGS[i] + " en haut = +" + UN[i + 1] + " en bas : la différence ne change pas" : "";
+    var cl = el("clavier"); cl.innerHTML = "";
+    // le jeton : 1 objet du rang du dessus (une barre = 1 dizaine…) ; en haut il se casse en 10, en bas il reste entier
+    if (etape === "dix" || etape === "un") cl.innerHTML = '<div class="jeton" data-piece="' + etape + '">+ ' + objet(i + 1) + '<small>1 ' + COURT[i + 1] + ' = 10 ' + COURT[i] + '</small></div>';
+    // les chiffres restent toujours là : on peut poser le résultat dès le début (la compensation faite de tête)
+    if (etape === "calc" && bas > 0) cl.insertAdjacentHTML("beforeend", '<button class="btn-asc" id="btnAsc" type="button">🛗 L\'ascenseur</button>');
+    document.querySelectorAll(".chiffre, .jeton").forEach(mobile);
+    var ba = el("btnAsc"); if (ba) ba.addEventListener("click", ouvrirAsc);
+  }
+
+  // ---------- l'ascenseur : haut − bas, c'est bas + ? = haut ----------
+  function ouvrirAsc() {
+    var depart = basEff(i), arrivee = hautEff(i), dz = (Math.floor(depart / 10) + 1) * 10;
+    var arrets = dz < arrivee ? [dz, arrivee] : [arrivee];
+    el("cote").hidden = false; el("ascTitre").innerHTML = "<small>" + arrivee + " − " + depart + "</small>" + depart + " + ? = " + arrivee; el("ascTotal").innerHTML = ""; setTimeout(ajuster, 0);
+    var montees = [];
+    if (asc) asc.detruire();
+    asc = Ascenseur(el("tour"), { bas: Math.floor(depart / 10) * 10, haut: Math.floor(depart / 10) * 10 + 20, depart: depart, arrets: arrets,
+      onArret: function (k, etage, plus) { montees.push(plus);
+        el("ascTotal").insertAdjacentHTML("beforeend", "<span>+" + plus + " → " + etage + "</span>");
+        if (etage !== arrivee) asc.viser(arrivee, "+ ?");
+        if (etage === arrivee) el("ascTotal").insertAdjacentHTML("beforeend", "<span>= " + (montees.length > 1 ? montees.join(" + ") + " = " : "") + (arrivee - depart) + "</span>"); },
+      onFaux: function (etage, attendu) { verdict(attendu === dz ? "🤪 L'ascenseur s'arrête d'abord à " + dz : "🤪", "faux"); } });
+    asc.viser(arrets[0], "+ ?");
+  }
+  function fermerAsc() { if (asc) { asc.detruire(); asc = null; } el("cote").hidden = true; ajuster(); }
+
+  // ---------- deux gestes ----------
+  var choisi = null, enVol = false, CIBLE = ".col[data-k], .col-obj";
+  function oublier() { document.querySelectorAll(".choisi").forEach(function (x) { x.classList.remove("choisi"); }); choisi = null; }
+  function mobile(obj) {
+    obj.addEventListener("pointerdown", function (ev) {
+      if (fini) return; ev.preventDefault();
+      var r = obj.getBoundingClientRect(), vol = obj.cloneNode(true); vol.classList.remove("choisi"); vol.classList.add("en-vol");
+      vol.style.width = r.width + "px"; vol.style.height = r.height + "px"; document.body.appendChild(vol); obj.classList.add("parti"); enVol = true;
+      var x0 = ev.clientX, y0 = ev.clientY, dx = x0 - r.left, dy = y0 - r.top, bouge = false, survol = null;
+      function place(x, y) { vol.style.left = (x - dx) + "px"; vol.style.top = (y - dy) + "px"; }
+      place(x0, y0);
+      function sous(x, y) { var t = document.elementFromPoint(x, y); return t && t.closest ? t.closest(CIBLE) : null; }
+      function mv(e) { place(e.clientX, e.clientY); if (Math.hypot(e.clientX - x0, e.clientY - y0) > 12) bouge = true;
+        var c = sous(e.clientX, e.clientY); if (survol && survol !== c) survol.classList.remove("survol"); if (c) c.classList.add("survol"); survol = c; }
+      function up(e) {
+        document.removeEventListener("pointermove", mv); document.removeEventListener("pointerup", up);
+        vol.remove(); obj.classList.remove("parti"); setTimeout(function () { enVol = false; }, 0); if (survol) survol.classList.remove("survol");
+        if (!bouge) { var deja = choisi === obj; oublier(); if (!deja) { choisi = obj; obj.classList.add("choisi"); } return; }
+        var c = sous(e.clientX, e.clientY); if (c) { oublier(); deposer(obj, c); }
+      }
+      document.addEventListener("pointermove", mv); document.addEventListener("pointerup", up);
+    });
+  }
+  document.addEventListener("pointerup", function (ev) {
+    if (enVol || !choisi || fini) return;
+    var c = ev.target.closest && ev.target.closest(CIBLE); if (!c) return;
+    var o = choisi; oublier(); deposer(o, c);
+  });
+
+  function faux(c, msg) { erreurs++; secoue(c); verdict(msg || "🤪", "faux"); }
+  function deposer(obj, c) {
+    var r = c.dataset.r || "obj", k = Number(c.dataset.k), piece = obj.dataset.piece, v = obj.dataset.v === undefined ? null : Number(obj.dataset.v);
+    if (v !== null && (etape === "dix" || etape === "un")) {
+      if (k !== i) return faux(c, "🤪 Dans la colonne des " + RANGS[i]);
+      var juste = T[i] + 10 - basEff(i);
+      if (v !== juste) return faux(c, "🤪 On ne peut pas enlever " + basEff(i) + " à " + T[i] + " : d'abord 10 en haut, 1 en bas");
+      plusHaut[i] = true; plusBas[i + 1] = true; res[i] = v;
+      verdict("✅ Tu as fait 10 en haut et 1 en bas dans ta tête : je les écris", "bien");
+      i++; return debutColonne();
+    }
+    if (etape === "dix") {
+      if (piece !== "dix") return;
+      if (!(r === "haut" && k === i)) return faux(c, "🤪 Les 10 vont en haut, dans cette colonne");
+      plusHaut[i] = true; verdict("✅ 1 " + COURT[i + 1] + " se casse en 10 " + RANGS[i], "bien");
+      casseEn = i; var kk = i; setTimeout(function () { if (casseEn === kk) { casseEn = null; dessinerOp(); } }, 700);
+      return suite();
+    }
+    if (etape === "un") {
+      if (piece !== "un") return;
+      if (!(r === "bas" && k === i + 1)) return faux(c, "🤪 En bas, dans la colonne d'à côté");
+      plusBas[i + 1] = true; verdict("✅ 1 " + COURT[i + 1] + " = 10 " + RANGS[i] + " : la même chose en bas", "bien"); return suite();
+    }
+    if (v === null) return;
+    if (etape === "calc") {
+      if (k !== i) return faux(c, "🤪 Dans la colonne des " + RANGS[i] + ", sous le trait");
+      if (v !== hautEff(i) - basEff(i)) return faux(c);
+      res[i] = v; verdict("✅", "bien"); return suite();
+    }
+  }
+
+  el("btnIndice").addEventListener("click", function () {
+    if (fini) return;
+    var m = {
+      dix: "💡 " + T[i] + " est plus petit que " + basEff(i) + " : on ajoute 10 en haut",
+      un: "💡 10 en haut, alors 1 en bas, dans la colonne d'à côté",
+      calc: (plusBas[i] ? "💡 D'abord le petit 1 : " + B[i] + " + 1 = " + basEff(i) + ". " : "💡 ") + "Avec l'ascenseur : de " + basEff(i) + ", combien d'étages pour aller à " + hautEff(i) + " ?" };
+    verdict(m[etape]);
+  });
+  el("btnSuivant").addEventListener("click", function () { if (perso) perso = null; else index = (index + 1) % OPS[niveau].length; afficher(); });
+
+  // ---------- ✏️ Ma soustraction : le maître écrit les deux nombres au clavier de l'écran ----------
+  var champ = "haut", saisie = { haut: "", bas: "" };
+  function majPerso() {
+    el("pHaut").textContent = saisie.haut.replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+    el("pBas").textContent = saisie.bas.replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+    el("pHaut").classList.toggle("choisi", champ === "haut"); el("pBas").classList.toggle("choisi", champ === "bas");
+  }
+  ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "⌫", "C"].forEach(function (t) {
+    var b = document.createElement("button"); b.type = "button"; b.textContent = t;
+    b.addEventListener("click", function () {
+      if (t === "⌫") saisie[champ] = saisie[champ].slice(0, -1);
+      else if (t === "C") saisie[champ] = "";
+      else if (saisie[champ].length < 6 && !(t === "0" && saisie[champ] === "")) saisie[champ] += t;
+      el("pMsg").className = "perso-msg"; el("pMsg").textContent = ""; majPerso();
+    });
+    el("pTouches").appendChild(b);
+  });
+  ["pHaut", "pBas"].forEach(function (id) { el(id).addEventListener("click", function () { champ = el(id).dataset.champ; majPerso(); }); });
+  el("btnPerso").addEventListener("click", function () { saisie = { haut: "", bas: "" }; champ = "haut"; majPerso(); el("pMsg").textContent = "Touche un nombre, puis écris-le (jusqu'à 999 999)"; el("perso").hidden = false; });
+  el("pAnnuler").addEventListener("click", function () { el("perso").hidden = true; });
+  el("pOk").addEventListener("click", function () {
+    var h = parseInt(saisie.haut, 10), b = parseInt(saisie.bas, 10);
+    var msg = !h || !b ? "Écris les deux nombres." : h <= b ? "Le nombre du haut doit être plus grand que celui du bas." : "";
+    if (msg) { el("pMsg").className = "perso-msg faux"; el("pMsg").textContent = msg; return; }
+    perso = [h, b]; el("perso").hidden = true; score = 0; afficher();
+  });
+  function choisirNiveau(nv) {
+    var bt = document.querySelector('#niveaux button[data-niveau="' + nv + '"]'); if (!bt) return false;
+    niveau = nv; index = 0; score = 0;
+    document.querySelectorAll("#niveaux button").forEach(function (x) { x.classList.toggle("actif", x === bt); });
+    afficher(); return true;
+  }
+  document.querySelectorAll("#niveaux button").forEach(function (bt) { bt.addEventListener("click", function () { choisirNiveau(bt.dataset.niveau); }); });
+  if (!(location.hash && choisirNiveau(decodeURIComponent(location.hash.slice(1))))) afficher();
+  window.__soustraction = { etat: function () { return { niveau: niveau, index: index, i: i, n: n, etape: etape, fini: fini, T: T, B: B, plusBas: plusBas, plusHaut: plusHaut, res: res, score: score, asc: asc && asc.etat() }; },
+    nb: function () { return OPS[niveau].length; }, resultat: function () { var O = perso || OPS[niveau][index]; return O[0] - O[1]; } };
+})();
+</script>
+<!-- MENU -->
+<script>
+/* ==== LE MENU ☰ (GTH, 10/10) : interface épurée — à l'écran, seulement le titre, le score, la consigne et l'activité ====
+   Tout le reste (niveaux, onglets de méthode, ✏️, 🔊, 🖨️, aide…) part dans un menu ☰, ouvert d'un toucher.
+   Réglage par outil (CONF, posé par l'injecteur) : ancre = où mettre le bouton ☰ (sinon en haut à droite de l'écran) ;
+   cacher = ce qui part dans le menu (sinon : tout ce qui, dans « .barre .droite », n'est pas un score).
+   Installé par .claude/outils/menu-outil/injecter.py ; ne pas modifier dans l'outil, mais dans ce fichier. */
+(function () {
+  var CONF = {};
+  var st = document.createElement("style");
+  st.textContent =
+    ".menu-btn{width:58px; height:58px; border-radius:16px; border:2px solid rgba(0,0,0,.15); background:#fff; color:#1f2a33; font-size:2rem; line-height:1; cursor:pointer; flex:none; padding:0;}" +
+    ".menu-btn.fixe{position:fixed; top:10px; right:12px; z-index:150; box-shadow:0 4px 14px rgba(0,0,0,.15);}" +
+    ".menu-btn.ouvert{background:#1f2a33; color:#fff;}" +
+    ".menu-panneau{position:fixed; top:76px; right:16px; z-index:200; background:#fff; color:#1f2a33; border-radius:18px; box-shadow:0 18px 50px rgba(0,0,0,.28); padding:16px 18px;" +
+    "  display:flex; flex-direction:column; align-items:flex-start; gap:12px; max-width:min(620px, 92vw); max-height:80vh; overflow:auto;}" +
+    ".menu-panneau[hidden]{display:none !important;}" +
+    ".menu-panneau h4{margin:0; font-family:sans-serif; font-size:.85rem; text-transform:uppercase; letter-spacing:.6px; color:#6d7a85;}" +
+    ".menu-panneau > *{position:static !important; margin:0 !important;}" +
+    ".menu-panneau > div,.menu-panneau > nav{display:flex; flex-wrap:wrap; gap:8px;}";
+  document.head.appendChild(st);
+  function installer() {
+    var autres = [];
+    if (CONF.cacher) CONF.cacher.forEach(function (s) { document.querySelectorAll(s).forEach(function (e) { if (autres.indexOf(e) === -1) autres.push(e); }); });
+    else { var d = document.querySelector(".barre .droite"); if (d) autres = Array.prototype.filter.call(d.children, function (e) { return !e.classList.contains("score"); }); }
+    if (!autres.length) return;
+    var btn = document.createElement("button"); btn.type = "button"; btn.className = "menu-btn"; btn.title = "Niveaux et réglages"; btn.textContent = "☰";
+    var pan = document.createElement("div"); pan.className = "menu-panneau"; pan.hidden = true;
+    var t = document.createElement("h4"); t.textContent = "Niveaux et réglages"; pan.appendChild(t);
+    autres.forEach(function (e) { pan.appendChild(e); });
+    var ancre = document.querySelector(CONF.ancre || ".barre .droite");
+    if (ancre) ancre.appendChild(btn); else { btn.classList.add("fixe"); document.body.appendChild(btn); }
+    document.body.appendChild(pan);
+    function ouvrir(o) { pan.hidden = !o; btn.classList.toggle("ouvert", o); }
+    btn.addEventListener("click", function (e) { e.stopPropagation(); ouvrir(pan.hidden); });
+    // un niveau choisi, ou une fenêtre ouverte (✏️, 🖨️) : le menu se referme ; on garde le menu ouvert pour choisir un type de jeu
+    pan.addEventListener("click", function (e) { var b = e.target.closest("button"); if (b && !b.closest(CONF.garderOuvert || ".types")) setTimeout(function () { ouvrir(false); }, 120); });
+    document.addEventListener("pointerdown", function (e) { if (!pan.hidden && !pan.contains(e.target) && e.target !== btn) ouvrir(false); });
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", installer); else installer();
+})();
+</script>
+<!-- /MENU -->
+<!-- INDICE-COTE -->
+<script>
+/* 💡 sur le côté (Karim, 21/10) : dans les jeux qui ont un bouton « 💡 Indice » (.btn-indice), le bouton devient une ampoule seule,
+   collée au bord droit de l'écran, à mi-hauteur ; l'indice s'ouvre dans une bulle à côté d'elle, jamais sous le jeu.
+   Le jeu garde son propre code : au toucher, on regarde quel texte il vient d'écrire (zone #indice, ou la ligne de message),
+   on le reprend dans la bulle et on remet la zone comme avant. Installé par injecter.py. */
+(function () {
+  var b = document.querySelector(".btn-indice"); if (!b) return;
+  var st = document.createElement("style");
+  st.textContent =
+    ".btn-indice.cote{position:fixed !important; right:18px; top:50%; transform:translateY(-50%); width:76px; height:76px; padding:0 !important; border-radius:50% !important;" +
+    " font-size:40px !important; line-height:1; z-index:60; margin:0 !important; display:flex; align-items:center; justify-content:center}" +
+    "#bulle-cote{position:fixed; right:110px; top:50%; transform:translateY(-50%); max-width:520px; background:#fff8c4; border:2px solid #d4b106; border-radius:18px;" +
+    " padding:16px 22px; font-size:26px; line-height:1.35; z-index:60; box-shadow:0 6px 18px rgba(0,0,0,.15); display:none}" +
+    "#bulle-cote::after{content:''; position:absolute; right:-14px; top:50%; margin-top:-12px; border:12px solid transparent; border-left:14px solid #d4b106; border-right:none}";
+  document.head.appendChild(st);
+  b.classList.add("cote"); b.textContent = "💡"; b.title = "Indice"; document.body.appendChild(b);
+  var bulle = document.createElement("div"); bulle.id = "bulle-cote"; document.body.appendChild(bulle);
+  var zones = function () { return Array.prototype.slice.call(document.querySelectorAll("#indice, .indice, #message, .message, #verdict, .verdict, #consigne-aide")); };
+  var avant = [], minuteur = null;
+  b.addEventListener("click", function () { avant = zones().map(function (z) { return [z, z.textContent, z.className]; }); }, true);   // avant le code du jeu
+  b.addEventListener("click", function () {
+    setTimeout(function () {
+      var txt = "";
+      avant.forEach(function (a) {
+        var z = a[0], neuf = z.textContent;
+        if (neuf !== a[1] && neuf.trim()) { txt = neuf; z.textContent = a[1]; z.className = a[2]; }
+      });
+      if (!txt) return;   // le jeu montre l'indice autrement : on le laisse faire
+      bulle.textContent = txt.replace(/^\s*💡\s*/, ""); bulle.style.display = "block";
+      clearTimeout(minuteur); minuteur = setTimeout(function () { bulle.style.display = "none"; }, 8000);
+    }, 0);
+  });
+  document.addEventListener("pointerdown", function (e) { if (e.target !== b && e.target !== bulle) bulle.style.display = "none"; });
+})();
+</script>
+<!-- /INDICE-COTE -->
+</body>
+</html>

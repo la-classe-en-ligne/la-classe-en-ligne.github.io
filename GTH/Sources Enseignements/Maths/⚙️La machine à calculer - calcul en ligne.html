@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>La machine à calculer</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='22' fill='none' stroke='%2378909c' stroke-width='12' stroke-dasharray='9 6'/%3E%3Ccircle cx='32' cy='32' r='14' fill='%23fff8e1' stroke='%2337474f' stroke-width='4'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Quicksand:wght@600;700&display=swap">
+<style>
+  /* ⚙️ La machine à calculer (maquette validée par Karim le 22/10) : calcul en ligne en coupant un nombre.
+     On COUPE le nombre au doigt (72 → 70 | 2), chaque morceau passe dans la machine (× 6 : 420, puis 12), puis on ASSEMBLE à
+     l'ascenseur (420 + 12 = 432). Le calcul s'écrit à droite, une ligne par étape ; l'élève tape seulement les résultats
+     (petite calculette commune). Onglets : × un nombre · + un nombre (47 + 38 : 47 + 30 = 77, l'ascenseur s'arrête à la
+     dizaine, 80, puis 80 + 5 = 85) · Le double (200 + 80 + 10) · ✏️ mon calcul.
+     Méthodes de la banque : distributivité dans des cas simples (programme CM1, MENT 10 « multiplier par 4, par 8 »),
+     ajouter par sauts de dizaines puis passer la dizaine (ascenseur du 10), doubles (MENTAL 2). Nombres : séances P2 de
+     calcul mental et d'opérations (📅 1 à 7) et machine à doubler (P1) ; rien d'inventé. */
+  :root{ --encre:#1f2a33; --gris:#66737f; --bord:#dfe5ea; --acier:#607d8b; --acier-fonce:#37474f; --bien:#1a8f5c; --faux:#d6455d;
+    --talbot:#1f7a8c; --orange:#e65100; --dizaine:#c2541a; }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{margin:0; color:var(--encre); font-family:"Quicksand",system-ui,sans-serif; overflow:hidden; height:100vh; display:flex; flex-direction:column;
+    background:#eef3f6; user-select:none; -webkit-user-select:none; touch-action:none;}
+  [hidden]{display:none !important;}
+  .barre{display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:20px; padding:8px 26px; background:#fff; border-bottom:3px solid var(--bord);}
+  .titre{display:flex; align-items:center; gap:12px;} .titre svg{width:54px; height:54px;}
+  .titre h1{font-family:"Baloo 2",cursive; font-weight:800; font-size:1.9rem; margin:0;}
+  .onglets{display:flex; gap:8px; justify-content:center;}
+  .onglets button{font:inherit; font-family:"Baloo 2",cursive; font-weight:800; font-size:1.35rem; padding:4px 22px; border-radius:999px; cursor:pointer; background:#eceff1; color:var(--encre); border:none; white-space:nowrap;}
+  .onglets button.actif{background:var(--talbot); color:#fff;}
+  .onglets .perso{background:#eceff1; color:var(--talbot);}
+  .droite{display:flex; align-items:center; gap:12px;}
+  .score{display:flex; flex-direction:column; align-items:center; padding:2px 14px; border-radius:12px; background:#fff; border:2px solid var(--bord); min-width:130px;}
+  .score small{font-size:.8rem; font-weight:700; color:var(--gris); text-transform:uppercase; letter-spacing:.5px;}
+  .score b{font-family:"Baloo 2",cursive; font-size:1.8rem; line-height:1.05;}
+  .niveaux{display:flex; gap:4px; flex-wrap:wrap;}
+  .niveaux button{font:inherit; font-weight:700; font-size:.95rem; padding:3px 14px; border-radius:999px; cursor:pointer; background:#fff; color:var(--gris); border:2px solid var(--bord);}
+  .niveaux button.actif{background:var(--encre); color:#fff; border-color:var(--encre);}
+  .btn-son{width:44px; height:44px; border-radius:50%; font-size:1.2rem; cursor:pointer; background:#fff; border:2px solid var(--bord);}
+
+  /* l'opération en gros, puis la consigne de l'étape */
+  .entete{display:flex; flex-direction:column; align-items:center; gap:6px; padding:12px 20px 0;}
+  .operation{font-family:"Baloo 2",cursive; font-weight:800; font-size:3.4rem; line-height:1.1; background:#fff; padding:4px 40px 0; border-radius:18px; white-space:nowrap;}
+  .operation .res{color:var(--bien);}
+  .consigne p{margin:0; font-family:"Baloo 2",cursive; font-weight:700; font-size:1.9rem; color:#455a64; text-align:center;}
+
+  .jeu{flex:1; min-height:0; display:grid; grid-template-columns:500px 410px 340px minmax(0,1fr); gap:20px; padding:10px 120px 10px 30px; align-items:start;}
+
+  /* ---------- le nombre à couper ---------- */
+  .tapis{display:flex; flex-direction:column; align-items:center; padding-top:40px; touch-action:none; height:100%; min-width:0;}
+  .morceaux{display:flex; flex-wrap:nowrap; gap:.25em; justify-content:center; align-items:flex-end; width:100%; font-size:112px; overflow:hidden; padding:30px 0 12px;}
+  .morceau{display:flex; align-items:center; font-family:"Baloo 2",cursive; font-weight:800; font-size:1em; line-height:1; padding:.12em .2em 0; flex:none;
+    background:#fff; border:5px solid #455a64; border-radius:20px; box-shadow:0 8px 0 rgba(31,42,51,.15); cursor:grab; touch-action:none;}
+  .morceau.coupe-faite{border-color:var(--talbot);}
+  .morceau .ch.mille{margin-left:.22em;}
+  .morceau .zero{color:#aab4bd;}
+  .morceau.utilise{opacity:.2; border-style:dashed; box-shadow:none; cursor:default;}
+  .morceau.parti{visibility:hidden;}
+  .fente{position:relative; display:inline-block; width:.34em; height:1em; cursor:crosshair; touch-action:none;}
+  .fente::before{content:""; position:absolute; left:50%; top:-24px; bottom:-12px; margin-left:-3px; border-left:6px dashed #b0bec5;}
+  .fente:hover::before{border-left-color:#e53935;}
+  .ciseaux{font-size:3.4rem; height:60px; margin-bottom:6px;}
+  .coupe{animation:coupe .35s ease;} @keyframes coupe{50%{transform:scale(1.05) rotate(-2deg)}}
+
+  /* ---------- la machine ---------- */
+  .zone-machine{display:flex; flex-direction:column; align-items:center; padding-top:84px;}
+  .machine{position:relative; width:400px; height:400px; border-radius:26px; border:8px solid var(--acier-fonce); background:linear-gradient(#90a4ae,#607d8b);
+    box-shadow:0 10px 22px rgba(0,0,0,.18);}
+  .machine::before{content:"ENTRÉE"; position:absolute; left:50%; top:-76px; width:220px; height:70px; margin-left:-110px; background:#78909c; border:7px solid var(--acier-fonce); border-bottom:none;
+    clip-path:polygon(0 0,100% 0,75% 100%,25% 100%); color:#fff; font-family:"Baloo 2",cursive; font-weight:800; font-size:1.1rem; text-align:center; line-height:36px; letter-spacing:2px;}
+  .machine.cible{outline:8px solid var(--talbot); outline-offset:6px;}
+  .hublot{position:absolute; left:50%; top:26px; width:200px; height:200px; margin-left:-100px; border-radius:50%; background:#fff8e1; border:12px solid var(--acier-fonce);
+    display:flex; align-items:center; justify-content:center; font-family:"Baloo 2",cursive; font-weight:800; font-size:5.2rem; line-height:1; color:var(--orange); padding-top:12px;}
+  .hublot.petit{font-size:3.6rem;}
+  .machine.tourne .hublot{animation:tourne .7s linear infinite;} .machine.tourne{animation:vibre .1s linear infinite;}
+  @keyframes tourne{to{transform:rotate(360deg)}} @keyframes vibre{50%{transform:translateY(2px)}}
+  .ecran{position:absolute; left:20px; right:20px; bottom:46px; height:96px; border-radius:16px; background:#fff; display:flex; align-items:center; justify-content:center; gap:14px;
+    font-family:"Baloo 2",cursive; font-weight:800; font-size:48px; line-height:1; white-space:nowrap; box-shadow:inset 0 4px 0 rgba(0,0,0,.08); overflow:hidden; padding:0 12px;}
+  .ecran .vide{color:#b0bec5; font-size:1.5rem; font-weight:700;}
+  .sortie{position:absolute; left:50%; bottom:-8px; width:160px; height:42px; margin-left:-80px; background:var(--acier-fonce); border-radius:10px 10px 0 0; color:#fff;
+    text-align:center; font-size:1.1rem; line-height:44px; letter-spacing:2px; font-family:"Baloo 2",cursive; font-weight:700;}
+  .chute{position:absolute; left:50%; top:-150px; transform:translateX(-50%); z-index:3; font-family:"Baloo 2",cursive; font-weight:800; font-size:3rem; line-height:1;
+    background:#fff; border:4px solid #455a64; border-radius:14px; padding:8px 20px 2px; animation:chute .55s ease-in forwards;}
+  @keyframes chute{to{top:-20px; transform:translateX(-50%) scale(.35); opacity:0}}
+  .trou{display:inline-flex; align-items:center; justify-content:center; min-width:130px; height:1.2em; padding:6px 14px 0; border:5px dashed var(--gris); border-radius:14px; color:var(--gris);}
+  .trou.plein{border-style:solid; border-color:var(--bien); color:var(--bien); background:#e7f6ee;}
+  .produits{display:flex; flex-wrap:wrap; gap:16px; justify-content:center; margin-top:30px; min-height:90px; max-width:440px;}
+  .produit{font-family:"Baloo 2",cursive; font-weight:800; font-size:3.4rem; line-height:1; padding:12px 24px 2px; background:#fff; border:5px solid var(--talbot); border-radius:16px; animation:arrive .45s ease;}
+  .produits.petit .produit{font-size:2.5rem;}
+  @keyframes arrive{from{transform:translateY(-60px) scale(.6); opacity:0}}
+
+  /* ---------- l'ascenseur ---------- */
+  .zone-tour{position:relative; height:100%; padding-top:20px;}
+  .tour{position:relative; margin-left:84px; width:150px; height:680px; border:4px solid #90a4ae; border-top:18px solid #90a4ae; border-bottom:10px solid #78909c;
+    background:linear-gradient(115deg,rgba(255,255,255,0) 30%,rgba(255,255,255,.55) 42%,rgba(255,255,255,0) 54%), linear-gradient(180deg,#eef4f8,#d9e5ec);}
+  .tour.repos{opacity:.35;}
+  .etage{position:absolute; left:0; right:0; border-top:2px solid rgba(120,144,156,.5);}
+  .etage span{position:absolute; right:calc(100% + 12px); top:-22px; font-family:"Baloo 2",cursive; font-weight:800; font-size:1.7rem; color:var(--dizaine); white-space:nowrap;}
+  .cabine{position:absolute; left:28px; width:70px; height:46px; margin-top:-23px; border-radius:6px; background:linear-gradient(180deg,#eceff1,#b0bec5); border:3px solid #546e7a;
+    display:flex; align-items:center; justify-content:center; font-family:"Baloo 2",cursive; font-weight:800; font-size:1.3rem; color:var(--talbot); transition:top .7s ease; z-index:2;}
+  .accolade{position:absolute; left:108px; width:28px; border:5px dashed #e0a800; border-left:none; border-radius:0 14px 14px 0; z-index:1;}
+  .accolade.fait{border-style:solid; border-color:var(--bien);}
+  .accolade b{position:absolute; left:30px; top:50%; transform:translateY(-50%); font-family:"Baloo 2",cursive; font-weight:800; font-size:2rem; color:#7a5b00; white-space:nowrap; background:#eef3f6; padding:0 6px; border-radius:8px;}
+  .accolade.fait b{color:var(--bien);}
+
+  /* ---------- le calcul qui s'écrit ---------- */
+  .calcul{font-family:"Baloo 2",cursive; font-weight:800; font-size:52px; line-height:1.3; padding-top:30px; white-space:nowrap; overflow:hidden; min-width:0;}
+  .calcul div{animation:ligne .35s ease;} @keyframes ligne{from{opacity:0; transform:translateX(-20px)}}
+  .calcul .vu{color:var(--talbot);} .calcul .fin{color:var(--bien);} .calcul .att{color:#b0bec5;}
+  .calcul .trou{font-size:.9em;}
+
+  .en-vol{position:fixed !important; z-index:50; pointer-events:none; margin:0 !important; transform:rotate(-4deg) scale(1.05);}
+  .secoue{animation:secoue .4s ease;} @keyframes secoue{0%,100%{transform:none}25%{transform:translateX(-12px)}75%{transform:translateX(12px)}}
+
+  /* ✏️ mon calcul : le pavé du maître */
+  .fond-pave{position:fixed; inset:0; background:rgba(20,30,45,.45); display:flex; align-items:center; justify-content:center; z-index:60;}
+  .pave{background:#fff; border-radius:26px; padding:24px 30px; box-shadow:0 20px 50px rgba(0,0,0,.3); display:flex; flex-direction:column; gap:16px; align-items:center;}
+  .pave h2{margin:0; font-family:"Baloo 2",cursive; font-size:1.8rem;}
+  .pave-ecran{font-family:"Baloo 2",cursive; font-weight:800; font-size:4.4rem; line-height:1; min-width:420px; text-align:center; padding:14px 20px 4px; border:5px solid var(--encre); border-radius:18px; min-height:1.3em;}
+  .pave-ecran.secoue{border-color:var(--faux);}
+  .touches{display:grid; grid-template-columns:repeat(3,120px); gap:12px;}
+  .touches button{font-family:"Baloo 2",cursive; font-weight:800; font-size:2.6rem; height:90px; border-radius:18px; border:3px solid var(--bord); background:#f6f8fa; cursor:pointer;}
+  .touches button.ok{background:var(--talbot); color:#fff; border-color:var(--talbot); font-size:2rem;}
+  .pave-bas button{font:inherit; font-weight:700; font-size:1.2rem; padding:8px 22px; border-radius:999px; border:2px solid var(--bord); background:#fff; cursor:pointer;}
+
+  .bas{display:flex; align-items:center; justify-content:center; gap:18px; padding:4px 0 12px; min-height:66px;}
+  .btn-indice{font:inherit; font-weight:700; font-size:1.2rem; padding:6px 16px; border-radius:999px; cursor:pointer; background:#fff8dc; border:2px solid #f1d27a; color:#7a5b00;}
+  .verdict{min-height:3rem; font-family:"Baloo 2",cursive; font-size:2rem; font-weight:800; text-align:center;}
+  .verdict:not(:empty){background:#fff; padding:0 24px; border-radius:14px;}
+  .verdict.bien{color:var(--bien);} .verdict.faux{color:var(--faux);} .verdict.indice{color:#7a5b00;}
+  .btn-suivant{font:inherit; font-family:"Baloo 2",cursive; font-weight:800; font-size:1.8rem; padding:4px 34px; border-radius:999px; cursor:pointer; background:var(--encre); color:#fff; border:none;}
+</style>
+</head>
+<body>
+<div class="barre">
+  <div class="titre">
+    <svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="22" fill="none" stroke="#78909c" stroke-width="12" stroke-dasharray="9 6"/><circle cx="32" cy="32" r="14" fill="#fff8e1" stroke="#37474f" stroke-width="4"/></svg>
+    <h1>La machine à calculer</h1>
+  </div>
+  <div class="onglets" id="onglets">
+    <button type="button" data-op="fois" class="actif">× un nombre</button>
+    <button type="button" data-op="plus">+ un nombre</button>
+    <button type="button" data-op="double">Le double</button>
+    <button type="button" class="perso" id="btnPerso" title="Taper le calcul de mon choix">✏️</button>
+  </div>
+  <div class="droite">
+    <div class="score"><small>Calculs réussis</small><b id="score">0</b></div>
+    <div class="score" title="Le meilleur score à ce niveau, gardé sur cet ordinateur"><small>🏆 Record</small><b id="record">0</b></div>
+    <div class="niveaux" id="niveaux">
+      <button type="button" data-niveau="100" class="actif">≤ 100</button>
+      <button type="button" data-niveau="centaines">Centaines</button>
+      <button type="button" data-niveau="defi">Défi</button>
+    </div>
+    <button class="btn-son" id="btnSon" type="button" title="Son">🔊</button>
+  </div>
+</div>
+<div class="entete">
+  <div class="operation" id="operation"></div>
+  <div class="consigne"><p id="consigne"></p></div>
+</div>
+<div class="jeu">
+  <div class="tapis" id="tapis"><div class="ciseaux" id="ciseaux">✂️</div><div class="morceaux" id="morceaux"></div></div>
+  <div class="zone-machine">
+    <div class="machine" id="machine"><div class="hublot" id="hublot"></div><div class="ecran" id="ecran"></div><div class="sortie">SORTIE</div></div>
+    <div class="produits" id="produits"></div>
+  </div>
+  <div class="zone-tour"><div class="tour repos" id="tour"></div></div>
+  <div class="calcul" id="calcul"></div>
+</div>
+<div class="fond-pave" id="fondPave" hidden>
+  <div class="pave">
+    <h2 id="paveTitre"></h2>
+    <div class="pave-ecran" id="paveEcran"></div>
+    <div class="touches" id="touches">
+      <button type="button">7</button><button type="button">8</button><button type="button">9</button>
+      <button type="button">4</button><button type="button">5</button><button type="button">6</button>
+      <button type="button">1</button><button type="button">2</button><button type="button">3</button>
+      <button type="button" data-t="eff">⌫</button><button type="button">0</button><button type="button" class="ok" data-t="ok">OK</button>
+    </div>
+    <div class="pave-bas"><button type="button" id="paveAnnuler">Annuler</button></div>
+  </div>
+</div>
+<div class="bas">
+  <button class="btn-indice" id="btnIndice" type="button">💡 Indice</button>
+  <div class="verdict" id="verdict"></div>
+  <button class="btn-suivant" id="btnSuivant" type="button" hidden>➜</button>
+</div>
+<!-- CALCULETTE -->
+<script>
+/* 🧮 La calculette (Karim, 21/10) : pour répondre par un nombre, l'élève touche les touches d'une petite calculette posée sur le côté
+   (plus d'étiquettes-réponses à glisser). Ce qu'il tape s'écrit dans la case du jeu ; dès que le nombre ne peut plus devenir la
+   réponse, c'est faux ; dès qu'il est juste, le jeu continue. Installé par injecter.py.
+   Calculette.ouvrir({ cible: élément, bon: 42, format: f, siBon: function () {}, siFaux: function (tapé) {} }) ; Calculette.fermer(). */
+(function () {
+  var st = document.createElement("style");
+  st.textContent =
+    "#calculette{position:fixed; right:110px; bottom:28px; display:none; flex-direction:column; gap:6px; padding:8px; background:#eceff1; border:2px solid #cfd8dc; border-radius:14px; z-index:55; opacity:.9}" +
+    "#calculette .ecr{display:none}" +
+    "#calculette .tou{display:grid; grid-template-columns:repeat(3,46px); gap:5px}" +
+    "#calculette button{height:38px; border:1px solid #cfd8dc; border-radius:8px; background:#fff; color:#607d8b; font:700 19px 'Baloo 2',Arial,sans-serif; cursor:pointer}" +
+    "#calculette button:active{transform:translateY(2px); box-shadow:none}" +
+    "#calculette button.eff{color:#c62828}";
+  document.head.appendChild(st);
+  var box = document.createElement("div"); box.id = "calculette";
+  box.innerHTML = '<div class="ecr"></div><div class="tou"></div>';
+  document.addEventListener("DOMContentLoaded", function () { document.body.appendChild(box); });
+  if (document.body) document.body.appendChild(box);
+  var o = null, tape = "", texteAvant = "";
+  ["7", "8", "9", "4", "5", "6", "1", "2", "3", "", "0", "⌫"].forEach(function (k) {
+    var b = document.createElement("button"); b.type = "button"; b.textContent = k; if (!k) b.style.visibility = "hidden"; if (k === "⌫") b.className = "eff";
+    b.addEventListener("click", function () { touche(k); }); box.querySelector(".tou").appendChild(b);
+  });
+  function montre() {
+    box.querySelector(".ecr").textContent = tape;
+    if (o && o.cible) o.cible.textContent = tape ? (o.format ? o.format(+tape) : tape) : texteAvant;
+  }
+  function touche(k) {
+    if (!o || !k) return;
+    if (k === "⌫") tape = tape.slice(0, -1); else if (tape.length < 7) tape += k;
+    montre();
+    var juste = String(o.bon);
+    if (tape === juste) { var f = o.siBon; o = null; tape = ""; box.style.display = "none"; f(+juste); return; }
+    if (tape && juste.indexOf(tape) !== 0) {
+      var t = tape; if (o.siFaux) o.siFaux(+t);
+      setTimeout(function () { tape = ""; montre(); }, 700);
+    }
+  }
+  document.addEventListener("keydown", function (e) { if (!o) return; if (/^[0-9]$/.test(e.key)) touche(e.key); else if (e.key === "Backspace") touche("⌫"); });
+  // si le jeu passe à autre chose (sa case disparaît), la calculette se range
+  setInterval(function () { if (o && o.cible && !document.body.contains(o.cible)) window.Calculette.fermer(); }, 400);
+  window.Calculette = {
+    ouvrir: function (opt) { o = opt; tape = ""; texteAvant = opt.cible ? opt.cible.textContent : ""; box.style.display = "flex"; montre(); },
+    fermer: function () { o = null; tape = ""; box.style.display = "none"; }
+  };
+})();
+</script>
+<!-- /CALCULETTE -->
+<script>
+(function () {
+  // Nombres des séances P2 (GTH v2/donnees/seances/maths) et de la banque, aucun inventé :
+  // × : calcul mental 📅 4 (× 4, × 8 : 12, 15, 17, 25, 27, 28, 35, 36, 44, 62, 78, 108, 125, 246, 321…) et 📅 7 (23 × 4, 23 × 8, 51 × 8),
+  //     opérations 📅 1-4 (répertoires 136 ; 234 × 3, 318 × 6, 412 × 6, 523 × 6…), CM2 : produits à 4 chiffres des opérations 📅 3-4.
+  // + : calcul mental 📅 5 à 7 (54 + 29, 47 + 29, 154 + 38, 378 + 69, 698 + 89, 254 + 98…), problèmes et opérations (345 + 439, 248 + 369…).
+  // double : machine à doubler (MENTAL 2, manuel P1 S4, bilan P1) et calcul mental 📅 3 (575, 624).
+  var LISTES = {
+    fois: {
+      "100": [[12, 4], [15, 4], [17, 4], [23, 4], [24, 4], [27, 4], [28, 4], [36, 4], [62, 4], [78, 4], [16, 8], [17, 8], [21, 8], [23, 8], [27, 8], [43, 8], [51, 8], [96, 8], [27, 6], [45, 7], [43, 6], [71, 6]],
+      "centaines": [[108, 4], [125, 4], [246, 4], [253, 4], [321, 4], [368, 4], [136, 3], [136, 5], [234, 3], [318, 6], [412, 6], [523, 6], [648, 3], [437, 5], [426, 7], [125, 8]],
+      "defi": [[1492, 3], [3217, 4], [2406, 6], [4567, 5], [5812, 6], [3214, 8], [4812, 8], [8027, 6], [7935, 8], [4861, 5], [3865, 9], [9873, 8]]
+    },
+    plus: {
+      "100": [[54, 29], [47, 29], [47, 9], [42, 9], [44, 7], [26, 8], [42, 51], [53, 13], [37, 45], [48, 36], [24, 28], [22, 56], [56, 33], [88, 33]],
+      "centaines": [[154, 38], [378, 69], [698, 89], [254, 98], [136, 19], [176, 9], [158, 99], [123, 8], [139, 99], [234, 69], [153, 78]],
+      "defi": [[138, 115], [259, 169], [345, 439], [248, 369], [722, 139], [765, 341], [159, 367], [969, 599], [69, 135], [865, 530], [86, 331], [76, 248]]
+    },
+    double: {
+      "100": [[14, 2], [19, 2], [25, 2], [27, 2], [35, 2], [45, 2], [17, 2], [59, 2], [67, 2], [75, 2], [36, 2], [87, 2]],
+      "centaines": [[120, 2], [130, 2], [145, 2], [160, 2], [175, 2], [225, 2], [235, 2], [245, 2], [250, 2], [424, 2], [608, 2], [406, 2]],
+      "defi": [[475, 2], [545, 2], [575, 2], [624, 2], [645, 2], [675, 2], [735, 2], [845, 2], [980, 2], [312, 2], [1080, 2], [1275, 2]]
+    }
+  };
+  var el = function (id) { return document.getElementById(id); };
+  var op = "fois", niveau = "100", idx = 0, score = 0, sonActif = true, ctx = null;
+  // le calcul en cours : A (× A, ou A + …), N le nombre à couper
+  var A = 0, N = 0, D = "", coupes = [], etape = "", dedans = null, faits = [], produits = [], erreurs = 0;
+  var total = 0, reste = [], pas = null;   // l'ascenseur : valeur atteinte, morceaux qui restent à ajouter, saut en cours
+  var lignes = [];                          // les lignes du calcul déjà écrites
+  function n(x) { return String(x).replace(/\B(?=(\d{3})+(?!\d))/g, " "); }
+  function son(type) {
+    if (!sonActif) return;
+    try {
+      ctx = ctx || new (window.AudioContext || window.webkitAudioContext)();
+      var t = ctx.currentTime, notes = type === "bien" ? [[784, 0, .3], [988, .08, .3], [1175, .16, .45]] : type === "coupe" ? [[1800, 0, .05, "square"], [900, .04, .06, "square"]]
+        : type === "machine" ? [[110, 0, .6, "sawtooth"], [165, .2, .4, "sawtooth"]] : type === "pose" ? [[523, 0, .12], [659, .08, .2]] : type === "ding" ? [[880, 0, .25, "sine"]] : [[300, 0, .35, "sine", 140]];
+      notes.forEach(function (q) { var o = ctx.createOscillator(), g = ctx.createGain(); o.type = q[3] || "triangle"; o.frequency.setValueAtTime(q[0], t + q[1]);
+        if (q[4]) o.frequency.exponentialRampToValueAtTime(q[4], t + q[1] + q[2]);
+        o.connect(g); g.connect(ctx.destination); g.gain.setValueAtTime(.0001, t + q[1]); g.gain.exponentialRampToValueAtTime(type === "machine" ? .05 : .13, t + q[1] + .01);
+        g.gain.exponentialRampToValueAtTime(.0001, t + q[1] + q[2]); o.start(t + q[1]); o.stop(t + q[1] + q[2] + .05); });
+    } catch (e) {}
+  }
+  function cleRecord() { return "machine-calculer-record-" + op + "-" + niveau; }
+  function majScore() {
+    var r = 0; try { r = parseInt(localStorage.getItem(cleRecord()), 10) || 0; } catch (e) {}
+    if (score > r) { r = score; try { localStorage.setItem(cleRecord(), String(r)); } catch (e) {} }
+    el("score").textContent = score; el("record").textContent = r;
+  }
+  function verdict(t, c) { el("verdict").textContent = t; el("verdict").className = "verdict" + (c ? " " + c : ""); }
+  function consigne(t) { el("consigne").textContent = t; }
+  function secoue(x) { x.classList.remove("secoue"); void x.offsetWidth; x.classList.add("secoue"); }
+  function signe() { return op === "plus" ? "+" : "×"; }
+  function enTete() {   // 27 × 4 = …  ·  47 + 38 = …  ·  le double de 145 = …
+    var fin = etape === "fini" ? " <span class='res'>" + n(resultat()) + "</span>" : "";
+    el("operation").innerHTML = (op === "double" ? "Le double de " + n(N) : op === "plus" ? n(A) + " + " + n(N) : n(N) + " × " + A) + " =" + fin;
+  }
+  function resultat() { return op === "plus" ? A + N : A * N; }
+
+  // ---------- les morceaux : une coupe avant le chiffre j (jamais devant un 0) ----------
+  function segments() { var b = [0].concat(coupes.slice().sort(function (a, c) { return a - c; })).concat([D.length]), s = [];
+    for (var i = 0; i < b.length - 1; i++) s.push([b[i], b[i + 1]]); return s; }
+  function valeur(sg) { return parseInt(D.slice(sg[0], sg[1]), 10) * Math.pow(10, D.length - sg[1]); }
+  function valeurs() { return segments().map(valeur); }
+  function fentesPossibles() { var f = []; for (var j = 1; j < D.length; j++) if (D[j] !== "0" && coupes.indexOf(j) === -1) f.push(j); return f; }
+  function dessinerMorceaux() {
+    var M = el("morceaux"); M.innerHTML = "";
+    var sg = segments();
+    el("ciseaux").style.visibility = etape === "couper" && fentesPossibles().length ? "visible" : "hidden";
+    sg.forEach(function (s, k) {
+      var c = document.createElement("div"), pris = faits.indexOf(k) !== -1 || dedans === k;
+      c.className = "morceau" + (pris ? " utilise" : "") + (sg.length > 1 ? " coupe-faite" : ""); c.dataset.k = k; c.dataset.v = valeur(s);
+      for (var j = s[0]; j < D.length; j++) {
+        var zero = j >= s[1];
+        if (!zero && j > s[0] && D[j] !== "0" && etape === "couper") { var f = document.createElement("span"); f.className = "fente"; f.dataset.j = j; c.appendChild(f); }
+        var x = document.createElement("span"); x.className = "ch" + (zero ? " zero" : "") + ((D.length - j) % 3 === 0 && j > s[0] ? " mille" : "");
+        x.textContent = zero ? "0" : D[j]; c.appendChild(x);
+      }
+      M.appendChild(c); if (!pris) deplacerMorceau(c);
+    });
+  }
+  function ajuster(box, max, min) {   // la plus grande taille où tout tient sur une ligne
+    var f = max; box.style.fontSize = f + "px";
+    while (f > min && box.scrollWidth > box.clientWidth + 1) { f -= 2; box.style.fontSize = f + "px"; }
+  }
+  function tailleChiffres() {   // calculée une fois par nombre, sur le nombre entièrement coupé : rien ne bouge sous le doigt
+    var garde = coupes, et = etape; coupes = []; for (var j = 1; j < D.length; j++) if (D[j] !== "0") coupes.push(j);
+    etape = "attente"; dessinerMorceaux(); ajuster(el("morceaux"), 112, 30); coupes = garde; etape = et;
+  }
+  function couper(j) {
+    j = +j; if (etape !== "couper" || coupes.indexOf(j) !== -1 || D[j] === "0") return;
+    coupes.push(j); son("coupe"); dessinerMorceaux();
+    [].forEach.call(document.querySelectorAll(".morceau"), function (m) { m.classList.add("coupe"); });
+    majConsigne();
+  }
+  // les ciseaux : toucher une fente, ou passer le doigt à travers
+  var couteau = false;
+  document.addEventListener("pointerdown", function (ev) {   // le doigt peut partir de n'importe où à côté du nombre
+    if (etape !== "couper" || !el("fondPave").hidden || ev.target.closest(".barre, .machine, #calculette, .btn-indice, .menu-panneau")) return;
+    var f = ev.target.closest(".fente");
+    if (f) { ev.preventDefault(); couper(f.dataset.j); couteau = true; return; }
+    if (!ev.target.closest(".morceau")) couteau = true;
+  });
+  document.addEventListener("pointermove", function (ev) {
+    if (!couteau) return; var x = document.elementFromPoint(ev.clientX, ev.clientY), f = x && x.closest && x.closest(".fente"); if (f) couper(f.dataset.j);
+  });
+  document.addEventListener("pointerup", function () { couteau = false; });
+
+  // ---------- glisser (ou toucher) un morceau vers la machine ----------
+  function deplacerMorceau(d) {
+    d.addEventListener("pointerdown", function (ev) {
+      if (ev.target.closest(".fente")) return;
+      if (!(dedans === null && (etape === "couper" || etape === "attente"))) return;
+      ev.preventDefault(); ev.stopPropagation();
+      var r = d.getBoundingClientRect(), vol = d.cloneNode(true); vol.classList.add("en-vol"); vol.style.left = r.left + "px"; vol.style.top = r.top + "px"; vol.style.width = r.width + "px";
+      document.body.appendChild(vol); d.classList.add("parti");
+      var x0 = ev.clientX, y0 = ev.clientY, dx = x0 - r.left, dy = y0 - r.top, bouge = false, M = el("machine");
+      function sur(x, y) { var b = M.getBoundingClientRect(); return x > b.left - 40 && x < b.right + 40 && y > b.top - 90 && y < b.bottom + 40; }
+      function mv(e) { vol.style.left = (e.clientX - dx) + "px"; vol.style.top = (e.clientY - dy) + "px"; if (Math.hypot(e.clientX - x0, e.clientY - y0) > 12) bouge = true;
+        M.classList.toggle("cible", sur(e.clientX, e.clientY)); }
+      function up(e) {
+        document.removeEventListener("pointermove", mv); document.removeEventListener("pointerup", up);
+        vol.remove(); d.classList.remove("parti"); M.classList.remove("cible");
+        if (!bouge || sur(e.clientX, e.clientY)) entrer(+d.dataset.k);   // une seule place possible : un toucher suffit
+      }
+      document.addEventListener("pointermove", mv); document.addEventListener("pointerup", up);
+    });
+  }
+
+  // ---------- la machine : un morceau entre, l'élève tape ce qui sort ----------
+  var VIDE = "<span class='vide'>la machine attend un morceau</span>";
+  function hublot() { var h = el("hublot"); h.textContent = op === "plus" ? "+" : "× " + A; h.classList.toggle("petit", op !== "plus" && String(A).length > 1); }
+  function entrer(k) {
+    if (dedans !== null || faits.indexOf(k) !== -1) return;
+    var premier = etape === "couper";
+    dedans = k; etape = "calcul"; erreurs += 0; verdict(""); dessinerMorceaux();
+    if (premier) ecrireDecomposition();
+    var p = valeurs()[k], M = el("machine");
+    M.classList.add("tourne"); son("machine"); el("ecran").innerHTML = ""; consigne("…");
+    var chute = document.createElement("div"); chute.className = "chute"; chute.textContent = n(p); M.appendChild(chute); setTimeout(function () { chute.remove(); }, 650);
+    setTimeout(function () {
+      M.classList.remove("tourne");
+      if (op === "plus") sautPlus(p); else calculMorceau(p);
+    }, 700);
+  }
+  function ecran(gauche, bon, siBon, html) {   // « 20 × 4 = ? » : la case se remplit avec la calculette
+    var E = el("ecran"); E.innerHTML = html || gauche + "<span>=</span><span class='trou' id='trouEcran'>?</span>";
+    E.style.justifyContent = "flex-start"; ajuster(E, 48, 22); E.style.justifyContent = "";
+    demander(el("trouEcran"), bon, siBon);
+  }
+  function demander(trou, bon, siBon) {
+    if (window.Calculette) {
+      Calculette.ouvrir({ cible: trou, bon: bon, format: n, siBon: function () { trou.textContent = n(bon); trou.classList.add("plein"); siBon(); },
+        siFaux: function (x) { faux(x, bon); } });
+    }
+    trou.__bon = bon; trou.__siBon = siBon;   // pour les tests
+  }
+  function faux(x, bon) { erreurs++; son("non"); var t = document.getElementById("trouEcran") || document.getElementById("trouCalcul"); if (t) secoue(t); verdict("🤪 Ce n'est pas " + n(x) + ".", "faux"); }
+  // × et double : chaque morceau multiplié, le produit sort et attend l'assemblage
+  function calculMorceau(p) {
+    var g = op === "double" ? "<span>le double de " + n(p) + "</span>" : "<span>" + n(p) + "</span><span>×</span><span>" + A + "</span>";
+    ecran(g, A * p, function () {
+      son("pose"); verdict("");
+      var k = dedans; faits.push(k); produits[k] = A * p; dedans = null;
+      var t = document.createElement("div"); t.className = "produit"; t.textContent = n(A * p); el("produits").appendChild(t);
+      el("produits").classList.toggle("petit", segments().length >= 3);
+      ecrireProduits();
+      setTimeout(function () {
+        el("ecran").innerHTML = VIDE;
+        if (faits.length < segments().length) { etape = "attente"; dessinerMorceaux(); majConsigne(); }
+        else if (segments().length === 1) finir();
+        else assembler();
+      }, 450);
+    });
+  }
+  // + : chaque morceau fait monter l'ascenseur ; un saut d'unités qui passe la dizaine s'arrête d'abord à la dizaine
+  function sautPlus(p) {
+    var u = total % 10;
+    if (p < 10 && u + p > 10) {   // 438 + 9 : d'abord 438 + ? = 440 (l'ascenseur s'arrête à la dizaine), puis 440 + 7
+      var dix = total - u + 10, c = dix - total;
+      pas = "dizaine"; tourVoir(total, dix, "+ ?");
+      ecran("", c, function () {
+        pas = null; monter(dix, "+ " + c);
+        var r2 = p - c; total = dix;
+        remplacer(dedans, r2); ecrireEtat();
+        setTimeout(function () {
+          tourVoir(total, total + r2, "+ " + r2);
+          ecran("<span>" + n(total) + "</span><span>+</span><span>" + r2 + "</span>", total + r2, function () { finirSaut(dedans, r2); });
+          consigne("Ajoute ce qui reste.");
+        }, 900);
+      }, "<span>" + n(total) + "</span><span>+</span><span class='trou' id='trouEcran'>?</span><span>=</span><span>" + n(dix) + "</span>");
+      consigne("Combien pour arriver à " + n(dix) + " ?");
+      return;
+    }
+    tourVoir(total, total + p, "+ " + n(p));
+    ecran("<span>" + n(total) + "</span><span>+</span><span>" + n(p) + "</span>", total + p, function () { finirSaut(dedans, p); });
+    majConsigne();
+  }
+  var restes = {};   // morceau k → ce qu'il en reste à ajouter (après l'arrêt à la dizaine)
+  function remplacer(k, r) { restes[k] = r; }
+  function finirSaut(k, p) {
+    son("pose"); verdict(""); monter(total + p, "+ " + n(p)); total += p;
+    faits.push(k); delete restes[k]; dedans = null; ecrireEtat();
+    setTimeout(function () {
+      el("ecran").innerHTML = VIDE;
+      if (faits.length < segments().length) { etape = "attente"; dessinerMorceaux(); majConsigne(); }
+      else finir();
+    }, 900);
+  }
+
+  // ---------- l'assemblage (× et double) : les produits s'ajoutent à l'ascenseur ----------
+  function assembler() {
+    etape = "assembler"; dessinerMorceaux();
+    var P = produits.slice(); total = P[0]; reste = P.slice(1);
+    tourInit(total); etapeAssemblage();
+  }
+  function etapeAssemblage() {
+    var x = reste[0];
+    tourVoir(total, total + x, "+ " + n(x));
+    var L = el("calcul"), d = document.createElement("div");
+    d.innerHTML = "= <span class='trou' id='trouCalcul'>?</span>" + reste.slice(1).map(function (y) { return " + " + n(y); }).join("");
+    L.appendChild(d); ajuster(L, 52, 22);
+    consigne(reste.length > 1 ? "Assemble : ajoute " + n(total) + " et " + n(x) + "." : "Assemble : ajoute les deux morceaux.");
+    demander(el("trouCalcul"), total + x, function () {
+      son("pose"); verdict(""); monter(total + x, "+ " + n(x)); total += x; reste.shift();
+      if (reste.length) { lignes.push(["= " + n(total) + reste.map(function (y) { return " + " + n(y); }).join(""), "vu"]); ecrireCalcul(); }
+      if (reste.length) setTimeout(etapeAssemblage, 900); else setTimeout(finir, 700);
+    });
+  }
+
+  // ---------- le calcul écrit à droite ----------
+  function ecrireCalcul() {
+    var L = el("calcul"); L.innerHTML = "";
+    lignes.forEach(function (l) { var d = document.createElement("div"); d.className = l[1] || ""; d.innerHTML = l[0]; L.appendChild(d); });
+    ajuster(L, 52, 22);
+  }
+  function ecrireDecomposition() {   // 27 × 4 = 20 × 4 + 7 × 4  ·  47 + 38 = 47 + 30 + 8
+    var v = valeurs(); if (v.length < 2) return;
+    if (op === "fois") lignes.push(["= " + v.map(function (p) { return n(p) + " × " + A; }).join(" + "), "vu"]);
+    else if (op === "plus") lignes.push(["= " + n(A) + " + " + v.map(n).join(" + "), "vu"]);
+    ecrireCalcul();
+  }
+  function ecrireProduits() {   // = 80 + 28 (les produits qui manquent : …)
+    if (segments().length < 2) return;
+    var t = "= " + segments().map(function (s, k) { return produits[k] !== undefined ? n(produits[k]) : "<span class='att'>…</span>"; }).join(" + ");
+    if (lignes.length && lignes[lignes.length - 1][2] === "produits") lignes[lignes.length - 1][0] = t; else lignes.push([t, "vu", "produits"]);
+    ecrireCalcul();
+  }
+  function ecrireEtat() {   // + : ce qui est atteint, puis ce qui reste à ajouter
+    var r = []; segments().forEach(function (s, k) { if (faits.indexOf(k) === -1) r.push(restes[k] !== undefined ? restes[k] : valeur(s)); });
+    if (!r.length) return;   // le résultat s'écrit à la fin
+    lignes.push(["= " + n(total) + r.map(function (x) { return " + " + n(x); }).join(""), "vu"]);
+    ecrireCalcul();
+  }
+
+  // ---------- l'ascenseur ----------
+  var tourBas = 0, tourHaut = 0;
+  function tourInit(v) { el("tour").classList.remove("repos"); tourVoir(v, v, ""); }
+  function tourVoir(a, b, texte) {   // les étages autour du saut a → b (de 10 en 10, ou de 100 en 100…)
+    var T = el("tour"); T.classList.remove("repos"); T.innerHTML = "";
+    var ecart = Math.max(b - a, 1), s = ecart <= 60 ? 10 : ecart <= 600 ? 100 : 1000;
+    tourBas = Math.floor(a / s) * s; tourHaut = Math.max(Math.ceil(b / s) * s, tourBas + 4 * s);
+    if (tourHaut === b) tourHaut += s;
+    for (var e = tourBas; e <= tourHaut; e += s) {
+      var d = document.createElement("div"); d.className = "etage"; d.style.top = y(e) + "px"; d.innerHTML = "<span>" + n(e) + "</span>"; T.appendChild(d);
+    }
+    var c = document.createElement("div"); c.className = "cabine"; c.id = "cabine"; c.style.top = y(a) + "px"; c.textContent = n(a); T.appendChild(c);
+    if (b > a) {
+      var acc = document.createElement("div"); acc.className = "accolade"; acc.id = "accolade"; acc.style.top = y(b) + "px"; acc.style.height = (y(a) - y(b)) + "px";
+      acc.innerHTML = "<b>" + texte + "</b>"; T.appendChild(acc);
+    }
+  }
+  function y(v) { var H = el("tour").clientHeight || 650; return H - 10 - (v - tourBas) / (tourHaut - tourBas) * (H - 30); }
+  function monter(v, texte) {   // la cabine monte jusqu'à v ; le saut s'écrit en vert
+    var c = el("cabine"), acc = el("accolade"); if (!c) return;
+    if (acc) { acc.className = "accolade fait"; acc.style.top = y(v) + "px"; acc.style.height = (y(parseFloat(c.textContent.replace(/\s/g, ""))) - y(v)) + "px"; acc.querySelector("b").textContent = texte; }
+    c.style.top = y(v) + "px"; c.textContent = n(v); setTimeout(function () { son("ding"); }, 600);
+  }
+
+  function finir() {
+    etape = "fini"; enTete(); son("bien");
+    lignes.push(["= " + n(resultat()), "fin"]); ecrireCalcul();
+    if (op !== "plus" && segments().length > 1) { /* l'ascenseur montre déjà le total */ }
+    score++; majScore(); verdict(erreurs ? "✅" : "✅ Bravo !", "bien");
+    consigne(""); el("btnSuivant").hidden = false; if (window.Calculette) Calculette.fermer();
+  }
+  function majConsigne() {
+    if (etape === "couper") consigne(fentesPossibles().length ? "Coupe " + n(N) + " au doigt, puis glisse un morceau dans la machine." : "Glisse " + n(N) + " dans la machine.");
+    else if (etape === "attente") consigne("Glisse un autre morceau dans la machine.");
+    else if (etape === "calcul") consigne(op === "plus" ? "Fais monter l'ascenseur : tape où il arrive." : "Tape ce qui sort de la machine.");
+  }
+  function nouveau(choisi) {
+    var L = LISTES[op][niveau], c = choisi || L[idx % L.length];
+    if (op === "plus") { A = c[0]; N = c[1]; } else { N = c[0]; A = c[1]; }
+    D = String(N); coupes = []; etape = "couper"; dedans = null; faits = []; produits = []; erreurs = 0; restes = {}; reste = [];
+    total = op === "plus" ? A : 0; pas = null;
+    lignes = [[op === "double" ? "le double de " + n(N) : op === "plus" ? n(A) + " + " + n(N) : n(N) + " × " + A, ""]];
+    verdict(""); el("btnSuivant").hidden = true; el("produits").innerHTML = ""; el("ecran").innerHTML = VIDE; el("ecran").classList.remove("petit");
+    if (window.Calculette) Calculette.fermer();
+    hublot(); enTete(); tailleChiffres(); dessinerMorceaux(); ecrireCalcul(); majConsigne();
+    if (op === "plus") tourInit(A); else { el("tour").innerHTML = ""; el("tour").classList.add("repos"); }
+  }
+
+  // ---------- 💡 la méthode, jamais le résultat ----------
+  el("btnIndice").addEventListener("click", function () {
+    if (etape === "couper") return verdict("💡 Coupe avant chaque chiffre : les milliers, les centaines, les dizaines, les unités.", "indice");
+    if (etape === "calcul" && op === "plus") return verdict(pas === "dizaine" ? "💡 Compte de " + n(total) + " jusqu'à la dizaine : 1, 2, 3…" : "💡 Ajoute les centaines aux centaines, les dizaines aux dizaines.", "indice");
+    if (etape === "calcul") return verdict(op === "double" ? "💡 Double le chiffre, puis remets les zéros." : "💡 Multiplie le chiffre par " + A + ", puis remets les zéros.", "indice");
+    if (etape === "assembler") return verdict("💡 Ajoute les centaines, puis les dizaines, puis les unités.", "indice");
+    verdict("💡 Glisse un morceau dans la machine.", "indice");
+  });
+
+  // ---------- ✏️ mon calcul : deux nombres sur le pavé ----------
+  var saisie = "", demandes = [], reponses = [];
+  function majPave() { el("paveEcran").textContent = saisie ? n(+saisie) : ""; }
+  function ouvrirPave() {
+    demandes = op === "fois" ? [["Le nombre à couper", 99999], ["Multiplié par", 9]] : op === "plus" ? [["Le premier nombre", 9999], ["Le nombre à ajouter (à couper)", 9999]] : [["Le nombre à doubler", 99999]];
+    reponses = []; saisie = ""; majPave(); el("paveTitre").textContent = demandes[0][0]; el("fondPave").hidden = false;
+  }
+  function fermerPave() { el("fondPave").hidden = true; }
+  el("btnPerso").addEventListener("click", ouvrirPave);
+  el("paveAnnuler").addEventListener("click", fermerPave);
+  el("fondPave").addEventListener("click", function (e) { if (e.target === el("fondPave")) fermerPave(); });
+  el("touches").addEventListener("click", function (e) {
+    var b = e.target.closest("button"); if (!b) return;
+    var dm = demandes[reponses.length];
+    if (b.dataset.t === "eff") { saisie = saisie.slice(0, -1); majPave(); return; }
+    if (b.dataset.t === "ok") {
+      var v = +saisie;
+      if (!v || v > dm[1] || (op === "fois" && reponses.length === 1 && v < 2)) { secoue(el("paveEcran")); return; }
+      reponses.push(v); saisie = ""; majPave();
+      if (reponses.length < demandes.length) { el("paveTitre").textContent = demandes[reponses.length][0]; return; }
+      fermerPave();
+      nouveau(op === "fois" ? [reponses[0], reponses[1]] : op === "plus" ? [reponses[0], reponses[1]] : [reponses[0], 2]);
+      return;
+    }
+    if (saisie.length >= String(dm[1]).length || (saisie === "" && b.textContent === "0")) return;
+    saisie += b.textContent; majPave();
+  });
+  el("btnSuivant").addEventListener("click", function () { idx++; nouveau(); });
+  el("btnSon").addEventListener("click", function () { sonActif = !sonActif; el("btnSon").textContent = sonActif ? "🔊" : "🔇"; });
+
+  function lancer() {
+    score = 0; idx = 0;
+    document.querySelectorAll("#onglets button[data-op]").forEach(function (b) { b.classList.toggle("actif", b.dataset.op === op); });
+    document.querySelectorAll("#niveaux button").forEach(function (b) { b.classList.toggle("actif", b.dataset.niveau === niveau); });
+    majScore(); nouveau();
+  }
+  document.querySelectorAll("#onglets button[data-op]").forEach(function (b) { b.addEventListener("click", function () { op = b.dataset.op; lancer(); }); });
+  document.querySelectorAll("#niveaux button").forEach(function (b) { b.addEventListener("click", function () { niveau = b.dataset.niveau; lancer(); }); });
+  function lireHash() {   // #fois, #plus, #double, avec -100, -centaines, -defi (ex. #plus-centaines)
+    decodeURIComponent(location.hash.slice(1)).split("-").forEach(function (h) { if (LISTES[h]) op = h; if (LISTES.fois[h]) niveau = h; });
+    lancer();
+  }
+  window.addEventListener("hashchange", lireHash);
+  window.addEventListener("resize", function () { if (el("cabine")) { var a = parseFloat(el("cabine").textContent.replace(/\s/g, "")); tourVoir(a, a, ""); } });
+  lireHash();
+  window.__machine = {
+    etat: function () {
+      return { op: op, niveau: niveau, A: A, N: N, etape: etape, morceaux: valeurs(), fentes: fentesPossibles(), dedans: dedans, faits: faits.slice(), produits: produits.slice(),
+        total: total, calcul: [].map.call(el("calcul").children, function (d) { return d.textContent.replace(/\s+/g, " ").trim(); }), score: score, listes: LISTES,
+        attendu: (function () { var t = document.getElementById("trouEcran") || document.getElementById("trouCalcul"); return t && !t.classList.contains("plein") ? t.__bon : null; })() };
+    },
+    couper: couper, entrer: entrer
+  };
+})();
+</script>
+<!-- MENU -->
+<script>
+/* ==== LE MENU ☰ (GTH, 10/10) : interface épurée — à l'écran, seulement le titre, le score, la consigne et l'activité ====
+   Tout le reste (niveaux, onglets de méthode, ✏️, 🔊, 🖨️, aide…) part dans un menu ☰, ouvert d'un toucher.
+   Réglage par outil (CONF, posé par l'injecteur) : ancre = où mettre le bouton ☰ (sinon en haut à droite de l'écran) ;
+   cacher = ce qui part dans le menu (sinon : tout ce qui, dans « .barre .droite », n'est pas un score).
+   Installé par .claude/outils/menu-outil/injecter.py ; ne pas modifier dans l'outil, mais dans ce fichier. */
+(function () {
+  var CONF = {"cacher": [".barre .droite > :not(.score)"]};
+  var st = document.createElement("style");
+  st.textContent =
+    ".menu-btn{width:58px; height:58px; border-radius:16px; border:2px solid rgba(0,0,0,.15); background:#fff; color:#1f2a33; font-size:2rem; line-height:1; cursor:pointer; flex:none; padding:0;}" +
+    ".menu-btn.fixe{position:fixed; top:10px; right:12px; z-index:150; box-shadow:0 4px 14px rgba(0,0,0,.15);}" +
+    ".menu-btn.ouvert{background:#1f2a33; color:#fff;}" +
+    ".menu-panneau{position:fixed; top:76px; right:16px; z-index:200; background:#fff; color:#1f2a33; border-radius:18px; box-shadow:0 18px 50px rgba(0,0,0,.28); padding:16px 18px;" +
+    "  display:flex; flex-direction:column; align-items:flex-start; gap:12px; max-width:min(620px, 92vw); max-height:80vh; overflow:auto;}" +
+    ".menu-panneau[hidden]{display:none !important;}" +
+    ".menu-panneau h4{margin:0; font-family:sans-serif; font-size:.85rem; text-transform:uppercase; letter-spacing:.6px; color:#6d7a85;}" +
+    ".menu-panneau > *{position:static !important; margin:0 !important;}" +
+    ".menu-panneau > div,.menu-panneau > nav{display:flex; flex-wrap:wrap; gap:8px;}";
+  document.head.appendChild(st);
+  function installer() {
+    var autres = [];
+    if (CONF.cacher) CONF.cacher.forEach(function (s) { document.querySelectorAll(s).forEach(function (e) { if (autres.indexOf(e) === -1) autres.push(e); }); });
+    else { var d = document.querySelector(".barre .droite"); if (d) autres = Array.prototype.filter.call(d.children, function (e) { return !e.classList.contains("score"); }); }
+    if (!autres.length) return;
+    var btn = document.createElement("button"); btn.type = "button"; btn.className = "menu-btn"; btn.title = "Niveaux et réglages"; btn.textContent = "☰";
+    var pan = document.createElement("div"); pan.className = "menu-panneau"; pan.hidden = true;
+    var t = document.createElement("h4"); t.textContent = "Niveaux et réglages"; pan.appendChild(t);
+    autres.forEach(function (e) { pan.appendChild(e); });
+    var ancre = document.querySelector(CONF.ancre || ".barre .droite");
+    if (ancre) ancre.appendChild(btn); else { btn.classList.add("fixe"); document.body.appendChild(btn); }
+    document.body.appendChild(pan);
+    function ouvrir(o) { pan.hidden = !o; btn.classList.toggle("ouvert", o); }
+    btn.addEventListener("click", function (e) { e.stopPropagation(); ouvrir(pan.hidden); });
+    // un niveau choisi, ou une fenêtre ouverte (✏️, 🖨️) : le menu se referme ; on garde le menu ouvert pour choisir un type de jeu
+    pan.addEventListener("click", function (e) { var b = e.target.closest("button"); if (b && !b.closest(CONF.garderOuvert || ".types")) setTimeout(function () { ouvrir(false); }, 120); });
+    document.addEventListener("pointerdown", function (e) { if (!pan.hidden && !pan.contains(e.target) && e.target !== btn) ouvrir(false); });
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", installer); else installer();
+})();
+</script>
+<!-- /MENU -->
+<!-- INDICE-COTE -->
+<script>
+/* 💡 sur le côté (Karim, 21/10) : dans les jeux qui ont un bouton « 💡 Indice » (.btn-indice), le bouton devient une ampoule seule,
+   collée au bord droit de l'écran, à mi-hauteur ; l'indice s'ouvre dans une bulle à côté d'elle, jamais sous le jeu.
+   Le jeu garde son propre code : au toucher, on regarde quel texte il vient d'écrire (zone #indice, ou la ligne de message),
+   on le reprend dans la bulle et on remet la zone comme avant. Installé par injecter.py. */
+(function () {
+  var b = document.querySelector(".btn-indice"); if (!b) return;
+  var st = document.createElement("style");
+  st.textContent =
+    ".btn-indice.cote{position:fixed !important; right:18px; top:50%; transform:translateY(-50%); width:76px; height:76px; padding:0 !important; border-radius:50% !important;" +
+    " font-size:40px !important; line-height:1; z-index:60; margin:0 !important; display:flex; align-items:center; justify-content:center}" +
+    "#bulle-cote{position:fixed; right:110px; top:50%; transform:translateY(-50%); max-width:520px; background:#fff8c4; border:2px solid #d4b106; border-radius:18px;" +
+    " padding:16px 22px; font-size:26px; line-height:1.35; z-index:60; box-shadow:0 6px 18px rgba(0,0,0,.15); display:none}" +
+    "#bulle-cote::after{content:''; position:absolute; right:-14px; top:50%; margin-top:-12px; border:12px solid transparent; border-left:14px solid #d4b106; border-right:none}";
+  document.head.appendChild(st);
+  b.classList.add("cote"); b.textContent = "💡"; b.title = "Indice"; document.body.appendChild(b);
+  var bulle = document.createElement("div"); bulle.id = "bulle-cote"; document.body.appendChild(bulle);
+  var zones = function () { return Array.prototype.slice.call(document.querySelectorAll("#indice, .indice, #message, .message, #verdict, .verdict, #consigne-aide")); };
+  var avant = [], minuteur = null;
+  b.addEventListener("click", function () { avant = zones().map(function (z) { return [z, z.textContent, z.className]; }); }, true);   // avant le code du jeu
+  b.addEventListener("click", function () {
+    setTimeout(function () {
+      var txt = "";
+      avant.forEach(function (a) {
+        var z = a[0], neuf = z.textContent;
+        if (neuf !== a[1] && neuf.trim()) { txt = neuf; z.textContent = a[1]; z.className = a[2]; }
+      });
+      if (!txt) return;   // le jeu montre l'indice autrement : on le laisse faire
+      bulle.textContent = txt.replace(/^\s*💡\s*/, ""); bulle.style.display = "block";
+      clearTimeout(minuteur); minuteur = setTimeout(function () { bulle.style.display = "none"; }, 8000);
+    }, 0);
+  });
+  document.addEventListener("pointerdown", function (e) { if (e.target !== b && e.target !== bulle) bulle.style.display = "none"; });
+})();
+</script>
+<!-- /INDICE-COTE -->
+</body>
+</html>

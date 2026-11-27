@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>La banque des nombres</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2040%2040%22%20width%3D%2264%22%20height%3D%2264%22%20aria-hidden%3D%22true%22%3E%3Cpath%20d%3D%22M5%2C13%20l9%2C-8%20h22%20l-9%2C8%20z%22%20fill%3D%22%23d7c2ff%22/%3E%3Cpath%20d%3D%22M27%2C13%20l9%2C-8%20v22%20l-9%2C8%20z%22%20fill%3D%22%238d66d6%22/%3E%3Crect%20x%3D%225%22%20y%3D%2213%22%20width%3D%2222%22%20height%3D%2222%22%20fill%3D%22%23b28cf0%22/%3E%3Cpath%20d%3D%22M7.2%2C13%20v22%20M5%2C15.2%20h22%20M7.2%2C13%20l9%2C-8%20M5.9%2C12.2%20h22%20M27%2C15.2%20l9%2C-8%20M27.9%2C12.2%20v22%20M9.4%2C13%20v22%20M5%2C17.4%20h22%20M9.4%2C13%20l9%2C-8%20M6.8%2C11.4%20h22%20M27%2C17.4%20l9%2C-8%20M28.8%2C11.4%20v22%20M11.6%2C13%20v22%20M5%2C19.6%20h22%20M11.6%2C13%20l9%2C-8%20M7.7%2C10.6%20h22%20M27%2C19.6%20l9%2C-8%20M29.7%2C10.6%20v22%20M13.8%2C13%20v22%20M5%2C21.8%20h22%20M13.8%2C13%20l9%2C-8%20M8.6%2C9.8%20h22%20M27%2C21.8%20l9%2C-8%20M30.6%2C9.8%20v22%20M16.0%2C13%20v22%20M5%2C24.0%20h22%20M16.0%2C13%20l9%2C-8%20M9.5%2C9.0%20h22%20M27%2C24.0%20l9%2C-8%20M31.5%2C9.0%20v22%20M18.2%2C13%20v22%20M5%2C26.2%20h22%20M18.2%2C13%20l9%2C-8%20M10.4%2C8.2%20h22%20M27%2C26.2%20l9%2C-8%20M32.4%2C8.2%20v22%20M20.4%2C13%20v22%20M5%2C28.4%20h22%20M20.4%2C13%20l9%2C-8%20M11.3%2C7.4%20h22%20M27%2C28.4%20l9%2C-8%20M33.3%2C7.4%20v22%20M22.6%2C13%20v22%20M5%2C30.6%20h22%20M22.6%2C13%20l9%2C-8%20M12.2%2C6.6%20h22%20M27%2C30.6%20l9%2C-8%20M34.2%2C6.6%20v22%20M24.8%2C13%20v22%20M5%2C32.8%20h22%20M24.8%2C13%20l9%2C-8%20M13.1%2C5.8%20h22%20M27%2C32.8%20l9%2C-8%20M35.1%2C5.8%20v22%22%20stroke%3D%22%234b2a8a%22%20stroke-width%3D%22.35%22%20stroke-opacity%3D%22.7%22%20fill%3D%22none%22/%3E%3Cpath%20d%3D%22M5%2C13%20h22%20v22%20h-22%20z%20M5%2C13%20l9%2C-8%20h22%20v22%20l-9%2C8%20M27%2C13%20l9%2C-8%22%20stroke%3D%22%233a1f70%22%20stroke-width%3D%221.1%22%20fill%3D%22none%22%20stroke-linejoin%3D%22round%22/%3E%3C/svg%3E">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700&family=Quicksand:wght@500;600;700&display=swap">
+<style>
+  :root{ --bg-deep:#0a1f2e; --bg-panel:#123246; --panel-border:#2d6079; --ink:#eaf6ff; --moon:#ffe9a8;
+    --good:#5be08a; --bad:#ff77bb; --tile:#173b52; --tile-border:#2d6079;
+    --m:#e4572e; --c:#3fae5a; --d:#3a86d4; --u:#f2c230; }   /* 14/11 : les couleurs du 🔨 marteau des nombres, communes à toutes les activités */
+  *{box-sizing:border-box;}
+  body{margin:0; min-height:100vh; color:var(--ink); font-family:"Quicksand",ui-sans-serif,system-ui,sans-serif;
+    background:radial-gradient(circle at 88% 6%, rgba(255,233,168,0.25), transparent 42%), var(--bg-deep);
+    padding:18px 16px; display:flex; justify-content:center; user-select:none; -webkit-user-select:none; touch-action:none;}
+  .page{width:100%; max-width:1200px; background:var(--bg-panel); border:2px solid var(--panel-border); border-radius:22px; padding:18px 24px 24px; box-shadow:0 14px 40px rgba(0,0,0,.45);}
+  h1{font-family:"Baloo 2",cursive; font-size:clamp(1.6rem,4vw,2.3rem); margin:0;}
+  .barre-haut{display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;}
+  .droite{display:flex; align-items:center; gap:12px;}
+  .etoiles{font-family:"Baloo 2",cursive; font-size:1.5rem; color:var(--moon);}
+  .btn,.niveaux button{font:inherit; font-weight:700; border-radius:999px; border:2px solid var(--tile-border); background:var(--tile); color:var(--ink); padding:8px 16px; cursor:pointer; font-size:1rem;}
+  .niveaux{display:flex; gap:8px; margin-top:6px; flex-wrap:wrap;}
+  .niveaux .bascule{margin-left:18px; border-style:dashed;} .niveaux .bascule.grand{background:#ff7a8a; color:#0a1f2e; border-color:#ff7a8a; border-style:solid;}
+  .colonne.dm{border-color:#ff7a8a; background:rgba(255,122,138,.08);} .colonne.dm h3{color:#ff7a8a; font-size:1.15rem;} .niveaux button.actif{background:#4fd1c5; color:#0a1f2e; border-color:#4fd1c5;}
+  .btn.principal{background:var(--moon); color:#0a1f2e; border-color:var(--moon); font-size:1.4rem; padding:8px 26px;}
+  .btn[hidden]{display:none;}
+
+  .cible{text-align:center; font-family:"Baloo 2",cursive; font-size:clamp(2.6rem,7vw,4.4rem); margin:6px 0 4px; letter-spacing:.04em;}
+  .cible.petite{font-size:clamp(1.5rem,3.6vw,2.4rem);}
+  .banque{display:flex; justify-content:center; gap:26px; align-items:flex-end; margin:6px 0 12px; flex-wrap:wrap;}
+  .billet{cursor:pointer; touch-action:none; display:flex; flex-direction:column; align-items:center; gap:4px;}
+  .billet .nom{font-weight:700; font-size:.95rem; opacity:.85;}
+  .banque[hidden]{display:none;}
+
+  /* Matériel de numération : pavés quadrillés en perspective (SVG généré par boite3D). */
+  .piece{display:inline-block; line-height:0;}
+  .piece svg{display:block; overflow:visible;}
+  /* zone de toucher plus large que le dessin (petits cubes et barres au doigt sur l'ENI) */
+  .tas .piece{padding:6px; margin:-3px; border-radius:6px;}
+  .tas .piece:hover{background:rgba(255,255,255,.08);}
+  .comptoir{display:grid; grid-template-columns:repeat(4,1fr); gap:12px;}
+  .colonne{border-radius:16px; border:3px solid; padding:8px; min-height:230px; position:relative; display:flex; flex-direction:column;}
+  .colonne h3{margin:0 0 6px; text-align:center; font-family:"Baloo 2",cursive; font-size:1.5rem;}
+  .colonne.m{border-color:var(--m); background:rgba(228,87,46,.10);} .colonne.m h3{color:var(--m);}
+  .colonne.c{border-color:var(--c); background:rgba(63,174,90,.10);} .colonne.c h3{color:var(--c);}
+  .colonne.d{border-color:var(--d); background:rgba(58,134,212,.10);} .colonne.d h3{color:var(--d);}
+  .colonne.u{border-color:var(--u); background:rgba(242,194,48,.10);} .colonne.u h3{color:var(--u);}
+  .colonne.survol{box-shadow:0 0 0 5px var(--moon);}
+  .tas{display:flex; flex-wrap:wrap; gap:5px; align-content:flex-start; justify-content:center; flex:1;}
+  .tas > *{cursor:pointer;}
+  .machine{position:absolute; left:-30px; top:50%; transform:translateY(-50%); z-index:3; font-size:2.2rem; background:var(--moon); color:#0a1f2e;
+    border:none; border-radius:50%; width:60px; height:60px; cursor:pointer; box-shadow:0 6px 14px rgba(0,0,0,.4); animation:appel 1.2s ease-in-out infinite;}
+  @keyframes appel{50%{transform:translateY(-50%) scale(1.1)}}
+  .machine[hidden]{display:none;}
+  .envol{position:fixed; z-index:40; pointer-events:none; transition:all .7s ease-in;}
+  .chiffre-case{margin-top:8px; align-self:center; width:70px; height:78px; border:4px dashed var(--moon); border-radius:14px; display:flex; align-items:center; justify-content:center;
+    font-family:"Baloo 2",cursive; font-size:3rem;}
+  .chiffre-case[hidden]{display:none;}
+  .chiffre-case.survol{box-shadow:0 0 0 6px rgba(255,233,168,.35);} .chiffre-case.remplie{border-style:solid; border-color:#4fd1c5;}
+  .chiffres{display:flex; gap:10px; justify-content:center; margin-top:12px; flex-wrap:wrap;}
+  .chiffres[hidden]{display:none;}
+  .chiffre{font-family:"Baloo 2",cursive; font-size:2.3rem; width:62px; height:62px; border-radius:14px; background:var(--tile); border:3px solid var(--tile-border);
+    display:flex; align-items:center; justify-content:center; cursor:grab; touch-action:none;}
+  .en-vol{position:fixed; z-index:50; pointer-events:none; transform:scale(1.12);}
+  /* Valider : on glisse le nombre à construire sur le comptoir. Défi : on glisse un tas de 10 vers la colonne de gauche. */
+  .cible.glisse{cursor:grab; touch-action:none; border:3px dashed var(--moon); border-radius:18px; padding:2px 22px; display:table; margin-left:auto; margin-right:auto;}
+  .comptoir.survol{outline:4px dashed var(--moon); outline-offset:8px; border-radius:16px;}
+  .tas.echangeable{cursor:grab; touch-action:none; box-shadow:0 0 0 4px var(--moon); border-radius:12px; animation:appel 1.2s ease-in-out infinite;}
+  @keyframes appel{50%{box-shadow:0 0 0 8px rgba(255,233,168,.35);}}
+  .colonne.survol{box-shadow:0 0 0 6px var(--moon);}
+  .message{min-height:1.5em; text-align:center; font-size:2rem; margin:8px 0 4px;}
+  .bas{display:flex; justify-content:center; gap:12px;}
+  @media (max-width:760px){ .comptoir{grid-template-columns:repeat(2,1fr);} }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="barre-haut">
+    <h1 style="display:flex;align-items:center;gap:10px"><svg class="logo-svg" viewBox="0 0 40 40" width="46" height="46" aria-hidden="true"><path d="M5,13 l9,-8 h22 l-9,8 z" fill="#d7c2ff"/><path d="M27,13 l9,-8 v22 l-9,8 z" fill="#8d66d6"/><rect x="5" y="13" width="22" height="22" fill="#b28cf0"/><path d="M7.2,13 v22 M5,15.2 h22 M7.2,13 l9,-8 M5.9,12.2 h22 M27,15.2 l9,-8 M27.9,12.2 v22 M9.4,13 v22 M5,17.4 h22 M9.4,13 l9,-8 M6.8,11.4 h22 M27,17.4 l9,-8 M28.8,11.4 v22 M11.6,13 v22 M5,19.6 h22 M11.6,13 l9,-8 M7.7,10.6 h22 M27,19.6 l9,-8 M29.7,10.6 v22 M13.8,13 v22 M5,21.8 h22 M13.8,13 l9,-8 M8.6,9.8 h22 M27,21.8 l9,-8 M30.6,9.8 v22 M16.0,13 v22 M5,24.0 h22 M16.0,13 l9,-8 M9.5,9.0 h22 M27,24.0 l9,-8 M31.5,9.0 v22 M18.2,13 v22 M5,26.2 h22 M18.2,13 l9,-8 M10.4,8.2 h22 M27,26.2 l9,-8 M32.4,8.2 v22 M20.4,13 v22 M5,28.4 h22 M20.4,13 l9,-8 M11.3,7.4 h22 M27,28.4 l9,-8 M33.3,7.4 v22 M22.6,13 v22 M5,30.6 h22 M22.6,13 l9,-8 M12.2,6.6 h22 M27,30.6 l9,-8 M34.2,6.6 v22 M24.8,13 v22 M5,32.8 h22 M24.8,13 l9,-8 M13.1,5.8 h22 M27,32.8 l9,-8 M35.1,5.8 v22" stroke="#4b2a8a" stroke-width=".35" stroke-opacity=".7" fill="none"/><path d="M5,13 h22 v22 h-22 z M5,13 l9,-8 h22 v22 l-9,8 M27,13 l9,-8" stroke="#3a1f70" stroke-width="1.1" fill="none" stroke-linejoin="round"/></svg> La banque des nombres</h1>
+    <div class="droite"><span class="etoiles" id="etoiles">⭐ 0</span><button class="btn" id="btnSon" type="button">🔊</button></div>
+  </div>
+  <div class="niveaux" id="niveaux">
+    <button type="button" data-niveau="construire" class="actif">Je construis</button>
+    <button type="button" data-niveau="echange">10 = 1</button>
+    <button type="button" data-niveau="defi">Défi</button>
+    <button type="button" id="btnGrands" class="bascule" title="Passer aux nombres jusqu'à 99 999 (colonne des dizaines de milliers)">jusqu'à 9 999</button>
+  </div>
+  <div class="cible" id="cible"></div>
+  <div class="banque" id="banque"></div>
+  <div class="comptoir" id="comptoir"></div>
+  <div class="chiffres" id="chiffres" hidden></div>
+  <div class="message" id="message"></div>
+  <div class="bas">
+    <button class="btn" id="btnReset" type="button" title="Recommencer">↺</button>
+    <button class="btn principal" id="btnSuivant" type="button" hidden>➜</button>
+  </div>
+</div>
+<script>
+(function () {
+  var COLS_4 = [
+    { cle: "m", nom: "milliers", valeur: 1000 },
+    { cle: "c", nom: "centaines", valeur: 100 },
+    { cle: "d", nom: "dizaines", valeur: 10 },
+    { cle: "u", nom: "unités", valeur: 1 }
+  ];
+  var COLS_5 = [{ cle: "dm", nom: "dizaines de milliers", valeur: 10000 }].concat(COLS_4);
+  var COLS = COLS_4, grands = false;
+  // 3 niveaux, et pour chacun des nombres jusqu'à 9 999 (4 colonnes) ou jusqu'à 99 999 (5 colonnes) :
+  //  - Je construis : on construit le nombre affiché avec le matériel (rien ne se transforme tout seul) ;
+  //  - 10 = 1 : pareil, mais 10 pièces d'une colonne se transforment d'elles-mêmes en 1 pièce de la colonne de gauche ;
+  //  - Défi : le comptoir est déjà rempli (plus de 9 dans une colonne) ; on échange avec la machine, puis on écrit le nombre.
+  var ITEMS_4 = {
+    construire: [2413, 3205, 1342, 4130, 3945, 6078, 7501, 5087, 2604, 9310],
+    echange: [1256, 2390, 3408, 4070, 1999, 5602, 3799, 6085, 8140, 2507],
+    defi: [
+      { m: 8, c: 0, d: 92, u: 4, texte: "8 milliers + 92 dizaines + 4 unités" },
+      { m: 3, c: 12, d: 5, u: 7, texte: "3 milliers + 12 centaines + 5 dizaines + 7 unités" },
+      { m: 0, c: 45, d: 0, u: 27, texte: "45 centaines + 27 unités" },
+      { m: 5, c: 9, d: 13, u: 15, texte: "5 milliers + 9 centaines + 13 dizaines + 15 unités" },
+      { m: 2, c: 15, d: 0, u: 3, texte: "2 milliers + 15 centaines + 3 unités" },
+      { m: 0, c: 0, d: 64, u: 8, texte: "64 dizaines + 8 unités" },
+      { m: 6, c: 0, d: 18, u: 0, texte: "6 milliers + 18 dizaines" },
+      { m: 1, c: 11, d: 11, u: 11, texte: "1 millier + 11 centaines + 11 dizaines + 11 unités" },
+      { m: 4, c: 3, d: 0, u: 52, texte: "4 milliers + 3 centaines + 52 unités" },
+      { m: 0, c: 27, d: 14, u: 0, texte: "27 centaines + 14 dizaines" }
+    ]
+  };
+  var ITEMS_5 = {
+    construire: [23405, 51230, 40312, 12045, 30504, 67089, 38150, 90407, 25063, 71902],
+    echange: [21356, 34090, 19999, 45608, 70250, 29900, 50318, 63045, 18760, 86006],
+    defi: [
+      { dm: 2, m: 14, c: 3, d: 0, u: 25, texte: "2 dizaines de milliers + 14 milliers + 3 centaines + 25 unités" },
+      { dm: 0, m: 45, c: 12, d: 0, u: 6, texte: "45 milliers + 12 centaines + 6 unités" },
+      { dm: 3, m: 0, c: 0, d: 34, u: 0, texte: "3 dizaines de milliers + 34 dizaines" },
+      { dm: 1, m: 9, c: 9, d: 9, u: 12, texte: "1 dizaine de milliers + 9 milliers + 9 centaines + 9 dizaines + 12 unités" },
+      { dm: 1, m: 12, c: 0, d: 4, u: 0, texte: "1 dizaine de milliers + 12 milliers + 4 dizaines" },
+      { dm: 0, m: 0, c: 56, d: 0, u: 13, texte: "56 centaines + 13 unités" },
+      { dm: 4, m: 3, c: 15, d: 0, u: 0, texte: "4 dizaines de milliers + 3 milliers + 15 centaines" },
+      { dm: 2, m: 0, c: 0, d: 48, u: 7, texte: "2 dizaines de milliers + 48 dizaines + 7 unités" },
+      { dm: 0, m: 31, c: 2, d: 12, u: 0, texte: "31 milliers + 2 centaines + 12 dizaines" },
+      { dm: 6, m: 9, c: 10, d: 0, u: 10, texte: "6 dizaines de milliers + 9 milliers + 10 centaines + 10 unités" }
+    ]
+  };
+  var ITEMS = ITEMS_4;
+  // Pavé quadrillé en perspective cavalière : face avant (cols × rows), dessus (cols × prof), côté droit (prof × rows).
+  // Le cube de 1 000 est un vrai cube fermé (10 × 10 × 10), la plaque de 100 un pavé de 10 × 10 × 1, etc.
+  var FORMES = {
+    m: { cols: 10, rows: 10, prof: 10, avant: "#e4572e", dessus: "#f08a6b", cote: "#b8401f", trait: "#5a1d0b" },
+    c: { cols: 10, rows: 10, prof: 1, avant: "#3fae5a", dessus: "#7fd393", cote: "#2b8442", trait: "#14501f" },
+    d: { cols: 1, rows: 10, prof: 1, avant: "#3a86d4", dessus: "#7fb3e8", cote: "#2763a3", trait: "#123f73" },
+    u: { cols: 1, rows: 1, prof: 1, avant: "#f2c230", dessus: "#f8dc7a", cote: "#c99a12", trait: "#6e5206" },
+    dm: { cols: 1, rows: 10, prof: 1, avant: "#ff7a8a", dessus: "#ffb3bd", cote: "#d9505f", trait: "#6e1420" }
+  };
+  function boite3D(f, cell) {
+    var k = 0.42, dx = cell * k, dy = cell * k;          // décalage de la profondeur, par cube
+    var W = f.cols * cell, H = f.rows * cell, PX = f.prof * dx, PY = f.prof * dy;
+    var fin = f.cols * f.rows * f.prof > 1 ? 0.8 : 1.2;
+    var g = [];
+    // face avant
+    g.push('<rect x="0" y="' + PY + '" width="' + W + '" height="' + H + '" fill="' + f.avant + '"/>');
+    for (var i = 1; i < f.cols; i++) g.push('<line x1="' + i * cell + '" y1="' + PY + '" x2="' + i * cell + '" y2="' + (PY + H) + '" stroke="' + f.trait + '" stroke-width="' + fin + '"/>');
+    for (var j = 1; j < f.rows; j++) g.push('<line x1="0" y1="' + (PY + j * cell) + '" x2="' + W + '" y2="' + (PY + j * cell) + '" stroke="' + f.trait + '" stroke-width="' + fin + '"/>');
+    // dessus
+    g.push('<polygon points="0,' + PY + ' ' + W + ',' + PY + ' ' + (W + PX) + ',0 ' + PX + ',0" fill="' + f.dessus + '"/>');
+    for (i = 1; i < f.cols; i++) g.push('<line x1="' + i * cell + '" y1="' + PY + '" x2="' + (i * cell + PX) + '" y2="0" stroke="' + f.trait + '" stroke-width="' + fin + '"/>');
+    for (var p = 1; p < f.prof; p++) g.push('<line x1="' + p * dx + '" y1="' + (PY - p * dy) + '" x2="' + (W + p * dx) + '" y2="' + (PY - p * dy) + '" stroke="' + f.trait + '" stroke-width="' + fin + '"/>');
+    // côté droit
+    g.push('<polygon points="' + W + ',' + PY + ' ' + (W + PX) + ',0 ' + (W + PX) + ',' + H + ' ' + W + ',' + (PY + H) + '" fill="' + f.cote + '"/>');
+    for (j = 1; j < f.rows; j++) g.push('<line x1="' + W + '" y1="' + (PY + j * cell) + '" x2="' + (W + PX) + '" y2="' + (j * cell) + '" stroke="' + f.trait + '" stroke-width="' + fin + '"/>');
+    for (p = 1; p < f.prof; p++) g.push('<line x1="' + (W + p * dx) + '" y1="' + (PY - p * dy) + '" x2="' + (W + p * dx) + '" y2="' + (PY - p * dy + H) + '" stroke="' + f.trait + '" stroke-width="' + fin + '"/>');
+    // arêtes nettes
+    g.push('<path d="M0,' + PY + ' L' + PX + ',0 L' + (W + PX) + ',0 L' + (W + PX) + ',' + H + ' L' + W + ',' + (PY + H) + ' L0,' + (PY + H) + ' Z M0,' + PY + ' L' + W + ',' + PY + ' L' + (W + PX) + ',0 M' + W + ',' + PY + ' L' + W + ',' + (PY + H) + '" fill="none" stroke="' + f.trait + '" stroke-width="2" stroke-linejoin="round"/>');
+    var lw = W + PX, lh = H + PY;
+    return '<svg width="' + lw.toFixed(1) + '" height="' + lh.toFixed(1) + '" viewBox="-1 -1 ' + (lw + 2).toFixed(1) + ' ' + (lh + 2).toFixed(1) + '">' + g.join("") + "</svg>";
+  }
+  // 1 dizaine de milliers = une tour de 10 cubes de mille empilés (dessinés du bas vers le haut)
+  function tourDeMille(cell) {
+    var cube = boite3D(FORMES.m, cell), H = 10 * cell, PY = 10 * cell * 0.42, W = 10 * cell * 1.42;
+    var g = [];
+    for (var i = 9; i >= 0; i--) g.push('<g transform="translate(0,' + (i * H).toFixed(1) + ')">' + cube + "</g>");
+    var lh = 10 * H + PY;
+    return '<svg width="' + (W + 2).toFixed(1) + '" height="' + (lh + 2).toFixed(1) + '" viewBox="-1 -1 ' + (W + 4).toFixed(1) + " " + (lh + 4).toFixed(1) + '">' + g.join("") + "</svg>";
+  }
+  function piece(cle, serre) {
+    var s = document.createElement("span"); s.className = "piece";
+    s.innerHTML = cle === "dm" ? tourDeMille(serre ? 1.3 : 1.9) : boite3D(FORMES[cle], serre ? 4.2 : 7.5);
+    return s;
+  }
+
+  var el = function (id) { return document.getElementById(id); };
+  var niveau = "construire", index = 0, etoiles = 0, sonActif = true, rate = false;
+  var tas = { dm: 0, m: 0, c: 0, d: 0, u: 0 }, chiffresPoses = {};
+
+  var ctx = null;
+  function son(type) {
+    if (!sonActif) return;
+    try {
+      ctx = ctx || new (window.AudioContext || window.webkitAudioContext)();
+      var o = ctx.createOscillator(), g = ctx.createGain(), t = ctx.currentTime;
+      o.connect(g); g.connect(ctx.destination);
+      if (type === "bien") { o.type = "triangle"; o.frequency.setValueAtTime(660, t); o.frequency.setValueAtTime(990, t + .12); }
+      else if (type === "pose") { o.type = "sine"; o.frequency.setValueAtTime(520, t); }
+      else if (type === "echange") { o.type = "square"; o.frequency.setValueAtTime(300, t); o.frequency.exponentialRampToValueAtTime(900, t + .3); }
+      else { o.type = "sine"; o.frequency.setValueAtTime(400, t); o.frequency.exponentialRampToValueAtTime(90, t + .4); }
+      g.gain.setValueAtTime(.12, t); g.gain.exponentialRampToValueAtTime(.001, t + .4); o.start(t); o.stop(t + .45);
+    } catch (e) { /* pas de son */ }
+  }
+  function I() { return ITEMS[niveau][index]; }
+  function message(t) { el("message").textContent = t; }
+  function formater(n) { return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, " "); }
+  function valeurTas() { return COLS.reduce(function (s, c) { return s + (tas[c.cle] || 0) * c.valeur; }, 0); }
+
+  function glissable(objet, selecteur, auDepot, auTap) {
+    objet.addEventListener("pointerdown", function (ev) {
+      ev.preventDefault();
+      var x0 = ev.clientX, y0 = ev.clientY, clone = null, survole = null;
+      function cible(x, y) { var l = document.elementsFromPoint(x, y); for (var k = 0; k < l.length; k++) if (l[k].matches && l[k].matches(selecteur)) return l[k]; return null; }
+      function bouge(e) {
+        if (!clone && Math.hypot(e.clientX - x0, e.clientY - y0) < 8) return;
+        if (!clone) { clone = objet.cloneNode(true); clone.classList.add("en-vol"); document.body.appendChild(clone); }
+        clone.style.left = (e.clientX - clone.offsetWidth / 2) + "px"; clone.style.top = (e.clientY - clone.offsetHeight / 2) + "px";
+        var c = cible(e.clientX, e.clientY); if (survole && survole !== c) survole.classList.remove("survol"); if (c) c.classList.add("survol"); survole = c;
+      }
+      function lache(e) {
+        document.removeEventListener("pointermove", bouge); document.removeEventListener("pointerup", lache);
+        if (survole) survole.classList.remove("survol");
+        if (!clone) { if (auTap) auTap(); return; }   // simple toucher
+        clone.remove();
+        var c = cible(e.clientX, e.clientY); if (c) auDepot(c);
+      }
+      document.addEventListener("pointermove", bouge); document.addEventListener("pointerup", lache);
+    });
+  }
+
+  function dessinerComptoir() {
+    var comptoir = el("comptoir"); comptoir.innerHTML = "";
+    comptoir.style.gridTemplateColumns = "repeat(" + COLS.length + ", 1fr)";
+    COLS.forEach(function (col, i) {
+      var c = document.createElement("div"); c.className = "colonne " + col.cle; c.dataset.col = col.cle;
+      c.innerHTML = "<h3>" + col.nom + "</h3>";
+      var serre = tas[col.cle] > (col.cle === "dm" || col.cle === "m" || col.cle === "c" ? 4 : 12);
+      var t = document.createElement("div"); t.className = "tas" + (serre ? " serre" : "");
+      for (var k = 0; k < tas[col.cle]; k++) {
+        var pc = piece(col.cle, serre);
+        pc.title = "Toucher pour enlever";
+        if (niveau !== "defi") pc.addEventListener("click", function (cle) { return function () { if (enEchange) return; tas[cle]--; son("pose"); dessinerComptoir(); majValider(); }; }(col.cle));
+        t.appendChild(pc);
+      }
+      c.appendChild(t);
+      // Défi : un tas de 10 ou plus se glisse vers la colonne de gauche, où il devient 1 pièce.
+      if (niveau === "defi" && i > 0 && tas[col.cle] >= 10) {
+        t.classList.add("echangeable");
+        glissable(t, '.colonne[data-col="' + COLS[i - 1].cle + '"]', function (cle, gauche) { return function () { echanger(cle, gauche); }; }(col.cle, COLS[i - 1].cle));
+      }
+      var caseC = document.createElement("div"); caseC.className = "chiffre-case"; caseC.dataset.case = col.cle; caseC.hidden = true;
+      if (chiffresPoses[col.cle] !== undefined) { caseC.textContent = chiffresPoses[col.cle]; caseC.classList.add("remplie"); }
+      c.appendChild(caseC);
+      comptoir.appendChild(c);
+    });
+  }
+
+  // Découverte : dès qu'une colonne atteint 10, les 10 pièces partent d'elles-mêmes et deviennent 1 pièce
+  // de la colonne de gauche (10 unités → 1 barre, 10 barres → 1 plaque, 10 plaques → 1 cube), en cascade.
+  var enEchange = false;
+  function echangeAuto() {
+    if (niveau !== "echange" || enEchange) return;
+    for (var i = COLS.length - 1; i > 0; i--) {
+      if (tas[COLS[i].cle] >= 10) { echanger(COLS[i].cle, COLS[i - 1].cle); return; }
+    }
+  }
+  function echanger(cle, gauche) {
+    if (tas[cle] < 10 || enEchange) return;
+    enEchange = true;
+    var noms = { u: "unités", d: "dizaines", c: "centaines", m: "milliers" }, uns = { d: "1 dizaine", c: "1 centaine", m: "1 millier", dm: "1 dizaine de milliers" };
+    message("10 " + noms[cle] + " = " + uns[gauche]);
+    var colEl = document.querySelector('.colonne[data-col="' + cle + '"]'), dest = document.querySelector('.colonne[data-col="' + gauche + '"] h3');
+    var pieces = colEl.querySelectorAll(".tas > *"), cibleR = dest.getBoundingClientRect();
+    for (var k = 0; k < 10; k++) {
+      var p = pieces[pieces.length - 1 - k], r = p.getBoundingClientRect(), v = p.cloneNode(true);
+      v.classList.add("envol"); v.style.left = r.left + "px"; v.style.top = r.top + "px"; document.body.appendChild(v);
+      (function (v) { requestAnimationFrame(function () { v.style.left = (cibleR.left + cibleR.width / 2) + "px"; v.style.top = (cibleR.bottom + 10) + "px"; v.style.opacity = "0.2"; v.style.transform = "scale(.4)"; }); setTimeout(function () { v.remove(); }, 750); })(v);
+    }
+    son("echange");
+    setTimeout(function () {
+      tas[cle] -= 10; tas[gauche] += 1; enEchange = false; dessinerComptoir();
+      if (niveau === "defi") verifierFinEchanges();
+      else { majValider(); echangeAuto(); }
+      setTimeout(function () { if (!enEchange && el("message").textContent.indexOf("10 ") === 0) message(""); }, 1400);
+    }, 720);
+  }
+
+  function verifierFinEchanges() {
+    var fini = COLS.every(function (c) { return tas[c.cle] < 10; });
+    if (!fini) return;
+    Array.prototype.forEach.call(document.querySelectorAll(".chiffre-case"), function (c) { c.hidden = false; });
+    var zone = el("chiffres"); zone.hidden = false; zone.innerHTML = "";
+    for (var v = 0; v <= 9; v++) {
+      var t = document.createElement("div"); t.className = "chiffre"; t.textContent = v; zone.appendChild(t);
+      glissable(t, ".chiffre-case", function (val) { return function (caseEl) {
+        chiffresPoses[caseEl.dataset.case] = val; caseEl.textContent = val; caseEl.classList.add("remplie");
+        if (COLS.every(function (c) { return chiffresPoses[c.cle] !== undefined; })) verifierEcriture();
+      }; }(v));
+    }
+  }
+  function verifierEcriture() {
+    var ok = COLS.every(function (c) { return chiffresPoses[c.cle] === tas[c.cle]; });
+    if (ok) { el("cible").textContent = I().texte + " = " + formater(valeurTas()); reussite(); }
+    else {
+      echec();
+      setTimeout(function () { chiffresPoses = {}; Array.prototype.forEach.call(document.querySelectorAll(".chiffre-case"), function (c) { c.textContent = ""; c.classList.remove("remplie"); }); }, 900);
+    }
+  }
+
+  function majValider() { }
+  function reussite() { if (!rate) { etoiles++; el("etoiles").textContent = "⭐ " + etoiles; } son("bien"); message("✅"); el("cible").classList.remove("glisse"); el("btnSuivant").hidden = false; el("chiffres").hidden = true; }
+  function echec() { rate = true; son("non"); message("🤪"); }
+
+  function afficher() {
+    rate = false; chiffresPoses = {}; message("");
+    el("btnSuivant").hidden = true; el("chiffres").hidden = true;
+    var banque = el("banque"); banque.innerHTML = "";
+    if (niveau !== "defi") {
+      tas = { dm: 0, m: 0, c: 0, d: 0, u: 0 };
+      el("cible").className = "cible glisse"; el("cible").textContent = formater(I());
+      banque.hidden = false;
+      COLS.forEach(function (col) {
+        var b = document.createElement("div"); b.className = "billet";
+        b.appendChild(piece(col.cle, false));
+        var nom = document.createElement("span"); nom.className = "nom"; nom.textContent = col.valeur; b.appendChild(nom);
+        banque.appendChild(b);
+        function ajouter() { if (enEchange) return; tas[col.cle]++; son("pose"); dessinerComptoir(); majValider(); echangeAuto(); }
+        glissable(b, '.colonne[data-col="' + col.cle + '"]', ajouter, ajouter);
+      });
+    } else {
+      var it = I();
+      tas = { dm: it.dm || 0, m: it.m, c: it.c, d: it.d, u: it.u };
+      el("cible").className = "cible petite"; el("cible").textContent = it.texte;
+      banque.hidden = true;
+    }
+    dessinerComptoir();
+    if (niveau === "defi") verifierFinEchanges();
+  }
+
+  // Valider : le nombre à construire se glisse sur le comptoir (« voilà mon nombre »).
+  glissable(el("cible"), "#comptoir", function () {
+    if (niveau === "defi" || !el("cible").classList.contains("glisse")) return;
+    var n = I();
+    var attendu = {};
+    COLS.forEach(function (c, i) { attendu[c.cle] = i === 0 ? Math.floor(n / c.valeur) : Math.floor(n / c.valeur) % 10; });
+    if (COLS.every(function (c) { return tas[c.cle] === attendu[c.cle]; })) reussite(); else echec();
+  });
+  el("btnReset").addEventListener("click", afficher);
+  el("btnSuivant").addEventListener("click", function () { index = (index + 1) % ITEMS[niveau].length; afficher(); });
+  el("btnSon").addEventListener("click", function () { sonActif = !sonActif; el("btnSon").textContent = sonActif ? "🔊" : "🔇"; });
+  function choisirNiveau(n) {
+    var b = document.querySelector('#niveaux button[data-niveau="' + n + '"]'); if (!b) return false;
+    niveau = n; index = 0;
+    Array.prototype.forEach.call(document.querySelectorAll("#niveaux button[data-niveau]"), function (x) { x.classList.toggle("actif", x === b); });
+    afficher(); return true;
+  }
+  Array.prototype.forEach.call(document.querySelectorAll("#niveaux button[data-niveau]"), function (b) {
+    b.addEventListener("click", function () { choisirNiveau(b.dataset.niveau); });
+  });
+  el("btnGrands").addEventListener("click", function () {
+    grands = !grands; index = 0;
+    COLS = grands ? COLS_5 : COLS_4; ITEMS = grands ? ITEMS_5 : ITEMS_4;
+    el("btnGrands").textContent = grands ? "jusqu'à 99 999" : "jusqu'à 9 999";
+    el("btnGrands").classList.toggle("grand", grands);
+    afficher();
+  });
+  // Class Flow ouvre le jeu sur un niveau : …html#echange
+  if (!(location.hash && choisirNiveau(location.hash.slice(1)))) afficher();
+})();
+</script>
+<!-- MENU -->
+<script>
+/* ==== LE MENU ☰ (GTH, 10/10) : interface épurée — à l'écran, seulement le titre, le score, la consigne et l'activité ====
+   Tout le reste (niveaux, onglets de méthode, ✏️, 🔊, 🖨️, aide…) part dans un menu ☰, ouvert d'un toucher.
+   Réglage par outil (CONF, posé par l'injecteur) : ancre = où mettre le bouton ☰ (sinon en haut à droite de l'écran) ;
+   cacher = ce qui part dans le menu (sinon : tout ce qui, dans « .barre .droite », n'est pas un score).
+   Installé par .claude/outils/menu-outil/injecter.py ; ne pas modifier dans l'outil, mais dans ce fichier. */
+(function () {
+  var CONF = {"ancre": ".barre-haut .droite", "cacher": ["#niveaux", "#btnSon"]};
+  var st = document.createElement("style");
+  st.textContent =
+    ".menu-btn{width:58px; height:58px; border-radius:16px; border:2px solid rgba(0,0,0,.15); background:#fff; color:#1f2a33; font-size:2rem; line-height:1; cursor:pointer; flex:none; padding:0;}" +
+    ".menu-btn.fixe{position:fixed; top:10px; right:12px; z-index:150; box-shadow:0 4px 14px rgba(0,0,0,.15);}" +
+    ".menu-btn.ouvert{background:#1f2a33; color:#fff;}" +
+    ".menu-panneau{position:fixed; top:76px; right:16px; z-index:200; background:#fff; color:#1f2a33; border-radius:18px; box-shadow:0 18px 50px rgba(0,0,0,.28); padding:16px 18px;" +
+    "  display:flex; flex-direction:column; align-items:flex-start; gap:12px; max-width:min(620px, 92vw); max-height:80vh; overflow:auto;}" +
+    ".menu-panneau[hidden]{display:none !important;}" +
+    ".menu-panneau h4{margin:0; font-family:sans-serif; font-size:.85rem; text-transform:uppercase; letter-spacing:.6px; color:#6d7a85;}" +
+    ".menu-panneau > *{position:static !important; margin:0 !important;}" +
+    ".menu-panneau > div,.menu-panneau > nav{display:flex; flex-wrap:wrap; gap:8px;}";
+  document.head.appendChild(st);
+  function installer() {
+    var autres = [];
+    if (CONF.cacher) CONF.cacher.forEach(function (s) { document.querySelectorAll(s).forEach(function (e) { if (autres.indexOf(e) === -1) autres.push(e); }); });
+    else { var d = document.querySelector(".barre .droite"); if (d) autres = Array.prototype.filter.call(d.children, function (e) { return !e.classList.contains("score"); }); }
+    if (!autres.length) return;
+    var btn = document.createElement("button"); btn.type = "button"; btn.className = "menu-btn"; btn.title = "Niveaux et réglages"; btn.textContent = "☰";
+    var pan = document.createElement("div"); pan.className = "menu-panneau"; pan.hidden = true;
+    var t = document.createElement("h4"); t.textContent = "Niveaux et réglages"; pan.appendChild(t);
+    autres.forEach(function (e) { pan.appendChild(e); });
+    var ancre = document.querySelector(CONF.ancre || ".barre .droite");
+    if (ancre) ancre.appendChild(btn); else { btn.classList.add("fixe"); document.body.appendChild(btn); }
+    document.body.appendChild(pan);
+    function ouvrir(o) { pan.hidden = !o; btn.classList.toggle("ouvert", o); }
+    btn.addEventListener("click", function (e) { e.stopPropagation(); ouvrir(pan.hidden); });
+    // un niveau choisi, ou une fenêtre ouverte (✏️, 🖨️) : le menu se referme ; on garde le menu ouvert pour choisir un type de jeu
+    pan.addEventListener("click", function (e) { var b = e.target.closest("button"); if (b && !b.closest(CONF.garderOuvert || ".types")) setTimeout(function () { ouvrir(false); }, 120); });
+    document.addEventListener("pointerdown", function (e) { if (!pan.hidden && !pan.contains(e.target) && e.target !== btn) ouvrir(false); });
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", installer); else installer();
+})();
+</script>
+<!-- /MENU -->
+</body>
+</html>

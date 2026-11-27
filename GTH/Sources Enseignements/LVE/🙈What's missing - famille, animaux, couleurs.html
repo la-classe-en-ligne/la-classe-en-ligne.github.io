@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>🙈 What's missing?</title>
+<!--
+  🙈 What's missing? / Who's missing? (Karim, 7/11) : on montre toutes les cartes, on ferme les yeux, une carte disparaît, quelqu'un dit laquelle.
+  Onglets : La famille (#famille) · Les animaux (#animaux) · Les couleurs (#couleurs) · En couleur (#melange : a blue bird).
+  Niveaux : 1 carte cachée, 2 cartes cachées. Les mots restent toujours écrits sous les cartes (Karim, 9/11 : les enlever ne sert à rien). Les images viennent de la séance d'anglais (GTH v2).
+-->
+<style>
+* { box-sizing:border-box; }
+html,body { margin:0; height:100%; overflow:hidden; background:#2b2200; font-family:"Segoe UI",Calibri,Arial,sans-serif; user-select:none; -webkit-user-select:none; }
+#scene { position:absolute; width:1920px; height:1080px; transform-origin:0 0; background:#fff; overflow:hidden; }
+/* Karim, 9/11 : écran épuré : ni barre ni titre ; les onglets et le nombre de cartes sont dans le menu ☰ */
+#menu { position:absolute; top:18px; right:22px; width:64px; height:64px; border-radius:16px; border:0; background:#0000; color:#b0a070; font-size:40px; cursor:pointer; z-index:6; }
+#barre { position:absolute; top:90px; right:22px; z-index:6; display:none; flex-direction:column; gap:10px; background:#fff; padding:16px; border-radius:18px; box-shadow:0 12px 40px #0003; }
+#barre.ouvert { display:flex; }
+#barre button { font:inherit; font-size:26px; padding:10px 20px; border-radius:12px; border:2px solid #e8d9a8; background:#fff; color:#6d5a1f; cursor:pointer; text-align:left; }
+#barre button.on { background:#e8a800; border-color:#e8a800; color:#fff; font-weight:700; }
+#reglages { display:flex; gap:8px; margin-top:6px; }
+#phrase { text-align:center; font-size:60px; font-weight:800; color:#17303a; height:150px; line-height:170px; }
+#cartes { display:flex; flex-wrap:wrap; justify-content:center; align-content:center; gap:30px 50px; height:740px; padding:0 60px; }
+.carte { width:280px; height:320px; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:10px; }
+.carte img { max-width:230px; height:210px; object-fit:contain; }
+.carte .sw { width:220px; height:210px; border-radius:18px; }
+.carte b { font-size:42px; color:#17303a; margin-top:6px; white-space:nowrap; }
+.carte.petit { width:230px; height:300px; } .carte.petit b { font-size:32px; } .carte.petit img { max-width:190px; height:190px; }
+.carte.trou { } .carte.trou > * { visibility:hidden; }
+.carte.trou::after { content:"?"; font-size:200px; font-weight:800; color:#e8a800; position:absolute; } .carte { position:relative; }
+.carte.revele b { color:#2e7d32; }
+#voile { position:absolute; inset:0; background:#17303a; color:#fff; display:none; flex-direction:column; align-items:center; justify-content:center; z-index:4; }
+#voile .y { font-size:230px; line-height:1.1; } #voile .t { font-size:90px; font-weight:800; }
+#action { position:absolute; left:0; right:0; bottom:26px; text-align:center; }
+#action button { font:inherit; font-size:48px; font-weight:800; padding:16px 54px; border-radius:22px; border:0; background:#e8a800; color:#fff; cursor:pointer; box-shadow:0 7px 0 #b98500; }
+</style>
+</head>
+<body>
+<div id="scene">
+  <button id="menu" title="Réglages">☰</button>
+  <div id="barre">
+    <button data-o="famille">La famille</button><button data-o="animaux">Les animaux</button><button data-o="couleurs">Les couleurs</button><button data-o="melange">En couleur</button>
+    <div id="reglages"><button data-n="1">1 carte</button><button data-n="2">2 cartes</button></div></div>
+  <div id="phrase"></div>
+  <div id="cartes"></div>
+  <div id="action"><button id="go"></button></div>
+  <div id="voile"><div class="y">🙈</div><div class="t">Close your eyes!</div></div>
+</div>
+<script>
+"use strict";
+const IMG = "../../../GTH v2/donnees/seances/anglais/img/";
+const FAM = ["mother", "father", "sister", "brother", "grandmother", "grandfather"], ANI = ["dog", "cat", "rabbit", "fish", "bird"];
+const HEX = { red: "#e53935", blue: "#1e88e5", green: "#43a047", yellow: "#fbd000" };
+const MEL = [["blue", "bird"], ["red", "cat"], ["green", "dog"], ["yellow", "fish"], ["red", "rabbit"], ["blue", "dog"], ["green", "cat"], ["yellow", "bird"]];
+const JEUX = {
+  famille: { dit: "Who's missing?", L: FAM.map(m => ({ mot: m, img: IMG + "an-s1/flash-" + m + ".png" })) },
+  animaux: { dit: "What's missing?", L: ANI.map(m => ({ mot: m, img: IMG + "an-s2/flash-" + m + ".png" })) },
+  couleurs: { dit: "What's missing?", L: Object.keys(HEX).map(c => ({ mot: c, sw: HEX[c] })) },
+  melange: { dit: "What's missing?", L: MEL.map(([c, a]) => ({ mot: "a " + c + " " + a, img: IMG + "an-s2/flash-" + c + "-" + a + ".png", petit: true })) }
+};
+const $ = id => document.getElementById(id);
+const E = { o: "famille", n: 1, mots: true, phase: "voir", cache: [], avant: [] };
+window.MISSING = E;   // pour le test automatique
+function carte(c, k) { const cl = "carte" + (c.petit ? " petit" : "") + (E.phase === "cherche" && E.cache.includes(k) ? " trou" : "") + (E.phase === "revele" && E.cache.includes(k) ? " revele" : "");
+  return '<div class="' + cl + '">' + (c.img ? '<img src="' + encodeURI(c.img) + '" alt="">' : '<div class="sw" style="background:' + c.sw + '"></div>') + (E.mots || E.phase === "revele" && E.cache.includes(k) ? "<b>" + c.mot + "</b>" : "") + "</div>"; }
+function dessine() {
+  const J = JEUX[E.o]; $("cartes").innerHTML = J.L.map(carte).join("");
+  $("phrase").textContent = E.phase === "voir" ? "Look!" : E.phase === "cherche" ? J.dit : E.cache.map(k => J.L[k].mot).join(" · ");
+  $("go").textContent = E.phase === "voir" ? "🙈 Close your eyes!" : E.phase === "cherche" ? "👀 Show me!" : "▶ Again!";
+  document.querySelectorAll("#barre > button").forEach(b => b.classList.toggle("on", b.dataset.o === E.o));
+  document.querySelectorAll("#reglages button[data-n]").forEach(b => b.classList.toggle("on", +b.dataset.n === E.n));
+}
+function cacher() {   // jamais la même carte deux fois de suite
+  const n = JEUX[E.o].L.length, ids = [...Array(n).keys()].filter(k => !E.avant.includes(k)).sort(() => Math.random() - .5); E.cache = ids.slice(0, E.n); E.avant = E.cache.slice();
+  $("voile").style.display = "flex"; E.phase = "ferme"; setTimeout(() => { $("voile").style.display = "none"; E.phase = "cherche"; dessine(); }, 2500);
+}
+$("go").onclick = () => { if (E.phase === "voir") cacher(); else if (E.phase === "cherche") { E.phase = "revele"; dessine(); } else if (E.phase === "revele") { E.phase = "voir"; E.cache = []; dessine(); } };
+document.querySelectorAll("#barre > button").forEach(b => b.onclick = () => { E.o = b.dataset.o; E.phase = "voir"; E.cache = []; E.avant = []; dessine(); });
+document.querySelectorAll("#reglages button[data-n]").forEach(b => b.onclick = () => { E.n = +b.dataset.n; dessine(); });
+$("menu").onclick = () => $("barre").classList.toggle("ouvert");
+document.querySelectorAll("#barre button").forEach(b => b.addEventListener("click", () => $("barre").classList.remove("ouvert")));
+function ajuste() { const e = Math.min(innerWidth / 1920, innerHeight / 1080), s = $("scene"); s.style.transform = "scale(" + e + ")"; s.style.left = ((innerWidth - 1920 * e) / 2) + "px"; s.style.top = ((innerHeight - 1080 * e) / 2) + "px"; }
+addEventListener("resize", ajuste); ajuste();
+function lien() { const h = location.hash.slice(1); if (JEUX[h]) E.o = h; E.phase = "voir"; dessine(); }
+addEventListener("hashchange", lien); lien();
+</script>
+</body>
+</html>

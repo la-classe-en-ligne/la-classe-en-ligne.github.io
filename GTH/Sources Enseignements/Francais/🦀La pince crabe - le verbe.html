@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>La pince crabe</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cellipse cx='32' cy='40' rx='20' ry='13' fill='%23e8552d'/%3E%3Ccircle cx='10' cy='20' r='8' fill='%23e8552d'/%3E%3Ccircle cx='54' cy='20' r='8' fill='%23e8552d'/%3E%3Ccircle cx='26' cy='28' r='4' fill='%23fff'/%3E%3Ccircle cx='38' cy='28' r='4' fill='%23fff'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Quicksand:wght@600;700&display=swap">
+<style>
+  /* Univers de ce jeu : la plage. La mer en haut, le sable en bas ; un crabe dont les deux pinces tiennent « ne » et « pas ».
+     On pose le crabe sur un mot : il le pince. Si la phrase veut encore dire quelque chose, c'est le verbe.
+     (L'autre méthode, changer le temps, est le jeu ⏳ La machine à remonter le temps.) */
+  :root{
+    --fond:#eef5fb; --encre:#1f3a5f; --gris:#6b7c93; --carte:#ffffff; --bord:#c8d6e5;
+    --hier:#7b61ff; --auj:#1aa37a; --demain:#f08a24; --bien:#1aa37a; --faux:#e0456b;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{margin:0; color:var(--encre); font-family:"Quicksand",system-ui,sans-serif; overflow:hidden; height:100vh; display:flex; flex-direction:column;
+    background:
+      radial-gradient(ellipse 60% 18% at 50% 57%, rgba(255,255,255,.55), transparent 70%),
+      linear-gradient(180deg, #d9f2fb 0%, #a9e0f1 30%, #6fc3e0 52%, #9fd9e8 55%, #f7e7bf 56%, #efd49a 100%);
+    user-select:none; -webkit-user-select:none; touch-action:none;}
+
+  /* ---------- Barre du haut : titre · onglets · score et niveaux ---------- */
+  .barre{display:grid; grid-template-columns:1fr auto 1fr; align-items:center; gap:16px; padding:12px 26px; background:#fff; border-bottom:3px solid var(--bord);}
+  .titre{display:flex; align-items:center; gap:12px;}
+  .titre svg{width:48px; height:48px; flex:none;}
+  .titre h1{font-family:"Baloo 2",cursive; font-weight:800; font-size:1.9rem; margin:0;}
+  .onglets{display:flex; gap:10px; background:#e6eef7; padding:6px; border-radius:18px;}
+  .onglets button{font:inherit; font-family:"Baloo 2",cursive; font-weight:700; font-size:1.45rem; padding:6px 26px; border-radius:14px; border:none; cursor:pointer; background:transparent; color:var(--gris);}
+  .onglets button.actif{background:#fff; color:var(--encre); box-shadow:0 3px 10px rgba(31,58,95,.15);}
+  .droite{justify-self:end; display:flex; align-items:center; gap:12px;}
+  .score{display:flex; flex-direction:column; align-items:center; padding:2px 14px; border-radius:12px; background:#f4f8fc; border:2px solid var(--bord); min-width:130px;}
+  .score small{font-size:.8rem; font-weight:700; color:var(--gris); text-transform:uppercase; letter-spacing:.5px;}
+  .score b{font-family:"Baloo 2",cursive; font-size:1.8rem; line-height:1.05;}
+  .niveaux{display:flex; flex-direction:column; gap:4px;}
+  .niveaux button{font:inherit; font-weight:700; font-size:.85rem; padding:2px 12px; border-radius:999px; cursor:pointer; background:#fff; color:var(--gris); border:2px solid var(--bord);}
+  .niveaux button.actif{background:var(--encre); color:#fff; border-color:var(--encre);}
+  .btn-son{width:44px; height:44px; border-radius:50%; font-size:1.2rem; cursor:pointer; background:#fff; border:2px solid var(--bord);}
+
+  /* ---------- Consigne ---------- */
+  .consigne{display:flex; align-items:center; justify-content:center; gap:16px; padding:14px 20px 0;}
+  .consigne p{margin:0; font-family:"Baloo 2",cursive; font-weight:700; font-size:2.1rem; text-align:center;}
+  .consigne p.bien{color:var(--bien);} .consigne p.faux{color:var(--faux);}
+  .btn-indice{font:inherit; font-weight:700; font-size:1.2rem; padding:6px 16px; border-radius:999px; cursor:pointer; background:#fff8dc; border:2px solid #f1d27a; color:#7a5b00;}
+  .indice{min-height:2rem; margin:4px 0 0; text-align:center; font-size:1.4rem; font-weight:700; color:#7a5b00;}
+
+  /* ---------- Jeu ---------- */
+  .jeu{flex:1; display:flex; flex-direction:column; align-items:center; justify-content:space-evenly; padding:0 30px 16px; min-height:0;}
+  .jeu[hidden]{display:none;}
+
+  /* L'horloge */
+  .zone-horloge{display:flex; align-items:center; gap:30px;}
+  .libelle-temps{font-family:"Baloo 2",cursive; font-weight:800; font-size:2.4rem; width:210px; text-align:center; opacity:.35; transition:all .25s;}
+  .libelle-temps.hier{color:var(--hier);} .libelle-temps.demain{color:var(--demain);}
+  .libelle-temps.allume{opacity:1; transform:scale(1.12);}
+  .horloge{position:relative; width:min(46vh,440px); height:min(46vh,440px); border-radius:50%; background:#fff; border:14px solid var(--encre);
+    box-shadow:0 14px 40px rgba(31,58,95,.25), inset 0 0 0 6px #e6eef7; touch-action:none; cursor:grab;}
+  .horloge.cible{box-shadow:0 0 0 10px rgba(123,97,255,.35), 0 14px 40px rgba(31,58,95,.25);}
+  .horloge svg.cadran{position:absolute; inset:0; width:100%; height:100%;}
+  .aiguille{position:absolute; left:50%; top:50%; width:14px; height:44%; margin-left:-7px; transform-origin:50% 100%; border-radius:8px;
+    background:var(--encre); transform:translateY(-100%) rotate(0deg); transition:transform .45s cubic-bezier(.3,1.4,.5,1);}
+  .aiguille::after{content:""; position:absolute; left:50%; top:-16px; margin-left:-16px; border:16px solid transparent; border-bottom:22px solid var(--encre); border-top:none;}
+  .aiguille.glisse{transition:none;}
+  .centre{position:absolute; left:50%; top:50%; width:34px; height:34px; margin:-17px; border-radius:50%; background:var(--encre); border:6px solid #fff;}
+  .fenetre{position:absolute; left:50%; top:66%; transform:translateX(-50%); min-width:62%; min-height:64px; padding:6px 16px; border-radius:14px;
+    display:flex; align-items:center; justify-content:center; gap:10px; background:#f4f8fc; border:3px dashed var(--bord);
+    font-family:"Baloo 2",cursive; font-weight:700; font-size:2rem; white-space:nowrap;}
+  .fenetre.pleine{border-style:solid; border-color:var(--encre); background:#fff;}
+  .fenetre .vide{font-family:"Quicksand"; font-size:1rem; color:var(--gris);}
+  .fenetre .apres.change{color:var(--demain);} .fenetre .apres.change.hier{color:var(--hier);}
+  .fenetre .apres.pareil{color:var(--gris);}
+
+  /* La phrase */
+  .phrase{display:flex; flex-wrap:wrap; justify-content:center; align-items:center; gap:22px 16px; max-width:1700px; min-height:130px;}
+  .mot{font-family:"Baloo 2",cursive; font-weight:700; font-size:3.4rem; line-height:1; padding:14px 22px 10px; border-radius:16px; background:var(--carte);
+    border:3px solid var(--encre); box-shadow:0 6px 0 var(--encre); cursor:grab; touch-action:none; position:relative;}
+  .mot.teste{opacity:.35; box-shadow:none; border-style:dashed;}
+  .mot.verbe{background:#dff7ee; border-color:var(--bien); box-shadow:0 6px 0 var(--bien); color:#0e6b4f;}
+  .mot.en-vol{position:fixed; z-index:50; pointer-events:none; transform:scale(1.08) rotate(-2deg); box-shadow:0 18px 30px rgba(31,58,95,.3);}
+  .mot.fixe{cursor:default;}
+  /* La même phrase, transportée hier ou demain */
+  .voyage{font-family:"Baloo 2",cursive; font-weight:700; font-size:2.6rem; text-align:center; padding:10px 34px; border-radius:18px; background:#fff; border:3px solid var(--bord); max-width:1700px;}
+  .voyage[hidden]{display:none;}
+  .voyage .v-hier{color:#b23a17;} .voyage .v-demain{color:var(--demain);}
+  .voyage .v-verbe{border-bottom:5px solid currentColor;}
+  .voyage .v-teste{border-bottom:5px solid var(--faux); color:var(--faux);}
+  .voyage.faux{border-color:var(--faux); background:#fff5f7;} .voyage.bien{border-color:var(--bien); background:#f2fbf7;}
+  .verdict{font-size:2.1rem; font-weight:800; margin-top:6px;}
+  .verdict.bien{color:var(--bien);} .verdict.faux{color:var(--faux);}
+  @keyframes pop{0%{transform:scale(1)}40%{transform:scale(1.25)}100%{transform:scale(1)}}
+  .pop{animation:pop .5s ease;}
+
+  /* ne … pas */
+  .fente{align-self:stretch; width:34px; margin:0 -8px; border-radius:8px; display:flex; justify-content:center; align-items:center;}
+  .fente::before{content:""; width:5px; height:70%; border-radius:4px; background:#dbe5f0;}
+  .fente.cible-survol::before{background:var(--hier); width:10px;}
+  .fente.occupee{width:auto; margin:0;} .fente.occupee::before{display:none;}
+  .mot.neg{background:#ffe7dc; border-color:#e8552d; box-shadow:0 6px 0 #b23a17; color:#b23a17; font-style:italic;}
+  .mot.neg.faux{background:#ffe6ec; border-color:var(--faux); box-shadow:0 6px 0 var(--faux); color:var(--faux);}
+  /* Les pinces ne … pas : « ne » et « pas » reliés par un arceau ; au milieu, la place du mot à serrer. */
+  .pince{position:relative; display:inline-flex; align-items:flex-end; gap:0; padding-top:150px; cursor:grab; touch-action:none;}
+  .dessin-pince{position:absolute; left:0; top:0; width:100%; height:160px; overflow:visible; pointer-events:none;}
+  .pince .machoire{font-family:"Baloo 2",cursive; font-weight:700; font-size:3rem; line-height:1; padding:12px 18px 8px; background:#ffe7dc; color:#b23a17;
+    border:3px solid #e8552d; box-shadow:0 6px 0 #b23a17; font-style:italic; border-radius:16px;}
+  .pince .machoire.g{border-radius:16px 6px 6px 16px;} .pince .machoire.d{border-radius:6px 16px 16px 6px;}
+  .pince .creux{width:170px; height:72px; margin:0 10px; border:3px dashed #e9a98f; border-radius:12px; background:rgba(255,255,255,.5);}
+
+  .pince.en-vol{position:fixed; z-index:50; pointer-events:none; transform:scale(.8); opacity:.85;}
+  .pince.en-vol .machoire{visibility:hidden;}
+  .mot.neg.apercu{position:absolute; pointer-events:none; z-index:6; outline:5px solid #fff;}
+  .serre{position:relative; display:inline-flex; align-items:flex-end; gap:10px; padding-top:150px; margin-top:-150px;}
+  .mot.cible-pince{outline:6px solid var(--hier); outline-offset:4px;}
+  .plateau{display:flex; gap:60px; justify-content:center; padding:12px 40px 18px; border-radius:22px; background:rgba(255,255,255,.35); border:3px dashed #d9b77a; min-width:460px; min-height:120px; align-items:center;}
+  @keyframes secoue{0%,100%{transform:translateX(0)}25%{transform:translateX(-14px)}75%{transform:translateX(14px)}}
+  .phrase.absurde{animation:secoue .4s ease 2;}
+
+  .btn-suivant{font:inherit; font-family:"Baloo 2",cursive; font-weight:800; font-size:1.7rem; padding:8px 40px; border-radius:999px; cursor:pointer;
+    background:var(--encre); color:#fff; border:none; box-shadow:0 6px 0 #0f223a;}
+  .btn-suivant[hidden]{display:none;}
+
+  .bilan{display:none; flex:1; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:20px 60px;}
+  .bilan.visible{display:flex;}
+  .bilan h2{font-family:"Baloo 2",cursive; font-size:2.8rem; margin:4px 0;}
+  .bilan .resultat{font-size:1.7rem; font-weight:700; margin:0 0 14px;}
+  .preuves{display:grid; grid-template-columns:1fr; gap:24px; margin:14px 0 20px; max-width:1300px;}
+  .preuve{background:#fff; border:3px solid var(--bord); border-radius:20px; padding:20px; font-size:1.6rem; font-weight:700; text-align:left;}
+  .preuve .ex{display:block; margin-top:10px; color:var(--gris); font-weight:600; font-size:1.35rem;}
+  /* 💡 sous le jeu, comme dans les autres jeux */
+  .zone-indice{display:flex; align-items:center; justify-content:center; gap:14px; min-height:44px;}
+  .zone-indice .indice{min-height:0; margin:0; width:auto; font-size:1.4rem; font-weight:700; color:#7a5b00;}
+  .zone-indice .indice:not(:empty){background:rgba(255,248,220,.95); padding:2px 16px; border-radius:12px;}
+</style>
+</head>
+<body>
+<header class="barre">
+  <div class="titre">
+    <svg viewBox="0 0 64 64" aria-hidden="true"><path d="M14 30 C8 22 8 12 14 8 M50 30 C56 22 56 12 50 8" stroke="#e8552d" stroke-width="5" fill="none" stroke-linecap="round"/><circle cx="12" cy="10" r="7" fill="#e8552d"/><circle cx="52" cy="10" r="7" fill="#e8552d"/><path d="M8 8 l5 3 M56 8 l-5 3" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/><ellipse cx="32" cy="40" rx="20" ry="13" fill="#e8552d"/><path d="M14 44 l-8 6 M16 48 l-6 8 M50 44 l8 6 M48 48 l6 8" stroke="#c23f1d" stroke-width="3.5" stroke-linecap="round"/><path d="M27 29 v-6 M37 29 v-6" stroke="#c23f1d" stroke-width="3"/><circle cx="27" cy="21" r="4" fill="#fff" stroke="#1f3a5f" stroke-width="1.5"/><circle cx="37" cy="21" r="4" fill="#fff" stroke="#1f3a5f" stroke-width="1.5"/><circle cx="27" cy="21" r="1.8" fill="#1f3a5f"/><circle cx="37" cy="21" r="1.8" fill="#1f3a5f"/><path d="M27 44 q5 4 10 0" stroke="#7a1e0a" stroke-width="2" fill="none" stroke-linecap="round"/></svg>
+    <h1>La pince crabe</h1>
+  </div>
+  <div></div>
+  <div class="droite">
+    <div class="score" title="Phrases dont le verbe est trouvé du premier coup"><small>Verbes trouvés</small><b id="score">0</b></div>
+    <div class="score" title="Le meilleur score à ce niveau, gardé sur cet ordinateur"><small>🏆 Record</small><b id="record">0</b></div>
+    <div class="niveaux" id="niveaux">
+      <button type="button" data-niveau="decouverte" class="actif">Découverte</button>
+      <button type="button" data-niveau="defi">Défi</button>
+    </div>
+    <button class="btn-son" id="btnSon" type="button" title="Son">🔊</button>
+  </div>
+</header>
+
+<div class="consigne"><p id="message"></p></div>
+
+
+
+<main class="jeu" id="jeuNepas">
+  <div class="phrase" id="phraseNepas"></div>
+  <div class="plateau" id="plateau"></div>
+  <div class="voyage" id="phraseNeg" hidden></div>
+  <div class="zone-indice"><button class="btn-indice" id="btnIndice" type="button">💡 Indice</button><span class="indice" id="indice"></span></div>
+  <button class="btn-suivant" id="btnSuivantNepas" type="button" hidden>Phrase suivante ➜</button>
+</main>
+
+<section class="bilan" id="bilan">
+  <h2>🦀 Comment reconnaître un verbe ?</h2>
+  <p class="resultat" id="resultat"></p>
+  <div class="preuves">
+    <div class="preuve">🦀 Je pince le mot avec « ne … pas » : si la phrase veut encore dire quelque chose, c'est le verbe.
+      <span class="ex">Nana n'est pas curieuse. · Kayabu ne pagaie pas.</span></div>
+  </div>
+  <button class="btn-suivant" id="btnRejouer" type="button">Rejouer</button>
+</section>
+
+<script>
+(function () {
+  // Chaque phrase : les mots, l'index du verbe (v ; pr = son pronom « se » s'il en a un : la pince serre les deux) et ses formes d'hier et de demain.
+  var PHRASES = {
+    decouverte: [
+      { mots: ["Kayabu", "pagaie", "sur", "le", "fleuve."], v: 1, hier: "pagayait", demain: "pagaiera" },
+      { mots: ["Nana", "est", "curieuse."], v: 1, hier: "était", demain: "sera" },
+      { mots: ["Les", "singes", "crient", "dans", "les", "arbres."], v: 2, hier: "criaient", demain: "crieront" },
+      { mots: ["Le", "vent", "chaud", "souffle", "sur", "la", "forêt."], v: 3, hier: "soufflait", demain: "soufflera" },
+      { mots: ["Les", "agriculteurs", "cultivent", "les", "champs."], v: 2, hier: "cultivaient", demain: "cultiveront" },
+      { mots: ["Kayabu", "a", "peur", "du", "feu."], v: 1, hier: "avait", demain: "aura" },
+      { mots: ["La", "rivière", "traverse", "la", "plaine."], v: 2, hier: "traversait", demain: "traversera" },
+      { mots: ["Les", "falaises", "bordent", "la", "mer."], v: 2, hier: "bordaient", demain: "borderont" },
+      { mots: ["Le", "chat", "dort", "sur", "le", "canapé."], v: 2, hier: "dormait", demain: "dormira" },
+      { mots: ["Les", "oiseaux", "chantent", "le", "matin."], v: 2, hier: "chantaient", demain: "chanteront" },
+      { mots: ["Ma", "sœur", "dessine", "un", "volcan."], v: 2, hier: "dessinait", demain: "dessinera" },
+      { mots: ["Nous", "jouons", "dans", "la", "cour."], v: 1, hier: "jouions", demain: "jouerons" },
+      { mots: ["Tu", "finis", "ton", "travail."], v: 1, hier: "finissais", demain: "finiras" },
+      { mots: ["Les", "vagues", "creusent", "les", "rochers."], v: 2, hier: "creusaient", demain: "creuseront" },
+      // Venues de l'ancien niveau « Le verbe » de 🏷️ (phrases courtes du groupe de besoin).
+      { mots: ["Le", "chat", "mange", "la", "souris."], v: 2, hier: "mangeait", demain: "mangera" },
+      { mots: ["Les", "enfants", "jouent", "dans", "la", "cour."], v: 2, hier: "jouaient", demain: "joueront" },
+      { mots: ["Kayabu", "marche", "dans", "la", "forêt."], v: 1, hier: "marchait", demain: "marchera" },
+      { mots: ["Ma", "sœur", "aime", "les", "fraises."], v: 2, hier: "aimait", demain: "aimera" },
+      { mots: ["Nous", "regardons", "les", "étoiles."], v: 1, hier: "regardions", demain: "regarderons" },
+      { mots: ["La", "pirogue", "glisse", "sur", "le", "fleuve."], v: 2, hier: "glissait", demain: "glissera" },
+      { mots: ["Tu", "chantes", "une", "chanson."], v: 1, hier: "chantais", demain: "chanteras" },
+      { mots: ["Le", "vent", "souffle", "très", "fort."], v: 2, hier: "soufflait", demain: "soufflera" },
+      { mots: ["Mon", "père", "prépare", "le", "repas."], v: 2, hier: "préparait", demain: "préparera" },
+      { mots: ["Vous", "écoutez", "la", "maîtresse."], v: 1, hier: "écoutiez", demain: "écouterez" },
+      { mots: ["Le", "petit", "garçon", "range", "sa", "chambre."], v: 3, hier: "rangeait", demain: "rangera" },
+      { mots: ["Les", "élèves", "finissent", "leur", "travail."], v: 2, hier: "finissaient", demain: "finiront" }
+    ],
+    defi: [
+      { mots: ["Dans", "la", "pirogue,", "le", "garçon", "rame", "avec", "courage."], v: 5, hier: "ramait", demain: "ramera" },
+      { mots: ["Chaque", "été,", "la", "famille", "de", "Kayabu", "quitte", "le", "village."], v: 6, hier: "quittait", demain: "quittera" },
+      { mots: ["Au", "loin,", "les", "nuages", "de", "fumée", "cachent", "le", "soleil."], v: 6, hier: "cachaient", demain: "cacheront" },
+      { mots: ["Nana", "et", "Kayabu", "marchent", "dans", "la", "forêt", "dense."], v: 3, hier: "marchaient", demain: "marcheront" },
+      { mots: ["Le", "matin,", "la", "brume", "couvre", "la", "vallée."], v: 4, hier: "couvrait", demain: "couvrira" },
+      { mots: ["Sur", "la", "colline", "se", "dresse", "un", "vieux", "château."], v: 4, pr: 3, hier: "dressait", demain: "dressera" },
+      { mots: ["Mon", "frère", "et", "moi", "construisons", "une", "cabane."], v: 4, hier: "construisions", demain: "construirons" },
+      { mots: ["Toi", "et", "ta", "sœur", "chantez", "très", "bien."], v: 4, hier: "chantiez", demain: "chanterez" },
+      { mots: ["Au", "bord", "du", "fleuve,", "les", "crocodiles", "attendent", "leur", "proie."], v: 6, hier: "attendaient", demain: "attendront" },
+      { mots: ["Les", "touristes", "visitent", "le", "musée", "du", "Louvre."], v: 2, hier: "visitaient", demain: "visiteront" },
+      { mots: ["Chaque", "soir,", "Nana", "écoute", "les", "histoires", "de", "Kayabu."], v: 3, hier: "écoutait", demain: "écoutera" },
+      { mots: ["La", "grand-mère", "de", "Kayabu", "prépare", "le", "repas."], v: 4, hier: "préparait", demain: "préparera" }
+    ]
+  };
+
+  var el = function (id) { return document.getElementById(id); };
+  var onglet = "nepas", niveau = "decouverte", index = 0, score = 0, erreurs = 0, trouve = false, sonActif = true;
+  var ordre = [];
+
+  // ---- Sons (Web Audio, sans fichier) ----
+  var ctxAudio = null;
+  function son(type) {
+    if (!sonActif) return;
+    try {
+      ctxAudio = ctxAudio || new (window.AudioContext || window.webkitAudioContext)();
+      var o = ctxAudio.createOscillator(), g = ctxAudio.createGain(), t = ctxAudio.currentTime;
+      o.connect(g); g.connect(ctxAudio.destination);
+      if (type === "bien") { o.type = "triangle"; o.frequency.setValueAtTime(660, t); o.frequency.setValueAtTime(880, t + 0.12); o.frequency.setValueAtTime(1175, t + 0.24); }
+      else if (type === "tic") { o.type = "square"; o.frequency.setValueAtTime(1400, t); g.gain.setValueAtTime(0.05, t); }
+      else { o.type = "sine"; o.frequency.setValueAtTime(420, t); o.frequency.exponentialRampToValueAtTime(90, t + 0.45); }
+      if (type !== "tic") g.gain.setValueAtTime(0.18, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 0.45); o.start(t); o.stop(t + 0.45);
+    } catch (e) {}
+  }
+
+  // ---- Consigne, indice, score ----
+  function message(texte, classe) { el("message").textContent = texte || ""; el("message").className = classe || ""; el("indice").textContent = ""; }
+  var INDICES = {
+    temps: "Dis la phrase en commençant par « Hier, … » : quel mot change ?",
+    nepas: "Si la phrase veut encore dire quelque chose avec « ne … pas », c'est le verbe."
+  };
+  function cleRecord() { return "pince-crabe-record-" + niveau; }
+  function lireRecord() { try { return parseInt(localStorage.getItem(cleRecord()), 10) || 0; } catch (e) { return 0; } }
+  function majScore() {
+    el("score").textContent = score;
+    var r = lireRecord();
+    if (score > r) { r = score; try { localStorage.setItem(cleRecord(), String(r)); } catch (e) {} }
+    el("record").textContent = r;
+  }
+  function phrase() { return PHRASES[niveau][ordre[index]]; }
+  function reussite() { trouve = true; if (erreurs === 0) { score++; majScore(); } son("bien"); }
+
+  // ---- Glisser un mot (clone qui suit le doigt) ----
+  function glisser(source, ev, auSurvol, auDepot, dessous) {
+    ev.preventDefault();
+    var clone = source.cloneNode(true);
+    clone.classList.add("en-vol"); clone.classList.remove("pop");
+    if (dessous) { var w = source.offsetWidth; clone.innerHTML = crabeHaut(w); Object.assign(clone.style, { width: w + "px", height: "230px", paddingTop: "0" }); }
+    document.body.appendChild(clone);
+    source.style.visibility = "hidden";
+    function placer(x, y) { clone.style.left = (x - clone.offsetWidth / 2) + "px"; clone.style.top = (dessous ? y + 30 : y - clone.offsetHeight / 2) + "px"; }
+    placer(ev.clientX, ev.clientY);
+    function bouge(e) { placer(e.clientX, e.clientY); if (auSurvol) auSurvol(e.clientX, e.clientY); }
+    function lache(e) {
+      document.removeEventListener("pointermove", bouge); document.removeEventListener("pointerup", lache);
+      clone.remove(); source.style.visibility = "";
+      auDepot(e.clientX, e.clientY);
+    }
+    document.addEventListener("pointermove", bouge); document.addEventListener("pointerup", lache);
+  }
+
+  var MINUSCULES = /^(le|la|les|l'|un|une|des|du|de|mon|ma|mes|ton|ta|tes|son|sa|ses|notre|nos|votre|vos|leur|leurs|ce|cet|cette|ces|chaque|je|tu|il|elle|on|nous|vous|ils|elles|dans|sur|au|aux|en|à|toi|moi|lui)$/i;
+  function nettoyer(m) { return String(m).replace(/[.,!?]$/, ""); }
+
+  // =========================== La pince crabe ===========================
+  // Une seule pièce : « ne » et « pas » reliés. On la glisse sur un mot : la pince le serre (ne avant, pas après).
+  var serre = null;  // index du mot serré
+  // Une pince : un pivot en haut (avec son ressort), deux bras qui s'écartent et finissent en mâchoires
+  // sur « ne » et sur « pas ». Dessinée après coup, à la largeur réelle du groupe.
+  function dessinerPince(groupe, couleur) {
+    var a = groupe.firstElementChild, b = groupe.lastElementChild;
+    if (a.classList.contains("dessin-pince")) a = a.nextElementSibling;
+    var xa = a.offsetLeft + a.offsetWidth / 2, xb = b.offsetLeft + b.offsetWidth / 2, xm = (xa + xb) / 2;
+    var R = "#e8552d", F = "#b23a17", haut = 58;
+    var pince = function (x, sens) {   // une pince de crabe : une grosse pince ronde, fendue vers le bas, qui mord le mot
+      return '<ellipse cx="' + x + '" cy="128" rx="30" ry="24" fill="' + R + '" stroke="' + F + '" stroke-width="4"/>' +
+        '<path d="M' + (x - 10) + ' 152 L' + x + ' 122 L' + (x + 10) + ' 152 Z" fill="#fff"/>' +
+        '<path d="M' + (x - 10) + ' 152 L' + x + ' 122 L' + (x + 10) + ' 152" fill="none" stroke="' + F + '" stroke-width="4" stroke-linejoin="round"/>';
+    };
+    var patte = function (x1, y1, x2, y2) { return '<path d="M' + x1 + " " + y1 + " Q " + ((x1 + x2) / 2) + " " + (y2 - 16) + " " + x2 + " " + y2 + '" stroke="' + F + '" stroke-width="7" fill="none" stroke-linecap="round"/>'; };
+    var svg = '<svg class="dessin-pince" viewBox="0 0 ' + groupe.offsetWidth + ' 160" preserveAspectRatio="none">' +
+      // les pattes, derrière le corps
+      patte(xm - 50, haut + 12, xm - 92, haut + 38) + patte(xm - 42, haut + 20, xm - 76, haut + 52) +
+      patte(xm + 50, haut + 12, xm + 92, haut + 38) + patte(xm + 42, haut + 20, xm + 76, haut + 52) +
+      // les bras, du corps jusqu'aux pinces
+      '<path d="M' + (xm - 44) + " " + haut + " C " + (xm - 90) + " " + (haut - 30) + ", " + xa + " " + (haut - 10) + ", " + xa + ' 110" stroke="' + R + '" stroke-width="16" fill="none" stroke-linecap="round"/>' +
+      '<path d="M' + (xm + 44) + " " + haut + " C " + (xm + 90) + " " + (haut - 30) + ", " + xb + " " + (haut - 10) + ", " + xb + ' 110" stroke="' + R + '" stroke-width="16" fill="none" stroke-linecap="round"/>' +
+      pince(xa) + pince(xb) +
+      // le corps
+      '<ellipse cx="' + xm + '" cy="' + haut + '" rx="58" ry="34" fill="' + R + '" stroke="' + F + '" stroke-width="4"/>' +
+      '<path d="M' + (xm - 14) + " " + (haut + 12) + " q 14 10 28 0" + '" stroke="#7a1e0a" stroke-width="4" fill="none" stroke-linecap="round"/>' +
+      // les yeux sur tiges
+      '<path d="M' + (xm - 18) + " " + (haut - 28) + " v -16 M" + (xm + 18) + " " + (haut - 28) + ' v -16" stroke="' + F + '" stroke-width="6" stroke-linecap="round"/>' +
+      '<circle cx="' + (xm - 18) + '" cy="' + (haut - 48) + '" r="11" fill="#fff" stroke="#1f3a5f" stroke-width="3"/><circle cx="' + (xm - 16) + '" cy="' + (haut - 47) + '" r="5" fill="#1f3a5f"/>' +
+      '<circle cx="' + (xm + 18) + '" cy="' + (haut - 48) + '" r="11" fill="#fff" stroke="#1f3a5f" stroke-width="3"/><circle cx="' + (xm + 20) + '" cy="' + (haut - 47) + '" r="5" fill="#1f3a5f"/>' +
+      "</svg>";
+    var ancien = groupe.querySelector(".dessin-pince"); if (ancien) ancien.remove();
+    groupe.insertAdjacentHTML("afterbegin", svg);
+  }
+
+  // le crabe vu de face, les pinces levées vers le haut (pour viser le mot au-dessus de lui)
+  function crabeHaut(w) {
+    var R = "#e8552d", F = "#b23a17", xm = w / 2, xa = 70, xb = w - 70, yb = 170;
+    var pince = function (x) {   // la pince ouverte vers le haut
+      return '<ellipse cx="' + x + '" cy="52" rx="32" ry="26" fill="' + R + '" stroke="' + F + '" stroke-width="4"/>' +
+        '<path d="M' + (x - 11) + ' 26 L' + x + ' 58 L' + (x + 11) + ' 26 Z" fill="#fff" stroke="' + F + '" stroke-width="4" stroke-linejoin="round"/>';
+    };
+    var patte = function (x1, y1, x2, y2) { return '<path d="M' + x1 + " " + y1 + " Q " + ((x1 + x2) / 2) + " " + (y2 + 18) + " " + x2 + " " + y2 + '" stroke="' + F + '" stroke-width="7" fill="none" stroke-linecap="round"/>'; };
+    return '<svg viewBox="0 0 ' + w + ' 230" width="' + w + '" height="230" style="overflow:visible">' +
+      patte(xm - 50, yb + 6, xm - 96, yb + 36) + patte(xm - 42, yb + 16, xm - 80, yb + 50) + patte(xm + 50, yb + 6, xm + 96, yb + 36) + patte(xm + 42, yb + 16, xm + 80, yb + 50) +
+      '<path d="M' + (xm - 46) + " " + yb + " C " + (xm - 100) + " " + (yb - 20) + ", " + xa + " " + (yb - 40) + ", " + xa + ' 76" stroke="' + R + '" stroke-width="16" fill="none" stroke-linecap="round"/>' +
+      '<path d="M' + (xm + 46) + " " + yb + " C " + (xm + 100) + " " + (yb - 20) + ", " + xb + " " + (yb - 40) + ", " + xb + ' 76" stroke="' + R + '" stroke-width="16" fill="none" stroke-linecap="round"/>' +
+      pince(xa) + pince(xb) +
+      '<path d="M' + (xm - 18) + " " + (yb - 30) + " v -18 M" + (xm + 18) + " " + (yb - 30) + ' v -18" stroke="' + F + '" stroke-width="6" stroke-linecap="round"/>' +
+      '<ellipse cx="' + xm + '" cy="' + yb + '" rx="58" ry="34" fill="' + R + '" stroke="' + F + '" stroke-width="4"/>' +
+      '<circle cx="' + (xm - 18) + '" cy="' + (yb - 52) + '" r="11" fill="#fff" stroke="#1f3a5f" stroke-width="3"/><circle cx="' + (xm - 16) + '" cy="' + (yb - 51) + '" r="5" fill="#1f3a5f"/>' +
+      '<circle cx="' + (xm + 18) + '" cy="' + (yb - 52) + '" r="11" fill="#fff" stroke="#1f3a5f" stroke-width="3"/><circle cx="' + (xm + 20) + '" cy="' + (yb - 51) + '" r="5" fill="#1f3a5f"/>' +
+      '<path d="M' + (xm - 14) + " " + (yb + 12) + ' q 14 10 28 0" stroke="#7a1e0a" stroke-width="4" fill="none" stroke-linecap="round"/></svg>';
+  }
+  function afficherNepas() {
+    var p = phrase(), zone = el("phraseNepas"); zone.innerHTML = ""; zone.classList.remove("absurde");
+    var avecPronom = p.pr !== undefined && serre === p.v, pronom = null;
+    p.mots.forEach(function (m, k) {
+      var s = document.createElement("span"); s.className = "mot fixe"; s.textContent = m; s.dataset.i = k;
+      if (trouve && (k === p.v || k === p.pr)) s.classList.add("verbe");
+      if (avecPronom && k === p.pr) { pronom = s; return; }   // « se » va dans la pince, avec son verbe
+      if (serre === k) {
+        var g = document.createElement("span"); g.className = "serre" + (trouve ? "" : " faux");
+        var ne = document.createElement("span"); ne.className = "mot neg fixe" + (trouve ? "" : " faux");
+        ne.textContent = (trouve && /^[aeiouyhéèêâîôû]/i.test(pronom ? pronom.textContent : m)) ? "n'" : "ne";
+        var pas = document.createElement("span"); pas.className = "mot neg fixe" + (trouve ? "" : " faux"); pas.textContent = "pas";
+        g.appendChild(ne); if (pronom) g.appendChild(pronom); g.appendChild(s); g.appendChild(pas);
+        zone.appendChild(g);
+        requestAnimationFrame(function () { dessinerPince(g, trouve ? "#7b61ff" : "#e0456b"); });
+      } else zone.appendChild(s);
+    });
+  }
+  // l'aperçu : « ne » et « pas » posés juste avant et juste après le mot visé, sans déplacer la phrase (le mot reste sous le doigt)
+  function apercu(m) {
+    var z = el("phraseNepas"); z.querySelectorAll(".apercu").forEach(function (e) { e.remove(); });
+    if (!m) return;
+    if (getComputedStyle(z).position === "static") z.style.position = "relative";
+    var r = m.getBoundingClientRect(), zr = z.getBoundingClientRect();
+    ["ne", "pas"].forEach(function (txt, k) {
+      var s = document.createElement("span"); s.className = "mot neg apercu"; s.textContent = txt; z.appendChild(s);
+      s.style.top = (r.top - zr.top) + "px";
+      s.style.left = (k ? r.right - zr.left + 10 : r.left - zr.left - s.offsetWidth - 10) + "px";
+    });
+  }
+  function motSous(x, y) {
+    var liste = document.elementsFromPoint(x, y);
+    for (var k = 0; k < liste.length; k++) if (liste[k].classList && liste[k].classList.contains("mot") && liste[k].dataset.i !== undefined && liste[k].closest("#phraseNepas")) return liste[k];
+    return null;
+  }
+  function remplirPlateau() {
+    var pl = el("plateau"); pl.innerHTML = "";
+    pl.style.visibility = serre !== null ? "hidden" : "";
+    if (serre !== null) return;
+    var o = document.createElement("span"); o.className = "pince"; o.title = "Le crabe et ses pinces ne … pas";
+    o.innerHTML = '<span class="machoire g">ne</span><span class="creux"></span><span class="machoire d">pas</span>';
+    requestAnimationFrame(function () { dessinerPince(o, "#7b61ff"); });
+    o.addEventListener("pointerdown", function (ev) {
+      var survol = null;
+      glisser(o, ev, function (x, y) { var m = motSous(x, y); if (survol && survol !== m) survol.classList.remove("cible-pince"); if (m) m.classList.add("cible-pince"); if (m !== survol) apercu(m); survol = m; },
+        function (x, y) {
+          if (survol) survol.classList.remove("cible-pince"); apercu(null);
+          var m = motSous(x, y); if (!m) return;
+          serre = parseInt(m.dataset.i, 10); son("tic");
+          if (phrase().pr === serre) serre = phrase().v;   // « se » fait partie du verbe : la pince serre « se dresse »
+          verifierNepas();
+        }, true);
+    });
+    pl.appendChild(o);
+  }
+  function verifierNepas() {
+    var p = phrase();
+    if (serre === p.v) {
+      reussite(); afficherNepas(); remplirPlateau();
+      el("plateau").style.visibility = "hidden";
+      carteNeg(p.v, "✅ La phrase veut dire quelque chose : « " + (p.pr !== undefined ? p.mots[p.pr] + " " : "") + nettoyer(p.mots[p.v]) + " » est le verbe !", "bien");
+      el("btnSuivantNepas").hidden = false;
+    } else {
+      erreurs++; son("non");
+      afficherNepas(); remplirPlateau();
+      el("phraseNepas").classList.add("absurde");
+      var mot = nettoyer(p.mots[serre]); if (serre === 0 && MINUSCULES.test(mot)) mot = mot.toLowerCase();
+      carteNeg(serre, "🤪 Ça ne veut rien dire : « " + mot + " » n'est pas le verbe. Recommence.", "faux");
+      setTimeout(function () { serre = null; afficherNepas(); remplirPlateau(); }, 2200);
+    }
+  }
+  // Le cadre sous la phrase : la phrase avec « ne … pas » autour du mot serré, puis le verdict en gros.
+  function carteNeg(k, verdict, classe) {
+    var p = phrase(), mots = p.mots.slice(), m = mots[k];
+    var fin = /[.,!?]$/.test(m) ? m.slice(-1) : "", corps = fin ? m.slice(0, -1) : m;
+    var estVerbe = k === p.v;
+    if (estVerbe && p.pr !== undefined) { corps = p.mots[p.pr] + " " + corps; mots.splice(p.pr, 1); k = p.pr; }   // ne se dresse pas
+    var ne = (estVerbe && /^[aeiouyhéèêâîôû]/i.test(corps)) ? "n'" : "ne ";
+    if (k === 0 && MINUSCULES.test(corps)) corps = corps.toLowerCase();
+    mots[k] = '<span class="' + (estVerbe ? "v-verbe v-hier" : "v-teste") + '">' + ne + corps + " pas</span>" + fin;
+    if (k === 0) mots[0] = mots[0].replace(">ne ", ">Ne ").replace(">n'", ">N'");
+    el("phraseNeg").innerHTML = "<div>" + mots.join(" ") + '</div><div class="verdict ' + classe + '" id="verdictNeg">' + verdict + "</div>";
+    el("phraseNeg").className = "voyage " + classe;
+    el("phraseNeg").hidden = false;
+  }
+  function nouvelleNepas() {
+    trouve = false; erreurs = 0; serre = null;
+    el("btnSuivantNepas").hidden = true; el("phraseNeg").hidden = true; el("plateau").style.visibility = "";
+    afficherNepas(); remplirPlateau();
+    message("Pose le crabe sur un mot : il le pince avec « ne … pas ».");
+  }
+
+  // =========================== Déroulé commun ===========================
+  function melanger(n) { var t = []; for (var i = 0; i < n; i++) t.push(i); for (var j = n - 1; j > 0; j--) { var k = Math.floor(Math.random() * (j + 1)); var x = t[j]; t[j] = t[k]; t[k] = x; } return t; }
+  function nouvellePhrase() { nouvelleNepas(); }
+  function demarrer() {
+    index = 0; score = 0; ordre = melanger(PHRASES[niveau].length); majScore();
+    el("bilan").classList.remove("visible");
+    el("jeuNepas").hidden = false;
+    nouvellePhrase();
+  }
+  function suivante() {
+    index++;
+    if (index >= ordre.length) {
+      el("jeuNepas").hidden = true; el("bilan").classList.add("visible");
+      el("resultat").textContent = "Verbes trouvés du premier coup : " + score + " sur " + ordre.length + " · 🏆 Record : " + lireRecord();
+      message("");
+      return;
+    }
+    nouvellePhrase();
+  }
+  el("btnSuivantNepas").addEventListener("click", suivante);
+  el("btnRejouer").addEventListener("click", demarrer);
+  el("btnIndice").addEventListener("click", function () { el("indice").textContent = "💡 " + INDICES[onglet]; });
+  el("btnSon").addEventListener("click", function () { sonActif = !sonActif; el("btnSon").textContent = sonActif ? "🔊" : "🔇"; });
+  function activer(groupe, attr, valeur) {
+    Array.prototype.forEach.call(document.querySelectorAll("#" + groupe + " button"), function (b) { b.classList.toggle("actif", b.dataset[attr] === valeur); });
+  }
+  Array.prototype.forEach.call(document.querySelectorAll("#niveaux button"), function (b) {
+    b.addEventListener("click", function () { niveau = b.dataset.niveau; activer("niveaux", "niveau", niveau); demarrer(); });
+  });
+
+  // Class Flow ouvre le jeu sur un niveau : …html#defi
+  location.hash.slice(1).split(",").forEach(function (h) {
+    if (PHRASES[h]) { niveau = h; activer("niveaux", "niveau", h); }
+  });
+  demarrer();
+})();
+</script>
+<!-- DEUX GESTES -->
+<script>
+/* ==== DEUX GESTES (GTH) : chaque jeu se joue en glissant OU en touchant (demande de Karim du 01/10) ====
+   REGLES  : jeu au glisser-déposer → on peut aussi toucher l'objet (il s'entoure), puis toucher sa place ; s'il n'a qu'une place
+             possible (une case réponse), un seul toucher le pose (10/10) :
+             le module rejoue exactement le même glisser-déposer, le jeu garde ses règles.
+   INVERSE : jeu au toucher (toucher la carte, puis la zone) → on peut aussi glisser la carte sur la zone.
+   Installé par .claude/outils/deux-gestes/injecter.py ; ne pas modifier dans le jeu, mais dans ce fichier. */
+(function () {
+  var REGLES = [{"source": "#plateau .pince", "cible": "#phraseNepas .mot"}], INVERSE = [];
+  // setPointerCapture refuse les pointeurs rejoués : on ignore l'erreur
+  ["setPointerCapture", "releasePointerCapture"].forEach(function (m) {
+    var o = Element.prototype[m]; if (!o) return;
+    Element.prototype[m] = function (id) { try { return o.call(this, id); } catch (e) { return undefined; } };
+  });
+  var st = document.createElement("style");
+  st.textContent = ".dg-choisi{outline:7px solid #1f7a8c !important; outline-offset:4px !important;}" +
+    ".dg-vol{position:fixed !important; z-index:9999; pointer-events:none; opacity:.92; transform:scale(1.05) rotate(-2deg); margin:0 !important;}";
+  document.head.appendChild(st);
+
+  var choix = null, bas = null, rejeu = false, avalerClic = 0;
+  function sous(x, y) { return document.elementFromPoint(x, y); }
+  function trouver(el, liste, cle) {
+    if (!el || !el.closest) return null;
+    for (var i = 0; i < liste.length; i++) { var e = el.closest(liste[i][cle]); if (e) return { regle: liste[i], el: e }; }
+    return null;
+  }
+  function oublier() { if (choix) choix.el.classList.remove("dg-choisi"); choix = null; }
+  function evt(type, cible, x, y) {
+    var e = new PointerEvent(type, { bubbles: true, cancelable: true, composed: true, clientX: x, clientY: y, pointerId: 777,
+      pointerType: "touch", isPrimary: true, button: 0, buttons: type === "pointerup" ? 0 : 1 });
+    (cible && cible.isConnected ? cible : document).dispatchEvent(e);
+  }
+  // Rejoue le glisser-déposer du jeu : de l'objet jusqu'au point touché
+  function rejouer(src, x, y) {
+    if (!src.isConnected) return;
+    var r = src.getBoundingClientRect(), x0 = r.left + r.width / 2, y0 = r.top + r.height / 2;
+    var depart = sous(x0, y0); if (!depart || !src.contains(depart)) depart = src;
+    rejeu = true;
+    try {
+      evt("pointerdown", depart, x0, y0);
+      for (var k = 1; k <= 12; k++) evt("pointermove", depart, x0 + (x - x0) * k / 12, y0 + (y - y0) * k / 12);
+      evt("pointerup", depart, x, y);
+    } finally { rejeu = false; }
+  }
+
+  // ---------- REGLES : toucher l'objet, puis sa place ----------
+  document.addEventListener("pointerdown", function (e) {
+    if (rejeu || !e.isTrusted || !REGLES.length) return;
+    if (choix && !choix.el.isConnected) oublier();
+    // l'objet touché est repéré dès que le doigt se pose : ensuite, le jeu le cache pour le faire glisser
+    bas = { x: e.clientX, y: e.clientY, cible: null, src: trouver(e.target, REGLES, "source") };
+    if (choix) {
+      var c = e.target.closest && e.target.closest(choix.regle.cible);
+      if (c && !(e.target.closest(choix.regle.source))) { bas.cible = c; e.stopImmediatePropagation(); e.preventDefault(); }
+    }
+  }, true);
+  document.addEventListener("pointerup", function (e) {
+    if (rejeu || !e.isTrusted || !bas || !REGLES.length) return;
+    var b = bas; bas = null;
+    var tap = Math.hypot(e.clientX - b.x, e.clientY - b.y) < 12;
+    if (b.cible) {   // le toucher sur la place : le jeu ne le voit pas, on rejoue le glisser à cet endroit
+      e.stopImmediatePropagation(); e.preventDefault(); avalerClic = Date.now();
+      if (tap && choix) { var s = choix.el; oublier(); var x = e.clientX, y = e.clientY; setTimeout(function () { rejouer(s, x, y); }, 0); }
+      return;
+    }
+    if (!tap) { oublier(); return; }   // un vrai glisser : le jeu s'en occupe
+    var src = b.src;
+    setTimeout(function () {   // après le jeu : l'objet touché est choisi (ou ne l'est plus)
+      if (!src || !src.el.isConnected) { return; }
+      // une seule place où le poser (une case réponse) : un toucher suffit, la réponse part dans la case (Karim, 10/10)
+      var places = Array.prototype.filter.call(document.querySelectorAll(src.regle.cible), function (c) {
+        var r = c.getBoundingClientRect(); return r.width > 0 && r.height > 0 && !src.el.contains(c) && getComputedStyle(c).visibility !== "hidden"; });
+      if (places.length === 1) { oublier(); var r = places[0].getBoundingClientRect(); rejouer(src.el, r.left + r.width / 2, r.top + r.height / 2); return; }
+      if (choix && choix.el === src.el) { oublier(); return; }
+      oublier(); choix = src; src.el.classList.add("dg-choisi");
+    }, 0);
+  }, true);
+  document.addEventListener("click", function (e) {
+    if (Date.now() - avalerClic < 500 && e.isTrusted) { e.stopImmediatePropagation(); e.preventDefault(); }
+  }, true);
+
+  // ---------- INVERSE : glisser la carte sur la zone = la toucher, puis toucher la zone ----------
+  var g = null;
+  document.addEventListener("pointerdown", function (e) {
+    if (rejeu || !e.isTrusted || !INVERSE.length) return;
+    var src = trouver(e.target, INVERSE, "source"); if (!src) return;
+    g = { src: src, x: e.clientX, y: e.clientY, vol: null };
+  }, true);
+  document.addEventListener("pointermove", function (e) {
+    if (!g || rejeu) return;
+    if (!g.vol && Math.hypot(e.clientX - g.x, e.clientY - g.y) < 12) return;
+    if (!g.vol) {
+      var r = g.src.el.getBoundingClientRect();
+      g.vol = g.src.el.cloneNode(true); g.vol.classList.add("dg-vol"); g.vol.style.width = r.width + "px";
+      g.dx = g.x - r.left; g.dy = g.y - r.top; document.body.appendChild(g.vol);
+    }
+    g.vol.style.left = (e.clientX - g.dx) + "px"; g.vol.style.top = (e.clientY - g.dy) + "px";
+  }, true);
+  document.addEventListener("pointerup", function (e) {
+    if (!g || rejeu || !e.isTrusted) return;
+    var d = g; g = null;
+    if (!d.vol) return;   // simple toucher : le jeu s'en occupe
+    d.vol.remove(); e.stopImmediatePropagation(); e.preventDefault(); avalerClic = Date.now();
+    var dessous = sous(e.clientX, e.clientY), zone = dessous && dessous.closest ? dessous.closest(d.src.regle.cible) : null;
+    if (!zone) return;
+    rejeu = true;
+    try { evt("pointerup", d.src.el, e.clientX, e.clientY); evt("pointerup", zone, e.clientX, e.clientY); }
+    finally { rejeu = false; }
+  }, true);
+})();
+</script>
+<!-- /DEUX GESTES -->
+<!-- MENU -->
+<script>
+/* ==== LE MENU ☰ (GTH, 10/10) : interface épurée — à l'écran, seulement le titre, le score, la consigne et l'activité ====
+   Tout le reste (niveaux, onglets de méthode, ✏️, 🔊, 🖨️, aide…) part dans un menu ☰, ouvert d'un toucher.
+   Réglage par outil (CONF, posé par l'injecteur) : ancre = où mettre le bouton ☰ (sinon en haut à droite de l'écran) ;
+   cacher = ce qui part dans le menu (sinon : tout ce qui, dans « .barre .droite », n'est pas un score).
+   Installé par .claude/outils/menu-outil/injecter.py ; ne pas modifier dans l'outil, mais dans ce fichier. */
+(function () {
+  var CONF = {};
+  var st = document.createElement("style");
+  st.textContent =
+    ".menu-btn{width:58px; height:58px; border-radius:16px; border:2px solid rgba(0,0,0,.15); background:#fff; color:#1f2a33; font-size:2rem; line-height:1; cursor:pointer; flex:none; padding:0;}" +
+    ".menu-btn.fixe{position:fixed; top:10px; right:12px; z-index:150; box-shadow:0 4px 14px rgba(0,0,0,.15);}" +
+    ".menu-btn.ouvert{background:#1f2a33; color:#fff;}" +
+    ".menu-panneau{position:fixed; top:76px; right:16px; z-index:200; background:#fff; color:#1f2a33; border-radius:18px; box-shadow:0 18px 50px rgba(0,0,0,.28); padding:16px 18px;" +
+    "  display:flex; flex-direction:column; align-items:flex-start; gap:12px; max-width:min(620px, 92vw); max-height:80vh; overflow:auto;}" +
+    ".menu-panneau[hidden]{display:none !important;}" +
+    ".menu-panneau h4{margin:0; font-family:sans-serif; font-size:.85rem; text-transform:uppercase; letter-spacing:.6px; color:#6d7a85;}" +
+    ".menu-panneau > *{position:static !important; margin:0 !important;}" +
+    ".menu-panneau > div,.menu-panneau > nav{display:flex; flex-wrap:wrap; gap:8px;}";
+  document.head.appendChild(st);
+  function installer() {
+    var autres = [];
+    if (CONF.cacher) CONF.cacher.forEach(function (s) { document.querySelectorAll(s).forEach(function (e) { if (autres.indexOf(e) === -1) autres.push(e); }); });
+    else { var d = document.querySelector(".barre .droite"); if (d) autres = Array.prototype.filter.call(d.children, function (e) { return !e.classList.contains("score"); }); }
+    if (!autres.length) return;
+    var btn = document.createElement("button"); btn.type = "button"; btn.className = "menu-btn"; btn.title = "Niveaux et réglages"; btn.textContent = "☰";
+    var pan = document.createElement("div"); pan.className = "menu-panneau"; pan.hidden = true;
+    var t = document.createElement("h4"); t.textContent = "Niveaux et réglages"; pan.appendChild(t);
+    autres.forEach(function (e) { pan.appendChild(e); });
+    var ancre = document.querySelector(CONF.ancre || ".barre .droite");
+    if (ancre) ancre.appendChild(btn); else { btn.classList.add("fixe"); document.body.appendChild(btn); }
+    document.body.appendChild(pan);
+    function ouvrir(o) { pan.hidden = !o; btn.classList.toggle("ouvert", o); }
+    btn.addEventListener("click", function (e) { e.stopPropagation(); ouvrir(pan.hidden); });
+    // un niveau choisi, ou une fenêtre ouverte (✏️, 🖨️) : le menu se referme ; on garde le menu ouvert pour choisir un type de jeu
+    pan.addEventListener("click", function (e) { var b = e.target.closest("button"); if (b && !b.closest(CONF.garderOuvert || ".types")) setTimeout(function () { ouvrir(false); }, 120); });
+    document.addEventListener("pointerdown", function (e) { if (!pan.hidden && !pan.contains(e.target) && e.target !== btn) ouvrir(false); });
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", installer); else installer();
+})();
+</script>
+<!-- /MENU -->
+<!-- INDICE-COTE -->
+<script>
+/* 💡 sur le côté (Karim, 21/10) : dans les jeux qui ont un bouton « 💡 Indice » (.btn-indice), le bouton devient une ampoule seule,
+   collée au bord droit de l'écran, à mi-hauteur ; l'indice s'ouvre dans une bulle à côté d'elle, jamais sous le jeu.
+   Le jeu garde son propre code : au toucher, on regarde quel texte il vient d'écrire (zone #indice, ou la ligne de message),
+   on le reprend dans la bulle et on remet la zone comme avant. Installé par injecter.py. */
+(function () {
+  var b = document.querySelector(".btn-indice"); if (!b) return;
+  var st = document.createElement("style");
+  st.textContent =
+    ".btn-indice.cote{position:fixed !important; right:18px; top:50%; transform:translateY(-50%); width:76px; height:76px; padding:0 !important; border-radius:50% !important;" +
+    " font-size:40px !important; line-height:1; z-index:60; margin:0 !important; display:flex; align-items:center; justify-content:center}" +
+    "#bulle-cote{position:fixed; right:110px; top:50%; transform:translateY(-50%); max-width:520px; background:#fff8c4; border:2px solid #d4b106; border-radius:18px;" +
+    " padding:16px 22px; font-size:26px; line-height:1.35; z-index:60; box-shadow:0 6px 18px rgba(0,0,0,.15); display:none}" +
+    "#bulle-cote::after{content:''; position:absolute; right:-14px; top:50%; margin-top:-12px; border:12px solid transparent; border-left:14px solid #d4b106; border-right:none}";
+  document.head.appendChild(st);
+  b.classList.add("cote"); b.textContent = "💡"; b.title = "Indice"; document.body.appendChild(b);
+  var bulle = document.createElement("div"); bulle.id = "bulle-cote"; document.body.appendChild(bulle);
+  var zones = function () { return Array.prototype.slice.call(document.querySelectorAll("#indice, .indice, #message, .message, #verdict, .verdict, #consigne-aide")); };
+  var avant = [], minuteur = null;
+  b.addEventListener("click", function () { avant = zones().map(function (z) { return [z, z.textContent, z.className]; }); }, true);   // avant le code du jeu
+  b.addEventListener("click", function () {
+    setTimeout(function () {
+      var txt = "";
+      avant.forEach(function (a) {
+        var z = a[0], neuf = z.textContent;
+        if (neuf !== a[1] && neuf.trim()) { txt = neuf; z.textContent = a[1]; z.className = a[2]; }
+      });
+      if (!txt) return;   // le jeu montre l'indice autrement : on le laisse faire
+      bulle.textContent = txt.replace(/^\s*💡\s*/, ""); bulle.style.display = "block";
+      clearTimeout(minuteur); minuteur = setTimeout(function () { bulle.style.display = "none"; }, 8000);
+    }, 0);
+  });
+  document.addEventListener("pointerdown", function (e) { if (e.target !== b && e.target !== bulle) bulle.style.display = "none"; });
+})();
+</script>
+<!-- /INDICE-COTE -->
+</body>
+</html>

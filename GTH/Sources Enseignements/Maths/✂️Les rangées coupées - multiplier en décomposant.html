@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Les rangées coupées</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cg fill='%232bd4b4'%3E%3Crect x='4' y='10' width='34' height='12'/%3E%3Crect x='4' y='26' width='34' height='12'/%3E%3Crect x='4' y='42' width='34' height='12'/%3E%3C/g%3E%3Cg fill='%23ffb74d'%3E%3Crect x='46' y='10' width='14' height='12'/%3E%3Crect x='46' y='26' width='14' height='12'/%3E%3Crect x='46' y='42' width='14' height='12'/%3E%3C/g%3E%3Cpath d='M42 4v56' stroke='%23e53935' stroke-width='3' stroke-dasharray='5 4'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&display=swap">
+<style>
+  /* ✂️ Les rangées coupées (maquette validée par Karim le 23/10, à la place de la machine à calculer) : multiplier en
+     décomposant, mais c'est l'élève qui choisit OÙ couper pour que le calcul soit facile (66 × 6 → 60 + 6 ; 72 × 4 → 60 + 12).
+     72 × 4 : les rangées de 72 cubes s'accumulent (1, 2, 3, 4 rangées), comme dans 🎲 Les rangées de cubes. On glisse le doigt
+     de haut en bas entre deux cubes : la coupe traverse toutes les rangées, les morceaux s'écartent (60 | 12). On peut recouper,
+     ou toucher une coupe pour la défaire. En × 2 chiffres (CM2), on coupe aussi les rangées (glisser de gauche à droite :
+     35 × 12 = 35 × 10 + 35 × 2). Puis on tape le produit de chaque morceau, puis le total (petite calculette) ; le calcul
+     s'écrit à droite, ligne par ligne. Toute coupe est juste : c'est le calcul qui devient facile, ou pas.
+     Karim, 7/11 : le dessin remplit sa place ; des repères disent où tombent 10, 20, 30 (et ce qui reste) ; des morceaux
+     pareils s'écrivent 360 × 2 avant le résultat (× 20 : d'abord × 10, puis × 2). */
+  :root{ --fond:#eef5fb; --encre:#163a5f; --gris:#5c7a99; --bleu:#1e88e5; --talbot:#1f7a8c; --bien:#2e7d32; --faux:#c62828; }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{margin:0; color:var(--encre); font-family:"Baloo 2",Arial,sans-serif; overflow:hidden; height:100vh; display:flex; flex-direction:column; user-select:none; -webkit-user-select:none; touch-action:none;
+    background:var(--fond); background-image:linear-gradient(rgba(30,136,229,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(30,136,229,.06) 1px,transparent 1px); background-size:40px 40px;}
+  [hidden]{display:none !important;}
+  .barre{display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:20px; padding:8px 26px; background:#163a5f; color:#fff; min-height:84px;}
+  .titre{display:flex; align-items:center; gap:12px;} .titre svg{width:50px; height:50px;}
+  .titre h1{font-weight:800; font-size:2rem; margin:0; color:#90caf9;}
+  .onglets{display:flex; gap:10px; justify-content:center;}
+  .onglets button{font:inherit; font-weight:800; font-size:1.3rem; padding:4px 20px; border-radius:12px; cursor:pointer; background:#24527f; color:#fff; border:none; white-space:nowrap;}
+  .onglets button.actif{background:#2bd4b4; color:#0d2a44;}
+  .droite{display:flex; align-items:center; gap:12px;}
+  .score{display:flex; flex-direction:column; align-items:center; padding:2px 14px; border-radius:12px; background:#1f4b75; min-width:130px;}
+  .score small{font-size:.8rem; font-weight:700; color:#b3d4f0; text-transform:uppercase; letter-spacing:.5px;}
+  .score b{font-size:1.7rem; line-height:1.05; color:#fff;}
+  .niveaux{display:flex; gap:4px;}
+  .niveaux button{font:inherit; font-weight:700; font-size:1rem; padding:3px 14px; border-radius:999px; cursor:pointer; background:#fff; color:var(--gris); border:2px solid #cfd8dc;}
+  .niveaux button.actif{background:var(--encre); color:#fff; border-color:var(--encre);}
+  .btn-son{width:44px; height:44px; border-radius:50%; font-size:1.2rem; cursor:pointer; background:#fff; border:2px solid #cfd8dc;}
+  .consigne{display:flex; justify-content:center; padding:14px 20px 0;}
+  .consigne p{margin:0; font-weight:800; font-size:2.9rem; text-align:center; line-height:1.15;}
+  .consigne p b{color:var(--bleu);}
+  .consigne p .res{color:var(--bien);}
+  .jeu{flex:1; min-height:0; display:grid; grid-template-columns:minmax(0,1fr) minmax(460px,30%); gap:10px; padding:0 120px 0 20px;}
+  #dessin{width:100%; height:100%; touch-action:none; cursor:crosshair; display:block;}
+  .calcul{font-weight:800; font-size:54px; line-height:1.38; padding-top:90px; white-space:nowrap; overflow:hidden; min-width:0;}
+  .calcul div{animation:ligne .35s ease;} @keyframes ligne{from{opacity:0; transform:translateY(-10px)}}
+  .calcul .vu{color:var(--talbot);} .calcul .fin{color:var(--bien);} .calcul .att{color:#b0bec5;}
+  .calcul .trou{display:inline-block; min-width:2.6em; border:5px dashed #78909c; border-radius:14px; text-align:center; color:#78909c; line-height:1.05; padding-top:.06em;}
+  .rangee{animation:recopie .3s ease-out;} @keyframes recopie{from{transform:translateY(-40px); opacity:0}}
+  .secoue{animation:secoue .4s ease;} @keyframes secoue{0%,100%{transform:none}25%{transform:translateX(-10px)}75%{transform:translateX(10px)}}
+
+  /* ✏️ mon calcul */
+  .fond-pave{position:fixed; inset:0; background:rgba(20,30,45,.45); display:flex; align-items:center; justify-content:center; z-index:60;}
+  .pave{background:#fff; border-radius:26px; padding:24px 30px; box-shadow:0 20px 50px rgba(0,0,0,.3); display:flex; flex-direction:column; gap:16px; align-items:center;}
+  .pave h2{margin:0; font-size:1.8rem;}
+  .pave-ecran{font-weight:800; font-size:4.2rem; line-height:1; min-width:380px; text-align:center; padding:14px 20px 4px; border:5px solid var(--encre); border-radius:18px; min-height:1.3em;}
+  .pave-ecran.secoue{border-color:var(--faux);}
+  .touches{display:grid; grid-template-columns:repeat(3,110px); gap:12px;}
+  .touches button{font:inherit; font-weight:800; font-size:2.4rem; height:84px; border-radius:18px; border:3px solid #dfe5ea; background:#f6f8fa; cursor:pointer;}
+  .touches button.ok{background:var(--talbot); color:#fff; border-color:var(--talbot); font-size:2rem;}
+  .pave-bas button{font:inherit; font-weight:700; font-size:1.2rem; padding:8px 22px; border-radius:999px; border:2px solid #dfe5ea; background:#fff; cursor:pointer;}
+
+  .bas{display:flex; align-items:center; justify-content:center; gap:18px; padding:4px 0 12px; min-height:70px;}
+  .btn-indice{font:inherit; font-weight:700; font-size:1.2rem; padding:6px 16px; border-radius:999px; cursor:pointer; background:#fff8dc; border:2px solid #f1d27a; color:#7a5b00;}
+  .verdict{min-height:3rem; font-size:2.1rem; font-weight:800; text-align:center;}
+  .verdict:not(:empty){background:#fff; padding:0 24px; border-radius:14px;}
+  .verdict.bien{color:var(--bien);} .verdict.faux{color:var(--faux);} .verdict.indice{color:#7a5b00;}
+  .btn-suivant{font:inherit; font-weight:800; font-size:1.8rem; padding:2px 34px; border-radius:999px; cursor:pointer; background:var(--encre); color:#fff; border:none;}
+</style>
+</head>
+<body>
+<div class="barre">
+  <div class="titre">
+    <svg viewBox="0 0 64 64" aria-hidden="true"><g fill="#2bd4b4"><rect x="4" y="10" width="34" height="12"/><rect x="4" y="26" width="34" height="12"/><rect x="4" y="42" width="34" height="12"/></g><g fill="#ffb74d"><rect x="46" y="10" width="14" height="12"/><rect x="46" y="26" width="14" height="12"/><rect x="46" y="42" width="14" height="12"/></g><path d="M42 4v56" stroke="#e53935" stroke-width="3" stroke-dasharray="5 4"/></svg>
+    <h1>Les rangées coupées</h1>
+  </div>
+  <div class="onglets" id="onglets">
+    <button type="button" data-onglet="1chiffre" class="actif">× 1 chiffre</button>
+    <button type="button" data-onglet="dizaines">× 20, × 30</button><button type="button" data-onglet="2chiffres">× 2 chiffres (CM2)</button>
+    <button type="button" id="btnPerso" title="Taper le calcul de mon choix">✏️</button>
+  </div>
+  <div class="droite">
+    <div class="score"><small>Produits trouvés</small><b id="score">0</b></div>
+    <div class="score" title="Le meilleur score à ce niveau, gardé sur cet ordinateur"><small>🏆 Record</small><b id="record">0</b></div>
+    <div class="niveaux" id="niveaux">
+      <button type="button" data-niveau="100" class="actif">≤ 100</button>
+      <button type="button" data-niveau="centaines">Centaines</button>
+    </div>
+    <button class="btn-son" id="btnSon" type="button" title="Son">🔊</button>
+  </div>
+</div>
+<div class="consigne"><p id="consigne"></p></div>
+<div class="jeu">
+  <svg id="dessin" viewBox="0 0 1180 760" preserveAspectRatio="xMidYMid meet"></svg>
+  <div class="calcul" id="calcul"></div>
+</div>
+<div class="fond-pave" id="fondPave" hidden>
+  <div class="pave">
+    <h2 id="paveTitre"></h2>
+    <div class="pave-ecran" id="paveEcran"></div>
+    <div class="touches" id="touches">
+      <button type="button">7</button><button type="button">8</button><button type="button">9</button>
+      <button type="button">4</button><button type="button">5</button><button type="button">6</button>
+      <button type="button">1</button><button type="button">2</button><button type="button">3</button>
+      <button type="button" data-t="eff">⌫</button><button type="button">0</button><button type="button" class="ok" data-t="ok">OK</button>
+    </div>
+    <div class="pave-bas"><button type="button" id="paveAnnuler">Annuler</button></div>
+  </div>
+</div>
+<div class="bas">
+  <button class="btn-indice" id="btnIndice" type="button">💡 Indice</button>
+  <div class="verdict" id="verdict"></div>
+  <button class="btn-suivant" id="btnSuivant" type="button" hidden>➜</button>
+</div>
+<!-- CALCULETTE -->
+<script>
+/* 🧮 La calculette (Karim, 21/10) : pour répondre par un nombre, l'élève touche les touches d'une petite calculette posée sur le côté
+   (plus d'étiquettes-réponses à glisser). Ce qu'il tape s'écrit dans la case du jeu ; dès que le nombre ne peut plus devenir la
+   réponse, c'est faux ; dès qu'il est juste, le jeu continue. Installé par injecter.py.
+   Calculette.ouvrir({ cible: élément, bon: 42, format: f, siBon: function () {}, siFaux: function (tapé) {} }) ; Calculette.fermer(). */
+(function () {
+  var st = document.createElement("style");
+  st.textContent =
+    "#calculette{position:fixed; right:110px; bottom:28px; display:none; flex-direction:column; gap:6px; padding:8px; background:#eceff1; border:2px solid #cfd8dc; border-radius:14px; z-index:55; opacity:.9}" +
+    "#calculette .ecr{display:none}" +
+    "#calculette .tou{display:grid; grid-template-columns:repeat(3,46px); gap:5px}" +
+    "#calculette button{height:38px; border:1px solid #cfd8dc; border-radius:8px; background:#fff; color:#607d8b; font:700 19px 'Baloo 2',Arial,sans-serif; cursor:pointer}" +
+    "#calculette button:active{transform:translateY(2px); box-shadow:none}" +
+    "#calculette button.eff{color:#c62828}";
+  document.head.appendChild(st);
+  var box = document.createElement("div"); box.id = "calculette";
+  box.innerHTML = '<div class="ecr"></div><div class="tou"></div>';
+  document.addEventListener("DOMContentLoaded", function () { document.body.appendChild(box); });
+  if (document.body) document.body.appendChild(box);
+  var o = null, tape = "", texteAvant = "";
+  ["7", "8", "9", "4", "5", "6", "1", "2", "3", "", "0", "⌫"].forEach(function (k) {
+    var b = document.createElement("button"); b.type = "button"; b.textContent = k; if (!k) b.style.visibility = "hidden"; if (k === "⌫") b.className = "eff";
+    b.addEventListener("click", function () { touche(k); }); box.querySelector(".tou").appendChild(b);
+  });
+  function montre() {
+    box.querySelector(".ecr").textContent = tape;
+    if (o && o.cible) o.cible.textContent = tape ? (o.format ? o.format(+tape) : tape) : texteAvant;
+  }
+  function touche(k) {
+    if (!o || !k) return;
+    if (k === "⌫") tape = tape.slice(0, -1); else if (tape.length < 7) tape += k;
+    montre();
+    var juste = String(o.bon);
+    if (tape === juste) { var f = o.siBon; o = null; tape = ""; box.style.display = "none"; f(+juste); return; }
+    if (tape && juste.indexOf(tape) !== 0) {
+      var t = tape; if (o.siFaux) o.siFaux(+t);
+      setTimeout(function () { tape = ""; montre(); }, 700);
+    }
+  }
+  document.addEventListener("keydown", function (e) { if (!o) return; if (/^[0-9]$/.test(e.key)) touche(e.key); else if (e.key === "Backspace") touche("⌫"); });
+  // si le jeu passe à autre chose (sa case disparaît), la calculette se range
+  setInterval(function () { if (o && o.cible && !document.body.contains(o.cible)) window.Calculette.fermer(); }, 400);
+  window.Calculette = {
+    ouvrir: function (opt) { o = opt; tape = ""; texteAvant = opt.cible ? opt.cible.textContent : ""; box.style.display = "flex"; montre(); },
+    fermer: function () { o = null; tape = ""; box.style.display = "none"; }
+  };
+})();
+</script>
+<!-- /CALCULETTE -->
+<script>
+(function () {
+  // [nombre, nombre de rangées]. ≤ 100 : séances P2 de calcul mental (📅 4 : × 4, × 8 ; 📅 7 : 23 × 4, 51 × 8) et d'opérations,
+  // plus 72 × 4 et 66 × 6 (exemples de Karim). Centaines : opérations 📅 1-4 (108 × 4, 125 × 4, 125 × 8, répertoire de 136),
+  // 110 × 5 (banque) ; 145 × 4 et 115 × 6 ajoutés par moi. × 2 chiffres (CM2) : répertoires ERMEL de 25, 35 et 68 (📅 2),
+  // 36 × 20 (calcul mental 📅 2) ; 24 × 15, 21 × 13, 18 × 12 et 16 × 14 ajoutés par moi.
+  var LISTES = {
+    "1chiffre-100": [[72, 4], [66, 6], [27, 4], [36, 4], [28, 4], [62, 4], [78, 4], [17, 8], [23, 8], [43, 8], [51, 8], [96, 8], [27, 6], [45, 7], [43, 6], [71, 6], [24, 4], [16, 8]],
+    "1chiffre-centaines": [[108, 4], [125, 4], [136, 3], [136, 4], [136, 5], [136, 6], [125, 8], [110, 5], [145, 4], [115, 6]],
+    "dizaines": [[36, 20], [8, 20], [7, 20], [25, 20], [12, 20], [9, 30], [6, 30], [15, 30], [7, 40], [8, 30], [45, 20], [23, 30]],   // Karim, 7/11 : × 20 = deux paquets de 10 rangées
+    "2chiffres": [[35, 12], [25, 12], [68, 12], [35, 14], [36, 20], [25, 16], [68, 11], [35, 21], [24, 15], [21, 13], [18, 12], [16, 14]]
+  };
+  var el = function (id) { return document.getElementById(id); };
+  var NS = "http://www.w3.org/2000/svg";
+  var onglet = "1chiffre", niveau = "100", idx = 0, score = 0, sonActif = true, ctx = null;
+  var N = 0, M = 0, vc = [], hc = [], blocs = [], iBloc = 0, etape = "", erreurs = 0, total = 0, reste = [], lignes = [], minuteurs = [];
+  function n(x) { return String(x).replace(/\B(?=(\d{3})+(?!\d))/g, " "); }
+  function son(type) {
+    if (!sonActif) return;
+    try {
+      ctx = ctx || new (window.AudioContext || window.webkitAudioContext)();
+      var t = ctx.currentTime, notes = type === "bien" ? [[784, 0, .3], [988, .08, .3], [1175, .16, .45]] : type === "coupe" ? [[1800, 0, .05, "square"], [900, .04, .06, "square"]]
+        : type === "pose" ? [[523, 0, .12], [659, .08, .2]] : type === "rangee" ? [[440, 0, .06]] : [[300, 0, .35, "sine", 140]];
+      notes.forEach(function (q) { var o = ctx.createOscillator(), g = ctx.createGain(); o.type = q[3] || "triangle"; o.frequency.setValueAtTime(q[0], t + q[1]);
+        if (q[4]) o.frequency.exponentialRampToValueAtTime(q[4], t + q[1] + q[2]);
+        o.connect(g); g.connect(ctx.destination); g.gain.setValueAtTime(.0001, t + q[1]); g.gain.exponentialRampToValueAtTime(type === "rangee" ? .04 : .12, t + q[1] + .01);
+        g.gain.exponentialRampToValueAtTime(.0001, t + q[1] + q[2]); o.start(t + q[1]); o.stop(t + q[1] + q[2] + .05); });
+    } catch (e) {}
+  }
+  function cle() { return onglet !== "1chiffre" ? onglet : "1chiffre-" + niveau; }
+  function majScore() {
+    var r = 0, k = "rangees-coupees-record-" + cle(); try { r = parseInt(localStorage.getItem(k), 10) || 0; } catch (e) {}
+    if (score > r) { r = score; try { localStorage.setItem(k, String(r)); } catch (e) {} }
+    el("score").textContent = score; el("record").textContent = r;
+  }
+  function verdict(t, c) { el("verdict").textContent = t; el("verdict").className = "verdict" + (c ? " " + c : ""); }
+  function consigne(h) { el("consigne").innerHTML = h; }
+
+  // ---------- la géométrie : cubes, paquets de 10, écarts aux coupes ----------
+  var W = 1120, X0 = 120, Y0 = 92, HMAX = 470, ECART = 34, G = {};
+  function geo() {
+    var paquets = Math.floor((N - 1) / 10), lignesPaquets = Math.floor((M - 1) / 10);
+    // la hauteur disponible suit la forme de l'écran : les rangées s'étirent au lieu de laisser le bas vide
+    var bx = el("dessin").getBoundingClientRect(), ratio = bx.width > 100 && bx.height > 100 ? bx.height / bx.width : 0.6;
+    var hmax = Math.max(HMAX, Math.min(1000, ratio * (W + 120) - 300));
+    var c = Math.min(46, (W - X0 - 3 * ECART) / (N + 0.35 * paquets));
+    var h = Math.min(c * 6, 92, (hmax - 2 * ECART) / (M * 1.18 + 0.25 * lignesPaquets));
+    G = { c: c, h: h, g: c * 0.35, gl: h * 0.18, gp: h * 0.25 };
+    cadrer();
+  }
+  function cadrer() {   // le cadre serre les cubes, leurs repères et les produits : le dessin remplit sa place
+    var x0 = X0 - (M <= 10 && !hc.length ? 160 : 110), x1 = xCol(N - 1) + G.c + (M > 10 ? 90 : 60), y0 = Y0 - 115, y1 = yRang(M - 1) + G.h + (hc.length ? 40 : 190);
+    el("dessin").setAttribute("viewBox", [x0, y0, x1 - x0, y1 - y0].join(" "));
+  }
+  function avant(t, k) { var a = 0; t.forEach(function (x) { if (x <= k) a++; }); return a; }
+  function xCol(i) { return X0 + i * G.c + Math.floor(i / 10) * G.g + avant(vc, i) * ECART; }
+  function yRang(r) { return Y0 + r * G.h * 1.18 + Math.floor(r / 10) * G.gp + avant(hc, r) * ECART; }
+  function segs(cuts, tot) { var b = [0].concat(cuts.slice().sort(function (a, c) { return a - c; })).concat([tot]), s = []; for (var i = 0; i < b.length - 1; i++) s.push([b[i], b[i + 1]]); return s; }
+  var COUL = [["#2bd4b4", "#13907a"], ["#ffb74d", "#e08a00"], ["#9575cd", "#5e35b1"], ["#f06292", "#c2185b"], ["#4fc3f7", "#0288d1"], ["#aed581", "#689f38"]];
+
+  // ---------- le dessin ----------
+  function S(t, a, txt) { var e = document.createElementNS(NS, t); for (var k in a) e.setAttribute(k, a[k]); if (txt !== undefined) e.textContent = txt; return e; }
+  function dessiner(nbRangees) {
+    var svg = el("dessin"); svg.innerHTML = "";
+    var R = nbRangees === undefined ? M : nbRangees, cs = segs(vc, N), rs = segs(hc, M);
+    // les rangées : une à la fois
+    for (var r = 0; r < R; r++) {
+      var g = S("g", { "class": r === R - 1 && nbRangees !== undefined ? "rangee" : "" }), y = yRang(r), ri = rs.findIndex(function (s) { return r >= s[0] && r < s[1]; });
+      for (var i = 0; i < N; i++) {
+        var ci = cs.findIndex(function (s) { return i >= s[0] && i < s[1]; }), k = (ci + ri * 2) % COUL.length;
+        g.appendChild(S("rect", { x: xCol(i) + .5, y: y, width: Math.max(G.c - 1.6, 1), height: G.h, rx: Math.min(3, G.c / 4), fill: COUL[k][0], stroke: COUL[k][1], "stroke-width": G.c > 6 ? 1.4 : .6 }));
+      }
+      if (M <= 10 && !hc.length) g.appendChild(S("text", { x: X0 - 14, y: y + G.h / 2 + 10, "text-anchor": "end", "font-size": 28, "font-weight": 700, fill: "#5c7a99" }, n(N) + " × " + (r + 1)));
+      svg.appendChild(g);
+    }
+    if (nbRangees !== undefined) return;
+    // les paquets de 10 : un trait gris au-dessus de chaque dizaine complète
+    for (var b = 0; b + 10 <= N; b += 10) {
+      var xa = xCol(b), xb = xCol(b + 9) + G.c - 1.6;
+      if (avant(vc, b + 9) !== avant(vc, b)) continue;
+      svg.appendChild(S("line", { x1: xa + 1, y1: Y0 - 12, x2: xb - 1, y2: Y0 - 12, stroke: "#90a4ae", "stroke-width": 4, "stroke-linecap": "round" }));
+    }
+    // les repères (Karim, 7/11) : où tombent 10, 20, 30, et la fin ; ce qui reste après la dernière dizaine se voit
+    var marques = function (tot) { var L = []; for (var v = 10; v < tot; v += 10) L.push(v); L.push(tot); return L; };
+    if (N > 10) marques(N).forEach(function (v) {
+      var x = v >= N ? xCol(N - 1) + G.c : (xCol(v - 1) + G.c + xCol(v)) / 2, fin = v === N, coul = fin ? "#163a5f" : "#5c7a99";
+      svg.appendChild(S("line", { x1: x, y1: Y0 - (N <= 100 || fin || v % 50 === 0 ? 34 : 16), x2: x, y2: Y0 - 2, stroke: coul, "stroke-width": 3 }));
+      var serre = fin && N > 10 && N % 10 && N % 10 < 4;   // 72 : trop près de 70, il s'écrit à droite du trait
+      // au-delà de 100 (21/11 : nombres jusqu'à 400), un trait à chaque dizaine mais un nombre écrit tous les 50 seulement, sinon ils se chevauchent
+      var ecrit = fin || N <= 100 || (v % 50 === 0 && N - v >= 25);
+      if (ecrit) svg.appendChild(S("text", { x: serre ? x + 6 : x, y: Y0 - 40, "text-anchor": serre ? "start" : "middle", "font-size": 28, "font-weight": 800, fill: coul }, n(v)));
+    });
+    if (M > 10) marques(M).forEach(function (v) {
+      var y = v >= M ? yRang(M - 1) + G.h : (yRang(v - 1) + G.h + yRang(v)) / 2, fin = v === M, coul = fin ? "#163a5f" : "#5c7a99", xr = xCol(N - 1) + G.c;
+      svg.appendChild(S("line", { x1: xr + 2, y1: y, x2: xr + 30, y2: y, stroke: coul, "stroke-width": 3 }));
+      svg.appendChild(S("text", { x: xr + 36, y: y + 10, "font-size": 28, "font-weight": 800, fill: coul }, n(v)));
+    });
+    // les valeurs des morceaux (au-dessus, et à gauche pour les rangées coupées)
+    cs.forEach(function (s, ci) {
+      var xm = (xCol(s[0]) + xCol(s[1] - 1) + G.c) / 2;
+      if (vc.length) svg.appendChild(S("text", { x: xm, y: Y0 - (N > 10 ? 76 : 26), "text-anchor": "middle", "font-size": 42, "font-weight": 800, fill: COUL[ci % COUL.length][1] }, n(s[1] - s[0])));
+    });
+    if (hc.length) rs.forEach(function (s, ri) {
+      var ym = (yRang(s[0]) + yRang(s[1] - 1) + G.h) / 2;
+      svg.appendChild(S("text", { x: X0 - 18, y: ym + 14, "text-anchor": "end", "font-size": 42, "font-weight": 800, fill: "#5c7a99" }, n(s[1] - s[0])));
+    });
+    // les coupes
+    vc.forEach(function (k) { var x = xCol(k) - ECART / 2; svg.appendChild(S("line", { "class": "coupe", "data-v": k, x1: x, y1: Y0 - (N > 10 ? 6 : 60), x2: x, y2: yRang(M - 1) + G.h + 14, stroke: "#e53935", "stroke-width": 5, "stroke-dasharray": "12 8" })); });
+    hc.forEach(function (k) { var y = yRang(k) - ECART / 2; svg.appendChild(S("line", { "class": "coupe", "data-h": k, x1: X0 - 10, y1: y, x2: xCol(N - 1) + G.c + 14, y2: y, stroke: "#e53935", "stroke-width": 5, "stroke-dasharray": "12 8" })); });
+    // le produit de chaque morceau
+    var yb = yRang(M - 1) + G.h + 18;
+    blocs.forEach(function (bl, i) {
+      var x1 = xCol(bl.c[0]), x2 = xCol(bl.c[1] - 1) + G.c, coul = COUL[bl.k][1], txt;
+      var dedans = hc.length > 0, xm = (x1 + x2) / 2;
+      var t = S("text", { "text-anchor": "middle", "font-size": 0, "font-weight": 800, fill: coul });
+      t.appendChild(S("tspan", {}, n(bl.a) + " × " + n(bl.b) + " = "));
+      var trou = S("tspan", { id: "trou" + i, fill: bl.val !== undefined ? coul : "#78909c" }, bl.val !== undefined ? n(bl.val) + " ✓" : (i === iBloc && etape !== "anim" ? "?" : "…"));
+      t.appendChild(trou);
+      if (dedans) {   // rangées coupées : le produit dans le morceau, sur une étiquette
+        var y1 = yRang(bl.r[0]), y2 = yRang(bl.r[1] - 1) + G.h, fs = Math.max(22, Math.min(40, (x2 - x1) / 7, (y2 - y1) * 0.5));
+        t.setAttribute("x", xm); t.setAttribute("y", (y1 + y2) / 2 + fs * 0.35); t.setAttribute("font-size", fs);
+        svg.appendChild(S("rect", { x: xm - Math.min(x2 - x1, fs * 7) / 2, y: (y1 + y2) / 2 - fs * 0.75, width: Math.min(x2 - x1, fs * 7), height: fs * 1.5, rx: 10, fill: "rgba(255,255,255,.88)", stroke: i === iBloc && bl.val === undefined ? "#1f7a8c" : "none", "stroke-width": 3 }));
+      } else {   // seulement des colonnes : une accolade sous chaque morceau, le produit dessous (maquette)
+        var fs2 = Math.max(26, Math.min(46, (x2 - x1) / 6.2 + 8));
+        svg.appendChild(S("path", { d: "M" + x1 + " " + yb + " q0 20 20 20 H" + (xm - 20) + " q20 0 20 20 q0-20 20-20 H" + (x2 - 20) + " q20 0 20-20", fill: "none", stroke: coul, "stroke-width": 4 }));
+        t.setAttribute("x", Math.max(xm, 160)); t.setAttribute("y", yb + 40 + fs2 + (cs.length > 2 && i % 2 ? fs2 * 1.1 : 0)); t.setAttribute("font-size", fs2);
+        if (i === iBloc && bl.val === undefined && etape !== "anim") svg.appendChild(S("rect", { x: Math.max(xm, 160) - fs2 * 4, y: yb + 40 + (cs.length > 2 && i % 2 ? fs2 * 1.1 : 0) + fs2 * 0.1, width: fs2 * 8, height: fs2 * 1.25, rx: 12, fill: "#fff", stroke: "#1f7a8c", "stroke-width": 3 }));
+      }
+      svg.appendChild(t);
+    });
+    // la coupe en train d'être tracée
+    if (apercu) svg.appendChild(S("line", { x1: apercu.x1, y1: apercu.y1, x2: apercu.x2, y2: apercu.y2, stroke: "#e53935", "stroke-width": 4, "stroke-dasharray": "6 8", opacity: .6 }));
+  }
+
+  // ---------- couper au doigt ----------
+  var appui = null, apercu = null;
+  function pt(ev) { var svg = el("dessin"), p = svg.createSVGPoint(); p.x = ev.clientX; p.y = ev.clientY; return p.matrixTransform(svg.getScreenCTM().inverse()); }
+  function colDe(x) { var best = null, d = 1e9; for (var k = 1; k < N; k++) { var xx = xCol(k) - (avant(vc, k) > avant(vc, k - 1) ? ECART / 2 : G.c * 0.1 + (k % 10 === 0 ? G.g / 2 : 0)); if (Math.abs(xx - x) < d) { d = Math.abs(xx - x); best = k; } } return best; }
+  function rangDe(y) { var best = null, d = 1e9; for (var k = 1; k < M; k++) { var yy = yRang(k) - (avant(hc, k) > avant(hc, k - 1) ? ECART / 2 : G.h * 0.09); if (Math.abs(yy - y) < d) { d = Math.abs(yy - y); best = k; } } return best; }
+  el("dessin").addEventListener("pointerdown", function (ev) {
+    if (etape !== "couper") return; ev.preventDefault(); appui = pt(ev); apercu = null;
+    try { el("dessin").setPointerCapture(ev.pointerId); } catch (e) {}
+  });
+  el("dessin").addEventListener("pointermove", function (ev) {
+    if (!appui) return; var p = pt(ev), dx = p.x - appui.x, dy = p.y - appui.y;
+    if (Math.abs(dy) > 30 && Math.abs(dy) > Math.abs(dx)) { var k = colDe(appui.x); if (k) { var x = xCol(k) - G.c * 0.1; apercu = { x1: x, y1: Math.min(p.y, appui.y), x2: x, y2: Math.max(p.y, appui.y) }; } }
+    else if (onglet !== "1chiffre" && Math.abs(dx) > 30) { var r = rangDe(appui.y); if (r) { var yy = yRang(r) - G.h * 0.09; apercu = { x1: Math.min(p.x, appui.x), y1: yy, x2: Math.max(p.x, appui.x), y2: yy }; } }
+    else apercu = null;
+    dessiner();
+  });
+  el("dessin").addEventListener("pointerup", function (ev) {
+    if (!appui) return; var p = pt(ev), dx = p.x - appui.x, dy = p.y - appui.y, a = appui; appui = null; apercu = null;
+    var hTot = yRang(M - 1) + G.h - Y0, wTot = xCol(N - 1) + G.c - X0;
+    if (Math.abs(dy) > Math.max(40, hTot * 0.45) && Math.abs(dy) > Math.abs(dx)) couperCol(colDe(a.x));
+    else if (onglet !== "1chiffre" && Math.abs(dx) > Math.max(40, wTot * 0.4)) couperRang(rangDe(a.y));
+    else if (Math.hypot(dx, dy) < 12) defaire(a);
+    else dessiner();
+  });
+  function couperCol(k) { if (!k || vc.indexOf(k) !== -1 || vc.length >= 3) return dessiner(); vc.push(k); vc.sort(function (a, b) { return a - b; }); son("coupe"); recalculer(); }
+  // × 40 : 4 paquets de 10, donc 3 coupes dans l'onglet « × 20, × 30 » ; Karim, 21/11 : 89 × 50 = 5 paquets de 10 rangées (4 coupes), autant de coupes que de dizaines de rangées
+  function couperRang(k) { if (!k || hc.indexOf(k) !== -1 || hc.length >= Math.max(onglet === "dizaines" ? 3 : 2, Math.ceil(M / 10))) return dessiner(); hc.push(k); hc.sort(function (a, b) { return a - b; }); son("coupe"); recalculer(); }
+  function defaire(p) {   // toucher une coupe la défait
+    var i = vc.findIndex(function (k) { return Math.abs(xCol(k) - ECART / 2 - p.x) < 22; });
+    if (i !== -1) { vc.splice(i, 1); son("coupe"); return recalculer(); }
+    var j = hc.findIndex(function (k) { return Math.abs(yRang(k) - ECART / 2 - p.y) < 22; });
+    if (j !== -1) { hc.splice(j, 1); son("coupe"); return recalculer(); }
+    dessiner();
+  }
+
+  // ---------- les morceaux et leurs produits ----------
+  function recalculer() {
+    var cs = segs(vc, N), rs = segs(hc, M); blocs = [];
+    rs.forEach(function (rr, ri) { cs.forEach(function (cc, ci) { blocs.push({ c: cc, r: rr, a: cc[1] - cc[0], b: rr[1] - rr[0], k: (ci + ri * 2) % COUL.length, val: undefined }); }); });
+    blocs.sort(function (p, q) { return p.r[0] - q.r[0] || p.c[0] - q.c[0]; });
+    iBloc = 0; verdict(""); geo(); ecrireCalcul(); dessiner(); demanderBloc();
+    consigne(blocs.length > 1 ? "Calcule chaque morceau, ou recoupe." : n(N) + " × " + M + " : coupe " + (onglet !== "1chiffre" ? "" : n(N) + " ") + "là où le calcul devient <b>facile</b>.");
+  }
+  function demanderBloc() {
+    var bl = blocs[iBloc], t = el("trou" + iBloc); if (!bl || !t) return;
+    if (window.Calculette) Calculette.ouvrir({ cible: t, bon: bl.a * bl.b, format: n, siBon: function () { blocTrouve(); }, siFaux: function (x) { faux(bl.a + " × " + bl.b, x); } });
+    t.__bon = bl.a * bl.b;
+  }
+  function faux(calc, x) { erreurs++; son("non"); verdict("🤪 " + calc + " ne fait pas " + n(x) + ".", "faux"); }
+  function blocTrouve() {
+    var bl = blocs[iBloc]; bl.val = bl.a * bl.b; son("pose"); verdict("");
+    if (blocs.length === 1) return finir();
+    etape = "calcul"; iBloc++;
+    // un morceau pareil à un morceau déjà calculé (89 × 10, encore 89 × 10) : il est déjà connu, on ne le refait pas
+    while (iBloc < blocs.length && blocs.slice(0, iBloc).some(function (b) { return b.a === blocs[iBloc].a && b.b === blocs[iBloc].b; })) { blocs[iBloc].val = blocs[iBloc].a * blocs[iBloc].b; iBloc++; }
+    ecrireCalcul(); dessiner();
+    if (iBloc < blocs.length) { consigne("Calcule le morceau suivant."); demanderBloc(); return; }
+    if (blocs.every(function (b) { return b.val === blocs[0].val; })) return multiplier();
+    total = blocs[0].val; reste = blocs.slice(1).map(function (b) { return b.val; }); etape = "somme"; sommer();
+  }
+  function multiplier() {   // les morceaux sont pareils : on écrit 360 × 2, et on le calcule
+    var v = blocs[0].val, k = blocs.length, L, d, t;
+    etape = "fois"; lignes.push(["= " + n(v) + " × " + k, "vu"]); ecrireCalcul();
+    L = el("calcul"); d = document.createElement("div"); d.innerHTML = "= <span class='trou' id='trouSomme'>?</span>"; L.appendChild(d); ajuster(L, 54, 22);
+    consigne("Les morceaux sont pareils : calcule " + n(v) + " × " + k + ".");
+    t = el("trouSomme"); t.__bon = v * k;
+    if (window.Calculette) Calculette.ouvrir({ cible: t, bon: v * k, format: n, siBon: function () { t.removeAttribute("id"); finir(); }, siFaux: function (y) { faux(n(v) + " × " + k, y); } });
+  }
+  function sommer() {
+    var x = reste[0], L = el("calcul"), d = document.createElement("div");
+    d.innerHTML = "= <span class='trou' id='trouSomme'>?</span>" + reste.slice(1).map(function (y) { return " + " + n(y); }).join("");
+    L.appendChild(d); ajuster(L, 54, 22);
+    consigne(reste.length > 1 ? "Ajoute " + n(total) + " et " + n(x) + "." : "Ajoute les morceaux.");
+    var t = el("trouSomme"), bon = total + x; t.__bon = bon;
+    if (window.Calculette) Calculette.ouvrir({ cible: t, bon: bon, format: n, siBon: function () {
+      son("pose"); verdict(""); total += x; reste.shift(); t.removeAttribute("id");
+      if (reste.length) { lignes.push(["= " + n(total) + reste.map(function (y) { return " + " + n(y); }).join(""), "vu"]); ecrireCalcul(); sommer(); } else finir();
+    }, siFaux: function (y) { faux(n(total) + " + " + n(x), y); } });
+  }
+  function ajuster(box, max, min) { var f = max; box.style.fontSize = f + "px"; while (f > min && box.scrollWidth > box.clientWidth + 1) { f -= 2; box.style.fontSize = f + "px"; } }
+  function ecrireCalcul() {
+    var L = el("calcul"); L.innerHTML = "";
+    var base = [[n(N) + " × " + M, ""]];
+    if (blocs.length > 1) {
+      base.push(["= " + blocs.map(function (b) { return n(b.a) + " × " + n(b.b); }).join(" + "), "vu"]);
+      if (etape !== "couper") base.push(["= " + blocs.map(function (b) { return b.val !== undefined ? n(b.val) : "<span class='att'>…</span>"; }).join(" + "), "vu"]);
+    }
+    base.concat(lignes).forEach(function (l) { var d = document.createElement("div"); d.className = l[1]; d.innerHTML = l[0]; L.appendChild(d); });
+    ajuster(L, 54, 22);
+  }
+  function finir() {
+    etape = "fini"; son("bien"); if (window.Calculette) Calculette.fermer();
+    lignes.push(["= " + n(N * M), "fin"]); ecrireCalcul(); dessiner();
+    consigne(n(N) + " × " + M + " = <span class='res'>" + n(N * M) + "</span>");
+    score++; majScore(); verdict(erreurs ? "✅" : "✅ Bravo !", "bien"); el("btnSuivant").hidden = false;
+  }
+
+  // ---------- un nouveau calcul : les rangées arrivent une à une ----------
+  function nouveau(choisi) {
+    minuteurs.forEach(clearTimeout); minuteurs = [];
+    var L = LISTES[cle()], c = choisi || L[idx % L.length]; N = c[0]; M = c[1];
+    vc = []; hc = []; blocs = []; iBloc = 0; erreurs = 0; lignes = []; etape = "anim";
+    if (window.Calculette) Calculette.fermer();
+    verdict(""); el("btnSuivant").hidden = true; geo();
+    consigne(n(N) + " × " + M + " : " + M + " rangées de " + n(N) + "…"); el("calcul").innerHTML = "";
+    var pas = Math.max(60, Math.min(300, 2400 / M));
+    for (var r = 1; r <= M; r++) (function (r) { minuteurs.push(setTimeout(function () { dessiner(r); son("rangee"); }, r * pas)); })(r);
+    minuteurs.push(setTimeout(function () { etape = "couper"; recalculer(); }, (M + 1) * pas));
+  }
+
+  // ---------- 💡 la méthode, jamais le résultat ----------
+  el("btnIndice").addEventListener("click", function () {
+    if (etape === "couper" && blocs.length < 2) return verdict(onglet === "dizaines" ? "💡 Coupe les rangées en paquets de 10, de gauche à droite : 36 × 20 = 36 × 10 + 36 × 10, puis 360 × 2." : onglet !== "1chiffre" ? "💡 Coupe les rangées en 10 et le reste (35 × 12 = 35 × 10 + 35 × 2)." : "💡 Coupe pour avoir des dizaines rondes, ou un nombre dont tu connais le produit par cœur.", "indice");
+    if (etape === "couper" || etape === "calcul") { var b = blocs[iBloc]; return verdict(b && b.a % 10 === 0 ? "💡 " + b.a + " × " + b.b + ", c'est " + (b.a / 10) + " × " + b.b + " dizaines." : "💡 Cherche dans les tables, ou recoupe ce morceau.", "indice"); }
+    if (etape === "somme") return verdict("💡 Ajoute les centaines, puis les dizaines, puis les unités.", "indice");
+    if (etape === "fois") { var v = blocs[0].val; return verdict("💡 " + n(v) + " × " + blocs.length + ", c'est " + blocs.map(function () { return n(v); }).join(" + ") + ".", "indice"); }
+  });
+  // ---------- ✏️ mon calcul ----------
+  var saisie = "", reponses = [], DEM = [["Le nombre (jusqu'à 400)", 400], ["Combien de rangées ? (2 à 60)", 60]];   // Karim, 21/11 : « on ne peut aller que jusqu'à 25 » → 60 rangées, nombre jusqu'à 400
+  function majPave() { el("paveEcran").textContent = saisie ? n(+saisie) : ""; }
+  el("btnPerso").addEventListener("click", function () { reponses = []; saisie = ""; majPave(); el("paveTitre").textContent = DEM[0][0]; el("fondPave").hidden = false; });
+  el("paveAnnuler").addEventListener("click", function () { el("fondPave").hidden = true; });
+  el("touches").addEventListener("click", function (e) {
+    var b = e.target.closest("button"); if (!b) return; var dm = DEM[reponses.length];
+    if (b.dataset.t === "eff") { saisie = saisie.slice(0, -1); majPave(); return; }
+    if (b.dataset.t === "ok") {
+      var v = +saisie; if (!v || v < 2 || v > dm[1]) { var pe = el("paveEcran"); pe.classList.remove("secoue"); void pe.offsetWidth; pe.classList.add("secoue"); return; }
+      reponses.push(v); saisie = ""; majPave();
+      if (reponses.length < 2) { el("paveTitre").textContent = DEM[1][0]; return; }
+      el("fondPave").hidden = true;
+      if (reponses[1] >= 10 && onglet === "1chiffre") { onglet = "2chiffres"; document.querySelectorAll("#onglets button[data-onglet]").forEach(function (b) { b.classList.toggle("actif", b.dataset.onglet === onglet); }); el("niveaux").style.visibility = "hidden"; }   // 10 rangées ou plus : on peut aussi couper les rangées
+      nouveau([reponses[0], reponses[1]]); return;
+    }
+    if (saisie.length >= String(dm[1]).length || (saisie === "" && b.textContent === "0")) return;
+    saisie += b.textContent; majPave();
+  });
+  el("btnSuivant").addEventListener("click", function () { idx++; nouveau(); });
+  el("btnSon").addEventListener("click", function () { sonActif = !sonActif; el("btnSon").textContent = sonActif ? "🔊" : "🔇"; });
+  function lancer() {
+    score = 0; idx = 0;
+    document.querySelectorAll("#onglets button[data-onglet]").forEach(function (b) { b.classList.toggle("actif", b.dataset.onglet === onglet); });
+    document.querySelectorAll("#niveaux button").forEach(function (b) { b.classList.toggle("actif", b.dataset.niveau === niveau); });
+    el("niveaux").style.visibility = onglet !== "1chiffre" ? "hidden" : "";
+    majScore(); nouveau();
+  }
+  document.querySelectorAll("#onglets button[data-onglet]").forEach(function (b) { b.addEventListener("click", function () { onglet = b.dataset.onglet; lancer(); }); });
+  document.querySelectorAll("#niveaux button").forEach(function (b) { b.addEventListener("click", function () { niveau = b.dataset.niveau; onglet = "1chiffre"; lancer(); }); });
+  function lireHash() {   // #1chiffre-100, #1chiffre-centaines, #dizaines, #2chiffres
+    var h = decodeURIComponent(location.hash.slice(1)).split("-");
+    if (h[0] === "2chiffres" || h[0] === "dizaines") onglet = h[0]; else if (h[0] === "1chiffre") { onglet = "1chiffre"; if (h[1] === "centaines" || h[1] === "100") niveau = h[1]; }
+    lancer();
+  }
+  window.addEventListener("hashchange", lireHash);
+  lireHash();
+  window.__rangees = {
+    etat: function () { var t = document.getElementById("trouSomme") || document.getElementById("trou" + iBloc);
+      return { onglet: onglet, niveau: niveau, N: N, M: M, vc: vc.slice(), hc: hc.slice(), etape: etape, blocs: blocs.map(function (b) { return [b.a, b.b, b.val]; }), iBloc: iBloc,
+        attendu: etape === "fini" || !t ? null : t.__bon, calcul: [].map.call(el("calcul").children, function (d) { return d.textContent.replace(/\s+/g, " ").trim(); }), score: score, listes: LISTES }; },
+    xCoupe: function (k) { var svg = el("dessin"), p = svg.createSVGPoint(); p.x = xCol(k) - G.c * 0.1; p.y = Y0; var q = p.matrixTransform(svg.getScreenCTM()); p.y = yRang(M - 1) + G.h; var q2 = p.matrixTransform(svg.getScreenCTM()); return { x: q.x, y1: q.y - 20, y2: q2.y + 10 }; },
+    yCoupe: function (k) { var svg = el("dessin"), p = svg.createSVGPoint(); p.x = X0; p.y = yRang(k) - G.h * 0.09; var q = p.matrixTransform(svg.getScreenCTM()); p.x = xCol(N - 1) + G.c; var q2 = p.matrixTransform(svg.getScreenCTM()); return { y: q.y, x1: q.x - 10, x2: q2.x + 10 }; }
+  };
+})();
+</script>
+<!-- MENU -->
+<script>
+/* ==== LE MENU ☰ (GTH, 10/10) : interface épurée — à l'écran, seulement le titre, le score, la consigne et l'activité ====
+   Tout le reste (niveaux, onglets de méthode, ✏️, 🔊, 🖨️, aide…) part dans un menu ☰, ouvert d'un toucher.
+   Réglage par outil (CONF, posé par l'injecteur) : ancre = où mettre le bouton ☰ (sinon en haut à droite de l'écran) ;
+   cacher = ce qui part dans le menu (sinon : tout ce qui, dans « .barre .droite », n'est pas un score).
+   Installé par .claude/outils/menu-outil/injecter.py ; ne pas modifier dans l'outil, mais dans ce fichier. */
+(function () {
+  var CONF = {"cacher": [".barre .droite > :not(.score)"]};
+  var st = document.createElement("style");
+  st.textContent =
+    ".menu-btn{width:58px; height:58px; border-radius:16px; border:2px solid rgba(0,0,0,.15); background:#fff; color:#1f2a33; font-size:2rem; line-height:1; cursor:pointer; flex:none; padding:0;}" +
+    ".menu-btn.fixe{position:fixed; top:10px; right:12px; z-index:150; box-shadow:0 4px 14px rgba(0,0,0,.15);}" +
+    ".menu-btn.ouvert{background:#1f2a33; color:#fff;}" +
+    ".menu-panneau{position:fixed; top:76px; right:16px; z-index:200; background:#fff; color:#1f2a33; border-radius:18px; box-shadow:0 18px 50px rgba(0,0,0,.28); padding:16px 18px;" +
+    "  display:flex; flex-direction:column; align-items:flex-start; gap:12px; max-width:min(620px, 92vw); max-height:80vh; overflow:auto;}" +
+    ".menu-panneau[hidden]{display:none !important;}" +
+    ".menu-panneau h4{margin:0; font-family:sans-serif; font-size:.85rem; text-transform:uppercase; letter-spacing:.6px; color:#6d7a85;}" +
+    ".menu-panneau > *{position:static !important; margin:0 !important;}" +
+    ".menu-panneau > div,.menu-panneau > nav{display:flex; flex-wrap:wrap; gap:8px;}";
+  document.head.appendChild(st);
+  function installer() {
+    var autres = [];
+    if (CONF.cacher) CONF.cacher.forEach(function (s) { document.querySelectorAll(s).forEach(function (e) { if (autres.indexOf(e) === -1) autres.push(e); }); });
+    else { var d = document.querySelector(".barre .droite"); if (d) autres = Array.prototype.filter.call(d.children, function (e) { return !e.classList.contains("score"); }); }
+    if (!autres.length) return;
+    var btn = document.createElement("button"); btn.type = "button"; btn.className = "menu-btn"; btn.title = "Niveaux et réglages"; btn.textContent = "☰";
+    var pan = document.createElement("div"); pan.className = "menu-panneau"; pan.hidden = true;
+    var t = document.createElement("h4"); t.textContent = "Niveaux et réglages"; pan.appendChild(t);
+    autres.forEach(function (e) { pan.appendChild(e); });
+    var ancre = document.querySelector(CONF.ancre || ".barre .droite");
+    if (ancre) ancre.appendChild(btn); else { btn.classList.add("fixe"); document.body.appendChild(btn); }
+    document.body.appendChild(pan);
+    function ouvrir(o) { pan.hidden = !o; btn.classList.toggle("ouvert", o); }
+    btn.addEventListener("click", function (e) { e.stopPropagation(); ouvrir(pan.hidden); });
+    // un niveau choisi, ou une fenêtre ouverte (✏️, 🖨️) : le menu se referme ; on garde le menu ouvert pour choisir un type de jeu
+    pan.addEventListener("click", function (e) { var b = e.target.closest("button"); if (b && !b.closest(CONF.garderOuvert || ".types")) setTimeout(function () { ouvrir(false); }, 120); });
+    document.addEventListener("pointerdown", function (e) { if (!pan.hidden && !pan.contains(e.target) && e.target !== btn) ouvrir(false); });
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", installer); else installer();
+})();
+</script>
+<!-- /MENU -->
+<!-- INDICE-COTE -->
+<script>
+/* 💡 sur le côté (Karim, 21/10) : dans les jeux qui ont un bouton « 💡 Indice » (.btn-indice), le bouton devient une ampoule seule,
+   collée au bord droit de l'écran, à mi-hauteur ; l'indice s'ouvre dans une bulle à côté d'elle, jamais sous le jeu.
+   Le jeu garde son propre code : au toucher, on regarde quel texte il vient d'écrire (zone #indice, ou la ligne de message),
+   on le reprend dans la bulle et on remet la zone comme avant. Installé par injecter.py. */
+(function () {
+  var b = document.querySelector(".btn-indice"); if (!b) return;
+  var st = document.createElement("style");
+  st.textContent =
+    ".btn-indice.cote{position:fixed !important; right:18px; top:50%; transform:translateY(-50%); width:76px; height:76px; padding:0 !important; border-radius:50% !important;" +
+    " font-size:40px !important; line-height:1; z-index:60; margin:0 !important; display:flex; align-items:center; justify-content:center}" +
+    "#bulle-cote{position:fixed; right:110px; top:50%; transform:translateY(-50%); max-width:520px; background:#fff8c4; border:2px solid #d4b106; border-radius:18px;" +
+    " padding:16px 22px; font-size:26px; line-height:1.35; z-index:60; box-shadow:0 6px 18px rgba(0,0,0,.15); display:none}" +
+    "#bulle-cote::after{content:''; position:absolute; right:-14px; top:50%; margin-top:-12px; border:12px solid transparent; border-left:14px solid #d4b106; border-right:none}";
+  document.head.appendChild(st);
+  b.classList.add("cote"); b.textContent = "💡"; b.title = "Indice"; document.body.appendChild(b);
+  var bulle = document.createElement("div"); bulle.id = "bulle-cote"; document.body.appendChild(bulle);
+  var zones = function () { return Array.prototype.slice.call(document.querySelectorAll("#indice, .indice, #message, .message, #verdict, .verdict, #consigne-aide")); };
+  var avant = [], minuteur = null;
+  b.addEventListener("click", function () { avant = zones().map(function (z) { return [z, z.textContent, z.className]; }); }, true);   // avant le code du jeu
+  b.addEventListener("click", function () {
+    setTimeout(function () {
+      var txt = "";
+      avant.forEach(function (a) {
+        var z = a[0], neuf = z.textContent;
+        if (neuf !== a[1] && neuf.trim()) { txt = neuf; z.textContent = a[1]; z.className = a[2]; }
+      });
+      if (!txt) return;   // le jeu montre l'indice autrement : on le laisse faire
+      bulle.textContent = txt.replace(/^\s*💡\s*/, ""); bulle.style.display = "block";
+      clearTimeout(minuteur); minuteur = setTimeout(function () { bulle.style.display = "none"; }, 8000);
+    }, 0);
+  });
+  document.addEventListener("pointerdown", function (e) { if (e.target !== b && e.target !== bulle) bulle.style.display = "none"; });
+})();
+</script>
+<!-- /INDICE-COTE -->
+</body>
+</html>

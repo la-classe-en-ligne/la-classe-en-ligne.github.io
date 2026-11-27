@@ -1,0 +1,434 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>La clé des petites bêtes</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath d='M14 50 C10 30 24 12 44 10 C46 30 34 48 14 50Z' fill='%232e7d32'/%3E%3Ccircle cx='38' cy='30' r='13' fill='none' stroke='%235d4037' stroke-width='5'/%3E%3Cline x1='47' y1='40' x2='58' y2='54' stroke='%235d4037' stroke-width='6' stroke-linecap='round'/%3E%3C/svg%3E">
+<!--
+  🔎 La clé des petites bêtes — sciences P2, 📅 1 et 2 (GTH v2 : donnees/seances/sciences/sc-s1.js et sc-s2.js). Maquette validée par Karim le 21/10.
+  Univers : le carnet du naturaliste ; la bête descend le chemin de la clé jusqu'à son nom.
+  Onglets : « Je suis la clé » (niveaux La clé · Nouvelles photos) et « Je fabrique ». Liens : #cle, #photos, #fabrique.
+  Gestes : glisser la carte (ou la toucher, puis toucher la cible). Le dépôt vaut réponse ; une erreur fait remonter la carte, sans donner la réponse.
+  Contenu : pas de banque en sciences ; clé et questions écrites d'après le programme 2025 (CM1, annexe p. 9-10) : critères visibles,
+  deux réponses, un nom d'espèce au bout, aucun critère de couleur. Photos Wikimedia Commons (images/petites-betes/credits.js).
+  Fonctionne hors ligne (ENI sans internet, Chromebook des élèves).
+-->
+<style>
+:root{--papier:#f6f0df;--papier2:#fbf7ec;--encre:#2b2a26;--brun:#5d4037;--chemin:#a1887f;--vert:#2e7d32;--vertc:#e8f5e9;--rouge:#c62828;--rougec:#ffebee;--talbot:#1f7a8c;--sc:#6a1b9a}
+html,body{margin:0;height:100%;background:#3e3a33;overflow:hidden;font-family:Arial,Helvetica,sans-serif;color:var(--encre)}
+#scene{position:absolute;left:0;top:0;width:1920px;height:1080px;transform-origin:0 0;background:var(--papier);
+  background-image:repeating-linear-gradient(0deg,transparent 0 47px,rgba(93,64,55,.07) 47px 48px)}
+/* étage 1 : la barre du haut */
+#barre{height:84px;display:flex;align-items:center;gap:22px;padding:0 28px;background:#efe6cc;border-bottom:3px solid #d7c9a3}
+#barre h1{margin:0;font-size:34px;display:flex;align-items:center;gap:12px;color:var(--brun)}
+#barre h1 svg{width:52px;height:52px}
+.onglets{display:flex;gap:8px;margin-left:24px}
+.onglets button{font:inherit;font-size:24px;padding:10px 22px;border-radius:14px 14px 0 0;border:2px solid #cdbb8f;border-bottom:none;background:#e9dfc0;color:var(--brun);cursor:pointer}
+.onglets button.on{background:var(--papier);font-weight:700;color:var(--encre)}
+#coin{margin-left:auto;text-align:right;font-size:20px;line-height:1.45}
+#coin b{font-size:26px}
+#niveaux{display:flex;gap:6px;justify-content:flex-end;margin-top:2px}
+#niveaux button{font:inherit;font-size:16px;padding:3px 10px;border-radius:10px;border:1.5px solid #bfae83;background:#fbf7ec;cursor:pointer}
+#niveaux button.on{background:var(--talbot);color:#fff;border-color:var(--talbot)}
+/* étage 2 : la consigne */
+#consigne{height:96px;display:flex;align-items:center;justify-content:center;font-size:48px;font-weight:700;text-align:center;padding:0 30px}
+#consigne .q{color:var(--talbot)}
+/* étage 3 : le jeu */
+#jeu{position:absolute;left:0;right:0;top:184px;bottom:110px}
+#bas{position:absolute;left:0;right:0;bottom:0;height:110px;display:flex;align-items:center;justify-content:center;gap:30px}
+#indice{font:inherit;font-size:24px;padding:12px 26px;border-radius:30px;border:2px solid #d4b106;background:#fff8c4;cursor:pointer}
+#verdict{font-size:40px;font-weight:700;min-width:560px;text-align:center}
+#verdict.ok{color:var(--vert)} #verdict.ko{color:var(--rouge)}
+#suivant{font:inherit;font-size:28px;padding:14px 30px;border-radius:30px;border:none;background:var(--talbot);color:#fff;cursor:pointer;display:none}
+#bulle{position:absolute;left:50%;bottom:118px;transform:translateX(-50%);max-width:1100px;background:#fff8c4;border:2px solid #d4b106;border-radius:18px;padding:16px 26px;font-size:28px;display:none;box-shadow:0 6px 18px rgba(0,0,0,.15)}
+/* la photo */
+#photo{position:absolute;left:24px;top:10px;width:430px}
+#photo .cadre{background:#fff;padding:14px 14px 10px;border-radius:6px;box-shadow:0 8px 22px rgba(0,0,0,.18);transform:rotate(-1.2deg)}
+#photo img{width:100%;height:350px;object-fit:contain;background:#222;display:block}
+#photo .num{font-size:26px;text-align:center;margin-top:8px;font-weight:700;color:var(--brun)}
+#photo .cred{font-size:13px;color:#7a6e5a;text-align:center;margin-top:4px}
+/* l'arbre */
+#arbre{position:absolute;left:478px;right:10px;top:0;bottom:0}
+#arbre svg.liens{position:absolute;left:0;top:0;overflow:visible}
+.noeud{position:absolute;transform:translate(-50%,-50%);background:var(--papier2);border:3px solid var(--chemin);border-radius:16px;padding:7px 8px;font-size:18px;font-weight:700;text-align:center;width:196px;box-sizing:border-box;line-height:1.2}
+.noeud.feuille{background:var(--vertc);border-color:var(--vert);color:#1b5e20;width:132px;font-size:15.5px;padding:6px 4px}
+.noeud.feuille i{display:block;font-weight:400;font-size:11px;color:#5f6f60}
+.noeud.vu{border-color:var(--talbot)}
+.noeud.ici{border-color:var(--talbot);border-width:5px;box-shadow:0 0 0 6px rgba(31,122,140,.18);font-size:21px;width:230px}
+.noeud.trouve{background:#c8e6c9;box-shadow:0 0 0 8px rgba(46,125,50,.3);transform:translate(-50%,-50%) scale(1.12)}
+.noeud.secoue{animation:secoue .5s 2}
+@keyframes secoue{0%,100%{transform:translate(-50%,-50%)}25%{transform:translate(calc(-50% - 9px),-50%)}75%{transform:translate(calc(-50% + 9px),-50%)}}
+.panneau{position:absolute;transform:translate(-50%,-50%);width:118px;height:62px;border-radius:14px;font-size:28px;font-weight:700;display:flex;align-items:center;justify-content:center;border:4px dashed;z-index:3}
+.panneau.oui{background:var(--vertc);border-color:var(--vert);color:var(--vert)}
+.panneau.non{background:var(--rougec);border-color:var(--rouge);color:var(--rouge)}
+.panneau.survol{border-style:solid;transform:translate(-50%,-50%) scale(1.12)}
+.jeton{position:absolute;transform:translate(-50%,-50%);width:92px;height:92px;border-radius:50%;border:5px solid #fff;box-shadow:0 4px 14px rgba(0,0,0,.35);background-size:cover;background-position:center;z-index:5;cursor:grab;touch-action:none;transition:left .6s,top .6s}
+.jeton.choisi,.carte-q.choisi{outline:6px solid var(--talbot);outline-offset:3px}
+.jeton.vole{transition:none;cursor:grabbing;z-index:20}
+/* 26/11 (Karim : « en sciences je ne vois aucun catalogue, alors que c'est écrit dans le titre » ; « inventer une bête… ils vont faire de la merde ») */
+#cat{position:absolute;inset:0 30px;display:grid;grid-template-columns:repeat(5,1fr);grid-template-rows:1fr 1fr auto;gap:14px 18px}
+#cat .c{background:#fff;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,.15);padding:8px 8px 6px;text-align:center;display:flex;flex-direction:column;min-height:0}
+#cat .c img{width:100%;flex:1;min-height:0;object-fit:cover;border-radius:4px}
+#cat .c b{font-size:22px;margin-top:6px} #cat .c i{font-size:14px;color:#7a6e5a}
+#cat .hors{grid-column:1/-1;display:flex;align-items:center;gap:18px;font-size:26px;font-weight:700;color:var(--brun);padding-top:6px}
+#cat .hors .x{position:relative;width:150px;height:96px;border-radius:8px;overflow:hidden;border:4px dashed var(--rouge);cursor:pointer}
+#cat .hors .x img{width:100%;height:100%;object-fit:cover;filter:grayscale(.3)}
+#cat .hors .x span{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:56px;color:#fff;text-shadow:0 2px 6px #000}
+#inv{position:absolute;inset:0 30px;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:repeat(3,1fr);gap:14px 26px}
+#inv .eq{background:#fff;border-radius:14px;box-shadow:0 3px 10px rgba(0,0,0,.12);display:grid;grid-template-columns:150px 1fr;align-items:center;padding:8px 14px;gap:12px}
+#inv .eq h3{margin:0;font-size:26px;text-align:center} #inv .eq h3 button{display:block;margin:6px auto 0;font:inherit;font-size:26px;padding:6px 16px;border-radius:12px;border:0;background:var(--talbot);color:#fff;cursor:pointer}
+#inv .tir{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+#inv .crit{border:3px solid #cdbb8f;border-radius:12px;padding:6px;text-align:center;background:var(--papier2);min-height:96px;display:flex;flex-direction:column;justify-content:center}
+#inv .crit small{font-size:15px;color:#7a6e5a;text-transform:uppercase;letter-spacing:.5px} #inv .crit b{font-size:23px} #inv .crit .e{font-size:34px;line-height:1.1}
+#inv .crit.vide{border-style:dashed;color:#bcaaa4;font-size:40px}
+/* Je fabrique */
+#reserve{position:absolute;left:30px;top:0;bottom:0;width:470px;display:flex;flex-direction:column;gap:12px;overflow:hidden}
+#reserve h2{margin:4px 0 0;font-size:24px;color:var(--brun)}
+.carte-q{background:#fff;border:3px solid var(--talbot);border-radius:14px;padding:12px 16px;font-size:23px;font-weight:700;cursor:grab;touch-action:none;box-shadow:0 3px 8px rgba(0,0,0,.12);user-select:none}
+.carte-q.vole{position:fixed;z-index:30;cursor:grabbing;pointer-events:none}
+#chantier{position:absolute;left:530px;right:20px;top:0;bottom:0}
+.groupe{position:absolute;transform:translate(-50%,0);display:flex;flex-direction:column;align-items:center;gap:6px}
+.groupe .betes{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;max-width:580px}
+.bete{width:132px;text-align:center;font-size:16px;font-weight:700}
+.bete img{width:132px;height:100px;object-fit:cover;border-radius:8px;border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.25);display:block}
+.fente{border:4px dashed var(--talbot);border-radius:14px;padding:14px 18px;font-size:22px;color:var(--talbot);background:rgba(255,255,255,.6);min-width:300px;text-align:center}
+.fente.survol{background:#d9f0f3;border-style:solid}
+.qposee{background:#fff;border:3px solid var(--talbot);border-radius:14px;padding:10px 14px;font-size:21px;font-weight:700;max-width:320px;text-align:center}
+.seule{background:var(--vertc);border:3px solid var(--vert);border-radius:14px;padding:8px;text-align:center;font-weight:700;color:#1b5e20}
+.seule img{width:120px;height:86px;object-fit:cover;border-radius:8px;display:block;margin:0 auto 4px}
+/* 💡 sur le côté (21/10) : l'ampoule seule, au bout de la consigne ; la bulle à côté, jamais sous le jeu */
+#indice{position:absolute;right:26px;top:96px;width:82px;height:82px;padding:0;border-radius:50%;font-size:44px;line-height:1;z-index:20}
+#bulle{left:auto;right:124px;top:100px;bottom:auto;transform:none;max-width:640px;font-size:28px;z-index:20}
+</style>
+</head>
+<body>
+<div id="scene">
+  <div id="barre">
+    <h1><svg viewBox="0 0 64 64"><path d="M14 50 C10 30 24 12 44 10 C46 30 34 48 14 50Z" fill="#2e7d32"/><path d="M16 48 L40 18" stroke="#a5d6a7" stroke-width="2"/><circle cx="38" cy="30" r="13" fill="rgba(255,255,255,.35)" stroke="#5d4037" stroke-width="5"/><line x1="47" y1="40" x2="58" y2="54" stroke="#5d4037" stroke-width="6" stroke-linecap="round"/></svg>La clé des petites bêtes</h1>
+    <div class="onglets"><button data-o="catalogue">📒 Le catalogue</button><button data-o="cle">Je suis la clé</button><button data-o="fabrique">Je fabrique</button><button data-o="invente">🎲 J’invente</button></div>
+    <div id="coin"><div><span id="score-nom">Bêtes identifiées</span> : <b id="score">0</b> · 🏆 Record : <b id="record">0</b></div><div id="niveaux"><button data-n="cle">La clé</button><button data-n="photos">Nouvelles photos</button><button data-n="intruses">Les intruses</button></div></div>
+  </div>
+  <div id="consigne"></div>
+  <div id="jeu"></div>
+  <div id="bulle"></div>
+  <button id="indice" title="Indice">💡</button><div id="bas"><div id="verdict"></div><button id="suivant">▶ Bête suivante</button></div>
+</div>
+<script src="images/petites-betes/credits.js"></script>
+<script>
+"use strict";
+const IMG = n => "images/petites-betes/" + n + ".jpg";
+const credit = n => { const c = (window.CREDITS_BETES || {})[n]; return c ? "Photo : " + c.auteur + " · " + c.licence + " · Wikimedia Commons" : ""; };
+
+// ---------- les bêtes et la clé (la même que la clé papier des séances) ----------
+const NOMS = { gendarme: ["Gendarme", "Pyrrhocoris apterus"], cloporte: ["Cloporte commun", "Armadillidium vulgare"], coccinelle: ["Coccinelle à sept points", "Coccinella septempunctata"],
+  lombric: ["Lombric (ver de terre)", "Lumbricus terrestris"], epeire: ["Épeire diadème (une araignée)", "Araneus diadematus"], "perce-oreille": ["Perce-oreille", "Forficula auricularia"],
+  limace: ["Limace rouge", "Arion rufus"], fourmi: ["Fourmi noire des jardins", "Lasius niger"], iule: ["Iule (un mille-pattes)", "Tachypodoiulus niger"],
+  escargot: ["Escargot petit-gris", "Cornu aspersum"], vulcain: ["Papillon vulcain", "Vanessa atalanta"], abeille: ["Abeille domestique", "Apis mellifera"],
+  sauterelle: ["Grande sauterelle verte", "Tettigonia viridissima"], mante: ["Mante religieuse", "Mantis religiosa"] };
+const Q = (q, aide, oui, non) => ({ q: q.replace(" ?", " ?"), aide, oui, non }), F = id => ({ f: id });   // espace insécable : le « ? » reste avec son mot
+const CLE = Q("A-t-il des pattes ?", "Regarde sous le corps : vois-tu des pattes ?",
+  Q("A-t-il 6 pattes ?", "Compte les pattes d'un côté, puis de l'autre.",
+    Q("A-t-il des pinces au bout du corps ?", "Regarde le bout du corps, du côté opposé à la tête.", F("perce-oreille"),
+      Q("Son corps est-il rond comme une demi-boule ?", "Regarde la forme du dos : est-il bombé comme une demi-balle ?", F("coccinelle"),
+        Q("Son corps est-il fait de 3 parties bien séparées ?", "Regarde le corps : vois-tu 3 parties séparées (la tête, le milieu, l'arrière) ?", F("fourmi"), F("gendarme")))),
+    Q("A-t-il 8 pattes ?", "Compte les pattes d'un côté, puis de l'autre.", F("epeire"),
+      Q("Son corps est-il très long et fin, comme un fil ?", "Regarde la forme du corps : long comme un ver, ou court ?", F("iule"), F("cloporte")))),
+  Q("A-t-il une coquille ?", "Porte-t-il une petite maison dure sur le dos ?", F("escargot"),
+    Q("Son corps est-il fait d'anneaux bien visibles ?", "Regarde le corps de près : vois-tu des anneaux tout le long ?", F("lombric"), F("limace"))));
+// pour chaque bête, le bon chemin (calculé depuis la clé)
+const CHEMIN = {};
+(function chemins(n, ch) { if (n.f) { CHEMIN[n.f] = ch; return; } chemins(n.oui, ch.concat("oui")); chemins(n.non, ch.concat("non")); })(CLE, []);
+const SERIES = {
+  cle: ["gendarme", "cloporte", "coccinelle", "lombric", "epeire", "perce-oreille", "limace", "fourmi", "iule", "escargot"].map(e => ({ esp: e, img: e })),
+  photos: [["cloporte", "cloporte-2"], ["epeire", "epeire-2"], ["escargot", "escargot-2"], ["perce-oreille", "perce-oreille-2"], ["limace", "limace-2"],
+    ["iule", "iule-2"], ["coccinelle", "coccinelle-2"], ["gendarme", "gendarme-2"], ["epeire", "epeire-3"], ["escargot", "escargot-3"]].map(([e, i]) => ({ esp: e, img: i }))
+};
+
+// ---------- Je fabrique : 10 groupes de 4 bêtes, des questions qui se voient (vraies pour les bêtes listées) et des questions qui ne vont pas ----------
+const QV = {
+  pattes: ["A-t-il des pattes ?", b => !["lombric", "limace", "escargot"].includes(b)],
+  six: ["A-t-il 6 pattes ?", b => ["gendarme", "coccinelle", "perce-oreille", "fourmi", "vulcain", "abeille", "sauterelle", "mante"].includes(b)],
+  huit: ["A-t-il 8 pattes ?", b => b === "epeire"], pinces: ["A-t-il des pinces au bout du corps ?", b => b === "perce-oreille"],
+  boule: ["Son corps est-il rond comme une demi-boule ?", b => b === "coccinelle"], fin: ["Son corps est-il fait de 3 parties bien séparées ?", b => b === "fourmi"],
+  long: ["Son corps est-il très long et fin, comme un fil ?", b => b === "iule" || b === "lombric"], coquille: ["A-t-il une coquille ?", b => b === "escargot"],
+  anneaux: ["Son corps est-il fait d'anneaux bien visibles ?", b => b === "lombric"], ailes: ["A-t-il de grandes ailes avec des dessins ?", b => b === "vulcain"],
+  arriere: ["A-t-il des pattes arrière très longues ?", b => b === "sauterelle"], crochets: ["Ses pattes avant sont-elles repliées en crochets ?", b => b === "mante"],
+  raye: ["Son corps est-il rayé ?", b => b === "abeille"]
+};
+const QX = ["Est-il joli ?", "Est-il gentil ?", "Vit-il dans un jardin ?", "Vit-il sous les pierres ?", "Pique-t-il ?", "Est-il rapide ?", "Mange-t-il des feuilles ?", "Fait-il peur ?"];
+const GROUPES = [
+  [["vulcain", "abeille", "sauterelle", "mante"], ["ailes", "arriere", "crochets", "raye", "six"]],
+  [["escargot", "limace", "lombric", "cloporte"], ["pattes", "coquille", "anneaux"]],
+  [["gendarme", "coccinelle", "perce-oreille", "fourmi"], ["pinces", "boule", "fin", "six"]],
+  [["epeire", "iule", "cloporte", "gendarme"], ["huit", "long", "six", "pattes"]],
+  [["escargot", "epeire", "perce-oreille", "vulcain"], ["pattes", "coquille", "huit", "pinces", "ailes"]],
+  [["lombric", "coccinelle", "fourmi", "epeire"], ["pattes", "boule", "fin", "huit", "anneaux"]],
+  [["limace", "coccinelle", "epeire", "sauterelle"], ["pattes", "boule", "huit", "arriere"]],
+  [["abeille", "fourmi", "mante", "escargot"], ["pattes", "coquille", "raye", "crochets"]],
+  [["cloporte", "perce-oreille", "vulcain", "lombric"], ["pattes", "pinces", "ailes", "anneaux", "six"]],
+  [["gendarme", "sauterelle", "escargot", "epeire"], ["pattes", "six", "huit", "arriere", "coquille"]]
+];
+
+// ---------- état, score, record ----------
+const etat = { onglet: "cle", niveau: "cle", i: 0, noeud: null, chemin: [], score: 0, g: 0 };
+const mem = { lire(k) { try { return +localStorage.getItem(k) || 0; } catch (e) { return 0; } }, ecrire(k, v) { try { localStorage.setItem(k, v); } catch (e) {} } };
+const cleRecord = () => "cle-betes-record-" + (etat.onglet === "fabrique" ? "fabrique" : etat.niveau);
+function afficheScore() {
+  document.getElementById("score").textContent = etat.score;
+  document.getElementById("record").textContent = mem.lire(cleRecord());
+  document.getElementById("score-nom").textContent = etat.onglet === "fabrique" ? "Clés réussies" : "Bêtes identifiées";
+}
+function marque() { etat.score++; if (etat.score > mem.lire(cleRecord())) mem.ecrire(cleRecord(), etat.score); afficheScore(); }
+const $ = id => document.getElementById(id);
+function verdict(t, cls) { const v = $("verdict"); v.textContent = t; v.className = cls || ""; }
+function consigne(html) { $("consigne").innerHTML = "<span>" + html + "</span>"; }   // une seule boîte : la ligne flexible mangeait les espaces
+function bulle(t) { const b = $("bulle"); b.textContent = t; b.style.display = "block"; clearTimeout(bulle.t); bulle.t = setTimeout(() => b.style.display = "none", 6000); }
+
+// ---------- les deux gestes : glisser, ou toucher la carte puis la cible ----------
+function rendGlissable(el, cibles, quandDepose, opts) {
+  opts = opts || {};
+  el.addEventListener("pointerdown", ev => {
+    ev.preventDefault();
+    const sx = ev.clientX, sy = ev.clientY, ech = echelle();
+    let bouge = false, survol = null, fantome = null;
+    const r0 = el.getBoundingClientRect();
+    const move = e => {
+      if (!bouge && Math.hypot(e.clientX - sx, e.clientY - sy) > 12) {
+        bouge = true;
+        if (opts.fantome) { fantome = el.cloneNode(true); fantome.classList.add("vole"); fantome.style.left = r0.left + "px"; fantome.style.top = r0.top + "px"; fantome.style.width = r0.width + "px"; document.body.appendChild(fantome); }
+        else el.classList.add("vole");
+      }
+      if (!bouge) return;
+      if (fantome) { fantome.style.left = (r0.left + e.clientX - sx) + "px"; fantome.style.top = (r0.top + e.clientY - sy) + "px"; }
+      else { el.style.left = (el._x + (e.clientX - sx) / ech) + "px"; el.style.top = (el._y + (e.clientY - sy) / ech) + "px"; }
+      const c = cibles().find(t => { const r = t.getBoundingClientRect(); return e.clientX > r.left && e.clientX < r.right && e.clientY > r.top && e.clientY < r.bottom; }) || null;
+      if (c !== survol) { survol && survol.classList.remove("survol"); survol = c; survol && survol.classList.add("survol"); }
+    };
+    const up = () => {
+      removeEventListener("pointermove", move); removeEventListener("pointerup", up);
+      survol && survol.classList.remove("survol"); fantome && fantome.remove(); el.classList.remove("vole");
+      if (!bouge) {   // un toucher : on choisit la carte, on touchera la cible ensuite
+        document.querySelectorAll(".choisi").forEach(x => x !== el && x.classList.remove("choisi"));
+        el.classList.toggle("choisi"); choix.el = el.classList.contains("choisi") ? el : null; choix.f = quandDepose; return;
+      }
+      if (!fantome) { el.style.left = el._x + "px"; el.style.top = el._y + "px"; }
+      if (survol) quandDepose(survol);
+    };
+    addEventListener("pointermove", move); addEventListener("pointerup", up);
+  });
+}
+const choix = { el: null, f: null };
+function cibleTouchable(t) {   // toucher la cible après avoir choisi la carte
+  t.addEventListener("pointerup", () => { if (!choix.el) return; const f = choix.f; choix.el.classList.remove("choisi"); choix.el = null; f(t); });
+}
+const echelle = () => +($("scene").dataset.ech || 1);
+
+// ---------- Onglet 1 : Je suis la clé ----------
+const POS = new Map();
+function placer(n, prof, cols) { n.prof = prof; if (n.f) { n.col = cols.c++; return; } placer(n.non, prof + 1, cols); placer(n.oui, prof + 1, cols); n.col = (n.oui.col + n.non.col) / 2; }
+placer(CLE, 0, { c: 0 });
+function demarreCle() {
+  etat.i = 0; etat.score = 0; afficheScore(); nouvelleBete();
+}
+function nouvelleBete() {
+  const serie = SERIES[etat.niveau], b = serie[etat.i % serie.length];
+  etat.bete = b; etat.noeud = CLE; etat.chemin = []; etat.erreurs = 0; $("bulle").style.display = "none";
+  $("suivant").style.display = "none"; verdict("");
+  const jeu = $("jeu"); jeu.innerHTML = "";
+  jeu.insertAdjacentHTML("beforeend", '<div id="photo"><div class="cadre"><img src="' + IMG(b.img) + '" alt="la bête à identifier"><div class="num">Bête ' + (etat.i % serie.length + 1) + ' sur ' + serie.length + '</div><div class="cred">' + credit(b.img) + '</div></div></div><div id="arbre"></div>');
+  dessineArbre();
+}
+function dessineArbre() {
+  const A = $("arbre"), W = A.clientWidth, H = A.clientHeight;
+  const dx = (W - 190) / 9, x0 = 95, dy = (H - 90) / 5, y0 = 46;
+  const X = n => x0 + n.col * dx, Y = n => y0 + n.prof * dy;
+  let svg = '<svg class="liens" width="' + W + '" height="' + H + '">';
+  const surChemin = new Set(); let m = CLE; surChemin.add(m); for (const c of etat.chemin) { m = m[c]; surChemin.add(m); }
+  let html = "";
+  (function liens(n) {
+    if (n.f) return;
+    for (const k of ["non", "oui"]) {
+      const e = n[k], vu = surChemin.has(n) && surChemin.has(e);
+      svg += '<path d="M' + X(n) + ',' + (Y(n) + 26) + ' C' + X(n) + ',' + ((Y(n) + Y(e)) / 2) + ' ' + X(e) + ',' + ((Y(n) + Y(e)) / 2) + ' ' + X(e) + ',' + (Y(e) - 26) + '" fill="none" stroke="' + (vu ? "#1f7a8c" : "#bcaaa4") + '" stroke-width="' + (vu ? 9 : 4) + '" stroke-dasharray="' + (vu ? "none" : "10 8") + '" stroke-linecap="round"/>';
+      liens(e);
+    }
+  })(CLE);
+  (function noeuds(n) {
+    const cls = n.f ? "noeud feuille" : "noeud" + (n === etat.noeud ? " ici" : surChemin.has(n) ? " vu" : "");
+    html += '<div class="' + cls + (n.f && n === etat.noeud ? " trouve" : "") + '" style="left:' + X(n) + 'px;top:' + Y(n) + 'px" data-k="' + (n.f || n.q) + '">' + (n.f ? NOMS[n.f][0] + "<i>" + NOMS[n.f][1] + "</i>" : n.q) + '</div>';
+    if (!n.f) { noeuds(n.oui); noeuds(n.non); }
+  })(CLE);
+  svg += "</svg>";
+  A.innerHTML = svg + html;
+  const n = etat.noeud;
+  if (!n.f) {
+    // les deux panneaux sous la question, vers chaque branche
+    for (const k of ["non", "oui"]) {
+      const e = n[k], px = X(n) + (X(e) - X(n)) * 0.42, py = Y(n) + (Y(e) - Y(n)) * 0.48;
+      A.insertAdjacentHTML("beforeend", '<div class="panneau ' + k + '" data-r="' + k + '" style="left:' + px + 'px;top:' + py + 'px">' + k.toUpperCase() + '</div>');
+    }
+    consigne('Regarde la bête, glisse-la vers OUI ou NON : <span class="q">' + n.q + '</span>');
+  }
+  if (n.f) return;   // arrivée : la case du nom s'allume, la grande photo reste à gauche ; pas de jeton qui cacherait une étiquette
+  const jt = document.createElement("div");
+  jt.className = "jeton"; jt.style.backgroundImage = "url('" + IMG(etat.bete.img) + "')";
+  // à gauche de la question en cours
+  jt._x = X(n) - 185; jt._y = Y(n) - 22; jt.style.left = jt._x + "px"; jt.style.top = jt._y + "px";
+  A.appendChild(jt);
+  const panneaux = () => [...A.querySelectorAll(".panneau")];
+  rendGlissable(jt, panneaux, p => repond(p.dataset.r));
+  panneaux().forEach(cibleTouchable);
+}
+function repond(r) {
+  const bon = CHEMIN[etat.bete.esp][etat.chemin.length];
+  if (r !== bon) {
+    etat.erreurs++;
+    verdict("🤪 Regarde encore la bête.", "ko");
+    const q = [...document.querySelectorAll(".noeud.ici")][0]; if (q) { q.classList.remove("secoue"); void q.offsetWidth; q.classList.add("secoue"); }
+    return;
+  }
+  verdict("");
+  etat.chemin.push(r); etat.noeud = etat.noeud[r];
+  dessineArbre();
+  if (etat.noeud.f && etat.bete.intrus) {
+    consigne('La clé dit : <span class="q">' + NOMS[etat.noeud.f][0] + '</span>… mais c’est : <span class="q" style="color:#c62828">' + NOMS[etat.bete.esp][0] + '</span>');
+    verdict("❌ La clé s’est trompée : cette bête n’est pas dans son catalogue.", "ko");
+    $("suivant").style.display = "inline-block"; return;
+  }
+  if (etat.noeud.f) {
+    marque();
+    consigne('C\'est : <span class="q">' + NOMS[etat.noeud.f][0] + '</span>');
+    verdict(etat.erreurs ? "✅ Trouvé !" : "✅ Trouvé du premier coup !", "ok");
+    $("suivant").style.display = "inline-block";
+  }
+}
+
+// ---------- Onglet 2 : Je fabrique ----------
+function demarreFabrique() { etat.g = 0; etat.score = 0; afficheScore(); nouveauGroupe(); }
+function nouveauGroupe() {
+  const [betes, bonnes] = GROUPES[etat.g % GROUPES.length];
+  const mauvaises = QX.slice().sort(() => Math.random() - .5).slice(0, 2);
+  etat.arbreF = { betes: betes.slice() };
+  etat.cartes = bonnes.map(k => ({ k, t: QV[k][0] })).concat(mauvaises.map(t => ({ k: null, t }))).sort(() => Math.random() - .5);
+  $("suivant").style.display = "none"; verdict("");
+  dessineFabrique();
+}
+function feuillesF(n, acc) { if (n.q) { feuillesF(n.oui, acc); feuillesF(n.non, acc); } else acc.push(n); return acc; }
+function dessineFabrique() {
+  const jeu = $("jeu"); jeu.innerHTML = '<div id="reserve"><h2>Les questions</h2></div><div id="chantier"></div>';
+  const R = $("reserve"), C = $("chantier");
+  etat.cartes.forEach(c => { if (c.posee) return; const d = document.createElement("div"); d.className = "carte-q"; d.textContent = c.t; d._c = c; R.appendChild(d); });
+  // mise en page : les groupes en colonnes, profondeur en lignes
+  const W = C.clientWidth, H = C.clientHeight, lignes = [];
+  const actif = feuillesF(etat.arbreF, []).find(n => n.betes.length > 1);
+  let col = 0;
+  (function place(n, prof) { n.prof = prof; if (n.q) { place(n.non, prof + 1); place(n.oui, prof + 1); n.col = (n.oui.col + n.non.col) / 2; } else { n.span = Math.max(1, n.betes.length > 1 ? n.betes.length / 2 : 1); n.col = col + n.span / 2 - 0.5; col += n.span; } })(etat.arbreF, 0);
+  // 26/11 (Karim : « les images sont minuscules ») : la hauteur des étages et la taille des photos suivent la place libre
+  let maxP = 0; (function pm(n) { maxP = Math.max(maxP, n.prof); if (n.q) { pm(n.oui); pm(n.non); } })(etat.arbreF);
+  const rowH = (H - 20) / (maxP + 1), qH = maxP ? Math.min(190, (H - 20 - 300) / maxP) : 0;   // les étages de questions serrés, le bas laissé aux photos
+  const total = Math.max(col, 1), X = n => (n.col + 0.5) / total * W, Y = n => 10 + n.prof * qH;
+  // 26/11, 2e passage (Karim : « images toujours trop petites ») : plus de plafond à 280 px ; 3 bêtes ou plus sur deux rangées, chaque photo prend sa part de la largeur ET de la hauteur
+  const taille = n => { const place = (n.span || 1) / total * W, nb = n.betes.length, rangs = nb > 2 ? 2 : 1, parRang = Math.ceil(nb / rangs);
+    const haut = (H - Y(n) - (n === actif ? 90 : 20)) / rangs - 44, larg = place / parRang - 44, w = Math.max(120, Math.min(520, larg, haut / 0.75));
+    return [w, w * 0.75]; };
+  let svg = '<svg class="liens" width="' + W + '" height="' + H + '" style="position:absolute;left:0;top:0">';
+  (function liens(n) { if (!n.q) return; for (const k of ["non", "oui"]) { const e = n[k]; svg += '<line x1="' + X(n) + '" y1="' + (Y(n) + 70) + '" x2="' + X(e) + '" y2="' + (Y(e) - 4) + '" stroke="#a1887f" stroke-width="5"/>'; svg += '<text x="' + ((X(n) + X(e)) / 2) + '" y="' + ((Y(n) + 70 + Y(e)) / 2) + '" font-size="24" font-weight="700" fill="' + (k === "oui" ? "#2e7d32" : "#c62828") + '" text-anchor="middle">' + k.toUpperCase() + '</text>'; liens(e); } })(etat.arbreF);
+  C.innerHTML = svg + "</svg>";
+  (function dessine(n) {
+    const g = document.createElement("div"); g.className = "groupe"; g.style.left = X(n) + "px"; g.style.top = Y(n) + "px";
+    if (n.q) g.innerHTML = '<div class="qposee">' + n.q + '</div>';
+    else if (n.betes.length === 1) { const [w, h] = taille(n); g.innerHTML = '<div class="seule" style="width:' + (w + 16) + 'px;font-size:' + (w > 180 ? 22 : 16) + 'px"><img src="' + IMG(n.betes[0]) + '" alt="" style="width:' + w + 'px;height:' + h + 'px">' + NOMS[n.betes[0]][0] + '</div>'; }
+    else {
+      const [w, h] = taille(n);
+      g.innerHTML = '<div class="betes" style="max-width:none;width:' + (Math.ceil(n.betes.length / (n.betes.length > 2 ? 2 : 1)) * (w + 16)) + 'px">' + n.betes.map(b => '<div class="bete" style="width:' + w + 'px;font-size:' + (w > 180 ? 21 : 16) + 'px"><img src="' + IMG(b) + '" alt="" style="width:' + w + 'px;height:' + h + 'px">' + NOMS[b][0] + '</div>').join("") + '</div>' + (n === actif ? '<div class="fente">Glisse une question ici</div>' : "");
+    }
+    C.appendChild(g);
+    if (n.q) { dessine(n.oui); dessine(n.non); }
+  })(etat.arbreF);
+  if (!actif) {
+    consigne('Ta clé marche : <span class="q">une bête au bout de chaque chemin</span>');
+    verdict("✅ Clé réussie !", "ok"); marque();
+    $("suivant").textContent = "▶ Autres bêtes"; $("suivant").style.display = "inline-block";
+    return;
+  }
+  consigne('Glisse une question qui <span class="q">coupe ces ' + actif.betes.length + ' bêtes en deux</span>');
+  const fentes = () => [...C.querySelectorAll(".fente")];
+  R.querySelectorAll(".carte-q").forEach(d => rendGlissable(d, fentes, () => pose(d._c, actif), { fantome: true }));
+  fentes().forEach(cibleTouchable);
+}
+function pose(c, n) {
+  if (!c.k) { verdict("🤪 On ne le voit pas sur la bête.", "ko"); bulle("Une question de clé porte sur ce qu'on voit sur l'animal, et tout le monde y répond pareil."); return; }
+  const f = QV[c.k][1], oui = n.betes.filter(f), non = n.betes.filter(b => !f(b));
+  if (!oui.length || !non.length) { verdict("🤪 Elle ne sépare pas ces bêtes.", "ko"); bulle("Ici, toutes les bêtes répondent pareil à cette question : elles iraient toutes du même côté."); return; }
+  verdict("✅", "ok"); $("bulle").style.display = "none";
+  n.q = c.t; n.oui = { betes: oui }; n.non = { betes: non }; delete n.betes; c.posee = true;
+  dessineFabrique();
+}
+
+// ---------- 26/11 : 📒 Le catalogue, les intruses, 🎲 J'invente ----------
+// les intruses : le chemin honnête qu'elles prennent dans la clé (6 pattes, pas de pinces, pas en demi-boule, 3 parties) : la clé dit « fourmi », elle se trompe
+const INTRUS = { vulcain: ["oui", "oui", "non", "non", "oui"], abeille: ["oui", "oui", "non", "non", "oui"], sauterelle: ["oui", "oui", "non", "non", "oui"], mante: ["oui", "oui", "non", "non", "oui"] };
+Object.assign(CHEMIN, INTRUS);
+SERIES.intruses = ["vulcain", "abeille", "sauterelle", "mante"].map(e => ({ esp: e, img: e, intrus: true }));
+const CATALOGUE = ["gendarme", "cloporte", "coccinelle", "lombric", "epeire", "perce-oreille", "limace", "fourmi", "iule", "escargot"];
+function demarreCatalogue() {
+  consigne('Les 10 bêtes que <span class="q">notre clé</span> connaît');
+  verdict(""); $("suivant").style.display = "none";
+  $("jeu").innerHTML = '<div id="cat">' + CATALOGUE.map(e => '<div class="c"><img src="' + IMG(e) + '" alt=""><b>' + NOMS[e][0] + '</b><i>' + NOMS[e][1] + '</i></div>').join("")
+    + '<div class="hors">Pas dans le catalogue :' + SERIES.intruses.map(b => '<div class="x" data-e="' + b.esp + '"><img src="' + IMG(b.img) + '" alt=""><span>?</span></div>').join("")
+    + '<span style="font-weight:400;font-size:22px">→ je touche une bête : elle passe dans la clé</span></div></div>';
+  document.querySelectorAll("#cat .x").forEach(x => x.onclick = () => { etat.i = SERIES.intruses.findIndex(b => b.esp === x.dataset.e); ouvre("cle", "intruses", true); });
+}
+// J'invente : chaque équipe tire ses caractères ; la bête dessinée doit les montrer (ce qu'on voit, pas « gentille » ou « jolie »)
+const TIRAGE = [
+  ["Pattes", [["🚫", "pas de pattes"], ["6️⃣", "6 pattes"], ["8️⃣", "8 pattes"], ["💯", "plus de 20 pattes"]]],
+  ["Son corps", [["🐛", "fait d’anneaux"], ["🐜", "en 3 parties"], ["🐞", "rond comme une demi-boule"], ["〰️", "long et fin comme un fil"]]],
+  ["En plus", [["🐚", "une coquille"], ["🦋", "des ailes"], ["✂️", "des pinces au bout du corps"], ["📡", "de très longues antennes"], ["👀", "des yeux au bout de tiges"]]],
+  ["Elle vit", [["⛰️", "sous les pierres"], ["🕳️", "dans la terre"], ["🍃", "sur les feuilles"], ["💧", "au bord de la mare"]]]
+];
+const EQUIPES = ["🦊 Renards", "🦉 Chouettes", "🐬 Dauphins", "🐻 Ours", "🐸 Grenouilles", "🐝 Abeilles"];
+function demarreInvente() {
+  consigne('J’invente une bête : <span class="q">elle montre ce que mon équipe a tiré</span>');
+  verdict(""); $("suivant").style.display = "none";
+  let T = {}; try { T = JSON.parse(localStorage.getItem("cle-betes-tirages") || "{}"); } catch (e) {}
+  $("jeu").innerHTML = '<div id="inv">' + EQUIPES.map((q, k) => '<div class="eq"><h3>' + q + '<button data-k="' + k + '">🎲</button></h3><div class="tir">'
+    + TIRAGE.map((t, j) => T[k] ? '<div class="crit"><small>' + t[0] + '</small><span class="e">' + t[1][T[k][j]][0] + '</span><b>' + t[1][T[k][j]][1] + '</b></div>' : '<div class="crit vide">?</div>').join("") + '</div></div>').join("") + '</div>';
+  document.querySelectorAll("#inv button").forEach(b => b.onclick = () => { T[b.dataset.k] = TIRAGE.map(t => Math.floor(Math.random() * t[1].length));
+    try { localStorage.setItem("cle-betes-tirages", JSON.stringify(T)); } catch (e) {} demarreInvente(); });
+}
+
+// ---------- onglets, niveaux, indice, mise à l'échelle ----------
+function ouvre(o, niv, garder) {
+  $("bulle").style.display = "none";
+  etat.onglet = o; if (niv) etat.niveau = niv;
+  document.querySelectorAll(".onglets button").forEach(b => b.classList.toggle("on", b.dataset.o === o));
+  document.querySelectorAll("#niveaux button").forEach(b => b.classList.toggle("on", b.dataset.n === etat.niveau));
+  $("niveaux").style.visibility = o === "cle" ? "visible" : "hidden";
+  $("suivant").textContent = o === "cle" ? "▶ Bête suivante" : "▶ Autres bêtes";
+  history.replaceState(null, "", "#" + (o === "cle" ? etat.niveau : o));
+  $("indice").style.display = o === "catalogue" || o === "invente" ? "none" : "";
+  $("niveaux").style.visibility = o === "cle" ? "visible" : "hidden";
+  if (o === "catalogue") return demarreCatalogue();
+  if (o === "invente") return demarreInvente();
+  if (o === "cle" && garder) { etat.score = 0; afficheScore(); return nouvelleBete(); }
+  o === "cle" ? demarreCle() : demarreFabrique();
+}
+document.querySelectorAll(".onglets button").forEach(b => b.onclick = () => ouvre(b.dataset.o));
+document.querySelectorAll("#niveaux button").forEach(b => b.onclick = () => ouvre("cle", b.dataset.n));
+$("suivant").onclick = () => { if (etat.onglet === "cle") { etat.i++; nouvelleBete(); } else { etat.g++; nouveauGroupe(); } };
+$("indice").onclick = () => {
+  if (etat.onglet === "cle") bulle(etat.noeud && !etat.noeud.f ? etat.noeud.aide + " Réponds avec ce que tu vois sur la photo." : "Une question à la fois : je regarde la bête, je réponds oui ou non, je suis la flèche.");
+  else bulle("Une bonne question : on la voit sur la bête, on y répond par oui ou par non, et elle coupe le groupe en deux.");
+};
+function ajuste() {
+  const e = Math.min(innerWidth / 1920, innerHeight / 1080), s = $("scene");
+  s.style.transform = "scale(" + e + ")"; s.style.left = ((innerWidth - 1920 * e) / 2) + "px"; s.style.top = ((innerHeight - 1080 * e) / 2) + "px"; s.dataset.ech = e;
+}
+addEventListener("resize", ajuste); ajuste();
+function depuisLien() { const h = location.hash.slice(1); ouvre(["fabrique", "catalogue", "invente"].includes(h) ? h : "cle", ["photos", "intruses"].includes(h) ? h : "cle"); }
+addEventListener("hashchange", depuisLien);   // un lien #cle, #photos ou #fabrique ouvert alors que la page est déjà là
+depuisLien();
+</script>
+</body>
+</html>

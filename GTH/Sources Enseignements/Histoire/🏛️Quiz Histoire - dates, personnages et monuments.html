@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Quiz Histoire</title>
+<style>
+  :root {
+    --bg: #f6f0e4;
+    --card: #ffffff;
+    --ink: #2e2417;
+    --muted: #8a7f66;
+    --accent: #8a4a1f;
+    --accent2: #a3852a;
+    --good: #2f9e44;
+    --bad: #d9480f;
+    --border: #e3d9c2;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Segoe UI", Verdana, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    padding: 20px 16px 60px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  h1 { margin: 0 0 4px; text-align: center; font-size: clamp(1.4rem, 3vw, 2.1rem); }
+  .card {
+    background: var(--card);
+    border-radius: 18px;
+    box-shadow: 0 6px 24px rgba(60,40,10,0.10);
+    padding: 26px 30px;
+    max-width: 720px;
+    width: 100%;
+  }
+  .blockmenu { display: flex; gap: 6px; justify-content: center; margin-bottom: 14px; flex-wrap: wrap; }
+  .blockmenu button {
+    border: 1.5px solid var(--accent);
+    background: white;
+    color: var(--accent);
+    border-radius: 999px;
+    padding: 5px 11px;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 0.72rem;
+  }
+  .blockmenu button.active { background: var(--accent); color: white; }
+  .levelmenu { display: flex; gap: 6px; justify-content: center; margin-bottom: 10px; flex-wrap: wrap; }
+  .levelmenu button {
+    border: 1.5px solid var(--accent2);
+    background: white;
+    color: var(--accent2);
+    border-radius: 999px;
+    padding: 6px 16px;
+    font-weight: 700;
+    cursor: pointer;
+    font-size: 0.85rem;
+  }
+  .levelmenu button.active { background: var(--accent2); color: white; }
+  .progress { text-align: center; color: var(--muted); font-size: 0.9rem; margin-bottom: 6px; }
+  .question-title { text-align: center; font-size: 1.15rem; font-weight: 700; margin: 10px 0 12px; }
+  .choices { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  button.choice {
+    border: 2px solid var(--accent2);
+    background: white;
+    color: var(--accent2);
+    border-radius: 12px;
+    padding: 14px;
+    font-size: 1.05rem;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  button.choice:disabled { cursor: default; }
+  /* On glisse la réponse dans le cadre (plus de clic). */
+  button.choice { touch-action: none; cursor: grab; }
+  .cadre-reponse { margin: 4px auto 16px; min-height: 58px; max-width: 420px; border: 3px dashed var(--accent2); border-radius: 14px;
+    display: flex; align-items: center; justify-content: center; font-size: 1.3rem; font-weight: 800; color: var(--accent2); }
+  .cadre-reponse.survol { background: rgba(0,0,0,.05); border-style: solid; }
+  .vol-choix { position: fixed; z-index: 90; pointer-events: none; transform: scale(1.06); box-shadow: 0 10px 24px rgba(0,0,0,.25); }
+  .frise { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin: 10px 0 18px; }
+  .frise .place { min-width: 96px; min-height: 54px; border: 3px dashed var(--accent); border-radius: 12px; display: flex; align-items: center; justify-content: center;
+    font-weight: 800; padding: 4px 8px; color: var(--accent); position: relative; }
+  .frise .place::before { content: attr(data-n); position: absolute; top: -18px; font-size: .75rem; color: var(--muted); }
+  .frise .place.survol { background: rgba(0,0,0,.05); border-style: solid; }
+  .frise .place.remplie { border-style: solid; border-color: var(--good); background: var(--good); color: white; }
+  button.choice.correct { background: var(--good); border-color: var(--good); color: white; }
+  button.choice.wrong { background: var(--bad); border-color: var(--bad); color: white; }
+  .feedback { text-align: center; margin-top: 16px; font-size: 1rem; min-height: 1.6em; font-weight: 600; }
+  .feedback.good { color: var(--good); }
+  .feedback.bad { color: var(--bad); }
+  .nextrow { text-align: center; margin-top: 18px; }
+  button.next {
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    padding: 12px 24px;
+    font-weight: 700;
+    font-size: 1rem;
+    cursor: pointer;
+    display: none;
+  }
+  /* Photo de correction en plein écran : pas besoin de faire défiler pour la voir ni pour
+     atteindre « Suivant ». La légende rappelle si la réponse était juste. */
+  .reveal-image-card {
+    position: fixed; inset: 0; z-index: 100;
+    display: flex; flex-direction: column;
+    background: rgba(12, 18, 24, 0.96);
+    animation: reveal-in 0.25s ease;
+  }
+  @keyframes reveal-in { from { opacity: 0; } to { opacity: 1; } }
+  .reveal-image-card img { flex: 1 1 auto; min-height: 0; width: 100%; object-fit: contain; padding: 16px 16px 0; }
+  .reveal-image-caption {
+    flex: none; text-align: center; color: #fff; font-weight: 700;
+    font-size: clamp(1rem, 2.2vw, 1.5rem); padding: 14px 20px 86px;
+  }
+  button.next.next-coin {
+    display: inline-block;
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 14px 34px;
+    font-size: 1.25rem;
+    box-shadow: 0 4px 14px rgba(0,0,0,.45);
+  }
+  .recap { text-align: center; }
+  .recap h2 { color: var(--accent); }
+  .recap table { margin: 16px auto; border-collapse: collapse; }
+  .recap td, .recap th { padding: 6px 16px; }
+  button.restart {
+    margin-top: 14px;
+    margin-right: 6px;
+    background: var(--accent2);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    padding: 12px 24px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .credit { text-align: center; color: var(--muted); font-size: 0.68rem; margin-top: 26px; max-width: 620px; }
+
+  /* Écrans larges (vidéoprojecteur, grand moniteur) : utiliser l'espace disponible sur les côtés
+     — plus de choix par ligne, images de révélation plus grandes. Placé en fin de feuille pour
+     l'emporter sur les règles de base (.card/.choices) définies plus haut. */
+  @media (min-width: 1200px){
+    .card{ max-width: 1100px; }
+    .choices{ grid-template-columns: repeat(4, 1fr); }
+  }
+  @media (min-width: 1700px){
+    .card{ max-width: 1400px; }
+  }
+  /* Légende « façon Bing » : titre, qui / quand, ce que ça montre (images/legendes.js). */
+  .legende-bing { position: absolute; left: 24px; bottom: 150px; max-width: min(46%, 640px); background: rgba(0,0,0,.58); color: #fff; border-radius: 10px; padding: 10px 16px; text-align: left; z-index: 2; box-shadow: 0 4px 18px rgba(0,0,0,.35); }
+  .legende-bing b { display: block; font-size: clamp(1rem, 1.8vw, 1.35rem); }
+  .legende-bing i { display: block; font-style: normal; opacity: .78; font-size: clamp(.78rem, 1.25vw, 1rem); margin: 2px 0 5px; }
+  .legende-bing span { display: block; font-size: clamp(.85rem, 1.4vw, 1.1rem); line-height: 1.35; font-weight: 400; }
+</style>
+</head>
+<body>
+
+  <h1>🏛️ Quiz Histoire</h1>
+
+  <div class="card">
+    <div class="levelmenu" id="levelMenu"></div>
+    <div class="blockmenu" id="blockMenu"></div>
+    <div id="quizArea"></div>
+  </div>
+
+  <p class="credit">Repères du programme d'histoire CM1-CM2 (cycle 3) — Gaulois et Gallo-romains, les Mérovingiens et les Carolingiens, le temps des rois, la Révolution et l'Empire, le temps de la République. Dates et faits simplifiés pour un usage en classe.</p>
+
+<script src="images/legendes.js"></script>
+<script>
+  // Légende « façon Bing » de l'image (images/legendes.js), montrée seulement après la réponse.
+  function legendeBing(url) {
+    var L = (window.LEGENDES_IMAGES || {})[String(url).split("/").pop()];
+    if (!L) return null;
+    var d = document.createElement("div"); d.className = "legende-bing";
+    ["b", "i", "span"].forEach(function (t, k) { var e = document.createElement(t); e.textContent = L[k]; d.appendChild(e); });
+    return d;
+  }
+  "use strict";
+
+  // ==================================================================
+  // ---- Bancs de questions — programme CM1-CM2, réparties en 3 blocs ----
+  // Un banc par niveau et par bloc : Niveau 1 = incontournables, 2 = la suite, 3 = plus pointu.
+  // ==================================================================
+  const DP = "Wikimedia Commons — domaine public";
+
+  // ---------------- Niveau 1 : les incontournables ----------------
+  const DATES_N1 = [
+    { q: "En quelle année a eu lieu la prise de la Bastille, début de la Révolution française ?", a: "1789", choices: ["1789", "1515", "1892", "1945"], image: { url: "images/bastille.jpg", credit: "Wikimedia Commons — domaine public" } },
+    { q: "À quelle date célèbre-t-on la fête nationale française ?", a: "Le 14 juillet", choices: ["Le 14 juillet", "Le 11 novembre", "Le 8 mai", "Le 1er mai"], image: { url: "images/feux-artifice-14-juillet.jpg", credit: "Wikimedia Commons — CC BY 2.0" } },
+    { q: "En quelle année la Première Guerre mondiale a-t-elle commencé ?", a: "1914", choices: ["1914", "1918", "1939", "1945"], image: { url: "images/ww1.jpg", credit: "Wikimedia Commons — CC BY-SA 4.0" } },
+    { q: "En quelle année la Seconde Guerre mondiale a-t-elle commencé ?", a: "1939", choices: ["1939", "1914", "1789", "1918"], image: { url: "images/pologne-1939.jpg", credit: "Bundesarchiv, Bild 183-51909-0003 — Wikimedia Commons, CC BY-SA 3.0 DE" } },
+    { q: "En quelle année la Seconde Guerre mondiale s'est-elle terminée ?", a: "1945", choices: ["1945", "1918", "1939", "1958"], image: { url: "images/ww2.jpg", credit: "US Army — Wikimedia Commons, domaine public" } },
+    { q: "En quelle année les femmes ont-elles obtenu le droit de vote en France ?", a: "1944", choices: ["1944", "1789", "1918", "1981"] },
+    { q: "Vers quelle année l'école est-elle devenue gratuite, laïque et obligatoire en France ?", a: "1882", choices: ["1882", "1789", "1939", "1958"], image: { url: "images/jules-ferry.jpg", credit: "Wikimedia Commons — domaine public" } },
+  ];
+  const PERSONNAGES_N1 = [
+    { q: "Qui était le chef gaulois qui a résisté à Jules César et aux Romains ?", a: "Vercingétorix", choices: ["Vercingétorix", "Clovis", "Charlemagne", "Napoléon"], image: { url: "images/vercingetorix.jpg", credit: "Wikimedia Commons — domaine public (L. Royer)" } },
+    { q: "Quel roi des Francs s'est fait baptiser et a unifié un grand royaume, vers l'an 500 ?", a: "Clovis", choices: ["Clovis", "Charlemagne", "Louis XIV", "Henri IV"] },
+    { q: "Quel roi de France est surnommé le « Roi Soleil » ?", a: "Louis XIV", choices: ["Louis XIV", "Louis IX", "François Ier", "Henri IV"], image: { url: "images/louis14.jpg", credit: "Wikimedia Commons — domaine public (H. Rigaud)" } },
+    { q: "Qui est devenu empereur des Français après la Révolution ?", a: "Napoléon Bonaparte", choices: ["Napoléon Bonaparte", "Louis XIV", "Charlemagne", "Clovis"], image: { url: "images/napoleon-alpes.jpg", credit: "Wikimedia Commons — domaine public (J.-L. David)" } },
+    { q: "Quelle jeune fille a mené des batailles pour libérer la France pendant la guerre de Cent Ans ?", a: "Jeanne d'Arc", choices: ["Jeanne d'Arc", "Marie Curie", "Marianne", "Clovis"], image: { url: "images/jeanne-arc.jpg", credit: "Wikimedia Commons — Licence Ouverte" } },
+    { q: "Quel empereur du Moyen Âge a encouragé l'ouverture d'écoles dans les monastères ?", a: "Charlemagne", choices: ["Charlemagne", "Clovis", "Louis IX", "Napoléon"], image: { url: "images/charlemagne-statue.jpg", credit: "Wikimedia Commons — CC BY-SA 4.0" } },
+    { q: "Quel ministre a rendu l'école gratuite, laïque et obligatoire en France ?", a: "Jules Ferry", choices: ["Jules Ferry", "Napoléon Bonaparte", "Charlemagne", "Louis XIV"], image: { url: "images/jules-ferry-statue.jpg", credit: "Wikimedia Commons — CC BY-SA 4.0" } },
+  ];
+  const MONUMENTS_N1 = [
+    { q: "Quel monument parisien a été construit pour l'Exposition universelle de 1889 ?", a: "La tour Eiffel", choices: ["La tour Eiffel", "L'Arc de Triomphe", "Le Panthéon", "Notre-Dame"], image: { url: "images/eiffel.jpg", credit: "Wikimedia Commons — CC BY-SA 2.0" } },
+    { q: "Quelle prison parisienne, symbole de la royauté, a été prise le 14 juillet 1789 ?", a: "La Bastille", choices: ["La Bastille", "Le Louvre", "Notre-Dame", "Le Panthéon"], image: { url: "images/colonne-juillet.jpg", credit: "Wikimedia Commons — CC BY-SA 4.0" } },
+    { q: "Quel immense château, résidence du Roi Soleil, se trouve tout près de Paris ?", a: "Le château de Versailles", choices: ["Le château de Versailles", "Le Louvre", "Le Panthéon", "Notre-Dame"], image: { url: "images/versailles.jpg", credit: "Wikimedia Commons — CC BY 3.0" } },
+    { q: "Quelle cathédrale de Paris, célèbre pour ses vitraux, date du Moyen Âge et a été touchée par un incendie en 2019 ?", a: "Notre-Dame de Paris", choices: ["Notre-Dame de Paris", "Le Panthéon", "Le Louvre", "Le Mont-Saint-Michel"], image: { url: "images/notre-dame.jpg", credit: "Wikimedia Commons — CC BY-SA 3.0" } },
+    { q: "Quelle abbaye, construite sur un îlot rocheux, est un célèbre monument du Moyen Âge ?", a: "Le Mont-Saint-Michel", choices: ["Le Mont-Saint-Michel", "Le château de Versailles", "La tour Eiffel", "Le Panthéon"], image: { url: "images/mont-saint-michel.jpg", credit: "Wikimedia Commons — CC BY-SA 4.0" } },
+    { q: "Quel arc parisien a été construit sur ordre de Napoléon pour célébrer ses victoires ?", a: "L'Arc de Triomphe", choices: ["L'Arc de Triomphe", "La tour Eiffel", "Le Panthéon", "Notre-Dame"], image: { url: "images/arc-de-triomphe.jpg", credit: "Wikimedia Commons — CC BY-SA 3.0" } },
+  ];
+
+  // ---------------- Niveau 2 : la suite ----------------
+  const DATES_N2 = [
+    { q: "En quelle année Napoléon Bonaparte est-il devenu empereur des Français ?", a: "1804", choices: ["1804", "1789", "1815", "1715"], image: { url: "images/napoleon-sacre.jpg", credit: "Wikimedia Commons — domaine public (J.-L. David)" } },
+    { q: "Vers quelle époque vivait Clovis, roi des Francs ?", a: "Vers l'an 500", choices: ["Vers l'an 500", "Vers l'an 1500", "Vers l'an 1800", "Vers 100 avant J.-C."], image: { url: "images/clovis-bapteme.jpg", credit: "Wikimedia Commons — CC BY-SA 3.0" } },
+    { q: "En quelle année Charlemagne a-t-il été couronné empereur ?", a: "800", choices: ["800", "1500", "1789", "500"], image: { url: "images/charlemagne.jpg", credit: "Wikimedia Commons — domaine public (A. Dürer)" } },
+    { q: "Vers quelle année Jules César a-t-il conquis la Gaule ?", a: "Vers 52 avant J.-C.", choices: ["Vers 52 avant J.-C.", "Vers 500 après J.-C.", "Vers 1789", "Vers 1500"], image: { url: "images/cesar-buste.jpg", credit: "Wikimedia Commons — CC BY-SA 3.0" } },
+    { q: "Sous quel roi le château de Versailles a-t-il été construit, à la fin du XVIIe siècle ?", a: "Louis XIV", choices: ["Louis XIV", "Louis IX", "François Ier", "Henri IV"], image: { url: "images/galerie-glaces.jpg", credit: "Wikimedia Commons — CC BY-SA 3.0" } },
+    { q: "En quelle année la Première Guerre mondiale s'est-elle terminée (armistice du 11 novembre) ?", a: "1918", choices: ["1918", "1914", "1945", "1939"], image: { url: "images/armistice-1918.jpg", credit: DP } },
+  ];
+  const PERSONNAGES_N2 = [
+    { q: "Quel roi a signé l'édit de Nantes pour permettre aux protestants de pratiquer leur religion ?", a: "Henri IV", choices: ["Henri IV", "Louis XIV", "François Ier", "Louis IX"], image: { url: "images/henri4.jpg", credit: "Wikimedia Commons — domaine public (F. Pourbus)" } },
+    { q: "Quel roi, aussi appelé Saint Louis, est resté célèbre pour rendre la justice sous un chêne ?", a: "Louis IX", choices: ["Louis IX", "Louis XIV", "Henri IV", "François Ier"], image: { url: "images/louis9.jpg", credit: "Wikimedia Commons — domaine public (G. Rouget)" } },
+    { q: "Quelle scientifique française a reçu deux prix Nobel, en physique et en chimie ?", a: "Marie Curie", choices: ["Marie Curie", "Simone Veil", "Jeanne d'Arc", "Marianne"], image: { url: "images/marie-curie.jpg", credit: "Wikimedia Commons — domaine public" } },
+    { q: "Quelle femme politique française a œuvré pour le droit à l'IVG et a présidé le Parlement européen ?", a: "Simone Veil", choices: ["Simone Veil", "Marie Curie", "Jeanne d'Arc", "Marianne"] },
+    { q: "Quel roi de la Renaissance a fait venir Léonard de Vinci en France ?", a: "François Ier", choices: ["François Ier", "Louis XIV", "Henri IV", "Louis IX"], image: { url: "images/francois1.jpg", credit: "Wikimedia Commons — domaine public" } },
+    { q: "Quel roi de France a été guillotiné pendant la Révolution, en 1793 ?", a: "Louis XVI", choices: ["Louis XVI", "Louis XIV", "Henri IV", "Napoléon Bonaparte"], image: { url: "images/louis16.jpg", credit: DP + " (J.-S. Duplessis)" } },
+  ];
+  const MONUMENTS_N2 = [
+    { q: "Quel ancien palais royal, aujourd'hui un grand musée à Paris, abrite la Joconde ?", a: "Le Louvre", choices: ["Le Louvre", "Le Panthéon", "Versailles", "Notre-Dame"], image: { url: "images/louvre.jpg", credit: "Wikimedia Commons — CC BY 2.5" } },
+    { q: "Quel monument parisien rend hommage à de grandes personnalités françaises (Voltaire, Marie Curie, Victor Hugo...) ?", a: "Le Panthéon", choices: ["Le Panthéon", "Le Louvre", "Notre-Dame", "L'Arc de Triomphe"], image: { url: "images/pantheon.jpg", credit: "Wikimedia Commons — CC BY-SA 4.0" } },
+    { q: "Quel monument gallo-romain, encore visible aujourd'hui dans le sud de la France, servait aux spectacles ?", a: "Les arènes romaines", choices: ["Les arènes romaines", "Les pyramides", "Le Colisée de Rome", "La tour Eiffel"], image: { url: "images/arenes-nimes.jpg", credit: "Wikimedia Commons — domaine public" } },
+    { q: "Quel pont romain, encore debout dans le sud de la France, servait à transporter l'eau ?", a: "Le pont du Gard", choices: ["Le pont du Gard", "Le pont Neuf", "La tour Eiffel", "Le Mont-Saint-Michel"], image: { url: "images/pont-du-gard.jpg", credit: "Wikimedia Commons — CC BY-SA 3.0" } },
+    { q: "Quel château de la Loire, aux centaines de cheminées, a été construit sous François Ier ?", a: "Le château de Chambord", choices: ["Le château de Chambord", "Le château de Versailles", "Le Louvre", "La Bastille"], image: { url: "images/chambord.jpg", credit: "Wikimedia Commons — CC BY-SA 3.0" } },
+    { q: "Quelle cité du Moyen Âge, entourée d'une double muraille, se trouve dans le sud de la France ?", a: "La cité de Carcassonne", choices: ["La cité de Carcassonne", "Le château de Versailles", "Le Panthéon", "Le Louvre"], image: { url: "images/carcassonne.jpg", credit: "Wikimedia Commons — CC BY-SA 4.0" } },
+  ];
+
+  // ---------------- Niveau 3 : plus pointu ----------------
+  const DATES_N3 = [
+    { q: "En quelle année Christophe Colomb a-t-il atteint l'Amérique ?", a: "1492", choices: ["1492", "1515", "1789", "800"], image: { url: "images/colomb.jpg", credit: DP + " (R. del Ghirlandaio)" } },
+    { q: "En quelle année François Ier a-t-il remporté la bataille de Marignan ?", a: "1515", choices: ["1515", "1492", "1610", "1804"], image: { url: "images/marignan.jpg", credit: DP } },
+    { q: "En quelle année Hugues Capet est-il devenu roi des Francs ?", a: "987", choices: ["987", "800", "1515", "1789"], image: { url: "images/hugues-capet.jpg", credit: DP } },
+    { q: "En quelle année a été écrite la Déclaration des droits de l'homme et du citoyen ?", a: "1789", choices: ["1789", "1848", "1515", "1944"], image: { url: "images/ddhc.jpg", credit: DP } },
+    { q: "En quelle année l'esclavage a-t-il été définitivement aboli en France ?", a: "1848", choices: ["1848", "1789", "1905", "1804"], image: { url: "images/abolition-1848.jpg", credit: DP + " (Archives nationales)" } },
+    { q: "En quelle année une loi a-t-elle séparé les Églises et l'État en France ?", a: "1905", choices: ["1905", "1882", "1789", "1958"] },
+    { q: "En quelle année la Ve République (celle d'aujourd'hui) a-t-elle commencé ?", a: "1958", choices: ["1958", "1945", "1789", "1905"] },
+  ];
+  const PERSONNAGES_N3 = [
+    { q: "Quel navigateur est arrivé en Amérique en 1492 ?", a: "Christophe Colomb", choices: ["Christophe Colomb", "Magellan", "Jacques Cartier", "Vasco de Gama"], image: { url: "images/colomb.jpg", credit: DP + " (R. del Ghirlandaio)" } },
+    { q: "Quel peintre et inventeur italien a peint la Joconde ?", a: "Léonard de Vinci", choices: ["Léonard de Vinci", "Michel-Ange", "Raphaël", "Botticelli"], image: { url: "images/joconde.jpg", credit: DP } },
+    { q: "Quel roi a fondé la dynastie des Capétiens en 987 ?", a: "Hugues Capet", choices: ["Hugues Capet", "Clovis", "Charlemagne", "Louis IX"], image: { url: "images/hugues-capet.jpg", credit: DP } },
+    { q: "Quelle reine, épouse de Louis XVI, a été guillotinée en 1793 ?", a: "Marie-Antoinette", choices: ["Marie-Antoinette", "Jeanne d'Arc", "Olympe de Gouges", "Catherine de Médicis"], image: { url: "images/marie-antoinette.jpg", credit: DP } },
+    { q: "Qui a écrit en 1791 une Déclaration des droits de la femme et de la citoyenne ?", a: "Olympe de Gouges", choices: ["Olympe de Gouges", "Marie-Antoinette", "Marie Curie", "Simone Veil"], image: { url: "images/olympe-de-gouges.jpg", credit: DP } },
+    { q: "Quel homme politique a fait abolir l'esclavage en France en 1848 ?", a: "Victor Schœlcher", choices: ["Victor Schœlcher", "Jules Ferry", "Napoléon Bonaparte", "Victor Hugo"], image: { url: "images/schoelcher.jpg", credit: DP + " (É. Carjat)" } },
+    { q: "Quel écrivain français a écrit « Les Misérables » ?", a: "Victor Hugo", choices: ["Victor Hugo", "Jules Verne", "Molière", "Jean de La Fontaine"], image: { url: "images/victor-hugo.jpg", credit: DP } },
+  ];
+  const MONUMENTS_N3 = [
+    { q: "Quelle grotte de Dordogne est célèbre pour ses peintures d'animaux de la Préhistoire ?", a: "La grotte de Lascaux", choices: ["La grotte de Lascaux", "Le Mont-Saint-Michel", "Le pont du Gard", "Les arènes de Nîmes"], image: { url: "images/lascaux.jpg", credit: DP } },
+    { q: "Dans quelle ville de Bretagne trouve-t-on des milliers de menhirs alignés ?", a: "Carnac", choices: ["Carnac", "Nîmes", "Versailles", "Reims"], image: { url: "images/carnac.jpg", credit: "Wikimedia Commons — CC BY-SA 3.0" } },
+    { q: "Quel temple romain très bien conservé se trouve à Nîmes ?", a: "La Maison carrée", choices: ["La Maison carrée", "Le Panthéon", "Le Louvre", "La Bastille"], image: { url: "images/maison-carree.jpg", credit: "Wikimedia Commons — CC BY-SA 4.0" } },
+    { q: "Dans quelle cathédrale la plupart des rois de France étaient-ils sacrés ?", a: "La cathédrale de Reims", choices: ["La cathédrale de Reims", "Notre-Dame de Paris", "La cathédrale de Strasbourg", "Le Mont-Saint-Michel"], image: { url: "images/reims.jpg", credit: "Wikimedia Commons — CC BY-SA 4.0" } },
+    { q: "Dans quelle ville se trouve le palais des Papes, construit au Moyen Âge ?", a: "Avignon", choices: ["Avignon", "Lyon", "Reims", "Carcassonne"], image: { url: "images/palais-papes.jpg", credit: "Wikimedia Commons — CC BY-SA 3.0" } },
+    { q: "Sous quel monument parisien repose le Soldat inconnu de la Première Guerre mondiale ?", a: "L'Arc de Triomphe", choices: ["L'Arc de Triomphe", "La tour Eiffel", "Le Panthéon", "Notre-Dame de Paris"], image: { url: "images/arc-de-triomphe.jpg", credit: "Wikimedia Commons — CC BY-SA 3.0" } },
+  ];
+
+  // ==================================================================
+  // ---- Niveaux : trois niveaux aux questions DIFFÉRENTES (aucun n'est un sous-ensemble d'un autre) ----
+  // ==================================================================
+  // Ancien « Quiz République » (séquence Le temps de la République), fusionné ici : { q, a, faux, img } ou { ordre: [...] }.
+  const REPUBLIQUE = {"Essentiel": {"📅 Dates": [{"q": "La Révolution française commence en…", "a": "1789", "faux": ["1792", "1848", "1870"]}, {"q": "La Ire République est proclamée en…", "a": "1792", "faux": ["1789", "1804", "1848"]}, {"q": "La IIe République est proclamée en…", "a": "1848", "faux": ["1830", "1870", "1792"]}, {"q": "La IIIe République est proclamée en…", "a": "1870", "faux": ["1848", "1882", "1789"]}, {"q": "L'école devient gratuite, obligatoire et laïque en…", "a": "1881-1882", "faux": ["1789", "1870", "1905"]}, {"ordre": ["1789", "1792", "1848", "1870", "1881-1882"]}], "👤 Personnages": [{"q": "Qui a fait voter les lois sur l'école ?", "img": "jules-ferry.jpg", "a": "Jules Ferry", "faux": ["Napoléon", "Louis XVI", "Victor Hugo"]}, {"q": "Qui proclame la République à Paris, le 4 septembre 1870 ?", "a": "Léon Gambetta", "faux": ["Louis XVI", "Napoléon Ier", "Jules César"]}, {"q": "Quel roi est guillotiné en 1793 ?", "img": "louis16.jpg", "a": "Louis XVI", "faux": ["Louis XIV", "Charles X", "Henri IV"]}, {"q": "Qui devient empereur des Français en 1804 ?", "img": "napoleon-sacre.jpg", "a": "Napoléon Ier", "faux": ["Jules Ferry", "Louis XVI", "Gambetta"]}, {"q": "Quelle femme représente la République ?", "img": "marianne-place-republique.jpg", "a": "Marianne", "faux": ["Marie-Antoinette", "Jeanne d'Arc", "Marie Curie"]}], "🏛️ Gouvernements": [{"q": "Un pays gouverné par un roi, c'est…", "a": "une monarchie", "faux": ["un empire", "une république", "une commune"]}, {"q": "Un pays gouverné par un empereur, c'est…", "a": "un empire", "faux": ["une monarchie", "une république", "un royaume"]}, {"q": "Pas de roi, pas d'empereur : les citoyens votent. C'est…", "a": "une république", "faux": ["une monarchie", "un empire", "une dictature"]}, {"q": "Depuis 1870, la France est…", "a": "une république", "faux": ["une monarchie", "un empire", "un royaume"]}, {"ordre": ["Ire République", "Ier Empire", "Monarchie", "IIe République", "Second Empire", "IIIe République"]}], "🏫 L'école": [{"q": "L'école gratuite, ça veut dire…", "a": "les parents ne paient plus", "faux": ["on n'a pas de devoirs", "on choisit ses leçons", "on y va quand on veut"]}, {"q": "L'école de Jules Ferry est obligatoire…", "a": "de 6 à 13 ans", "faux": ["de 3 à 6 ans", "de 10 à 18 ans", "pour les garçons seulement"]}, {"q": "L'école laïque, ça veut dire…", "a": "on n'y apprend pas de religion", "faux": ["on y apprend une religion", "on n'y va pas le dimanche", "seuls les riches y vont"]}, {"q": "Pour Jules Ferry, la religion s'apprend…", "a": "dans les familles", "faux": ["à l'école", "à la mairie", "à l'armée"]}, {"q": "La République veut une école pour tous pour que les enfants deviennent…", "a": "des citoyens", "faux": ["des soldats", "des rois", "des ministres"]}]}, "Défi": {"📅 Dates": [{"q": "Que se passe-t-il le 4 septembre 1870 ?", "a": "La République est proclamée", "faux": ["Louis XVI est guillotiné", "Napoléon est sacré", "L'école devient gratuite"]}, {"q": "En 1892, la France fête…", "a": "les 100 ans de la Ire République", "faux": ["la fin de la guerre", "le sacre d'un roi", "la naissance de Jules Ferry"]}, {"q": "La loi de 1881 rend l'école…", "a": "gratuite", "faux": ["laïque", "mixte", "payante"]}, {"q": "Combien d'années entre la République de 1870 et la loi de 1882 ?", "a": "12 ans", "faux": ["2 ans", "20 ans", "100 ans"]}, {"q": "Napoléon Ier devient empereur en…", "a": "1804", "faux": ["1789", "1852", "1870"]}, {"ordre": ["1789", "1792", "1804", "1848", "1852", "1870", "1882"]}], "👤 Personnages": [{"q": "Quel empereur est fait prisonnier à Sedan en 1870 ?", "a": "Napoléon III", "faux": ["Napoléon Ier", "Louis XVI", "Charlemagne"]}, {"q": "Napoléon III est… de Napoléon Ier.", "a": "le neveu", "faux": ["le fils", "le frère", "le grand-père"]}, {"q": "Pour sortir de Paris encerclé, en 1870, Gambetta prend…", "a": "un ballon", "faux": ["un train", "un bateau", "une voiture"]}, {"q": "Le dernier roi des Français, chassé en 1848, s'appelle…", "a": "Louis-Philippe", "faux": ["Louis XVI", "Henri IV", "Napoléon III"]}, {"q": "Jules Ferry était ministre de…", "a": "l'Instruction publique", "faux": ["la Guerre", "la Marine", "l'Agriculture"]}], "🏛️ Gouvernements": [{"q": "Après la IIe République vient…", "a": "le Second Empire", "faux": ["la Ire République", "la IIIe République", "la monarchie"]}, {"q": "En 1848, qui peut voter ?", "a": "tous les hommes", "faux": ["tout le monde", "seulement le roi", "seulement les riches"]}, {"q": "Combien de fois la République est-elle proclamée entre 1792 et 1870 ?", "a": "3 fois", "faux": ["1 fois", "2 fois", "5 fois"]}, {"q": "Aujourd'hui, la France vit sous la…", "a": "Ve République", "faux": ["IIIe République", "Ire République", "monarchie"]}, {"ordre": ["Ire République 1792", "Ier Empire 1804", "Monarchie 1814", "IIe République 1848", "Second Empire 1852", "IIIe République 1870"]}], "🏫 L'école": [{"q": "« L'instruction religieuse appartient aux familles et à l'église, l'instruction morale… »", "a": "à l'école", "faux": ["à l'armée", "au roi", "à la mairie"]}, {"q": "La liberté de conscience, c'est…", "a": "croire ou ne pas croire, librement", "faux": ["dire tout ce qu'on veut", "ne plus aller à l'école", "choisir son maître"]}, {"q": "Jules Ferry écrit sa lettre aux instituteurs en…", "a": "1883", "faux": ["1789", "1848", "1905"]}, {"q": "Avant 1881, pourquoi des enfants n'allaient pas à l'école ?", "a": "elle était payante", "faux": ["elle n'existait pas", "elle était trop loin de Paris", "les maîtres refusaient"]}, {"q": "Après la loi de 1882, un enfant de 8 ans…", "a": "doit aller à l'école", "faux": ["travaille aux champs", "choisit s'il y va", "paie son maître"]}]}, "Ferry": {"📅 Les dates": [{"q": "La loi qui rend l'école gratuite date de…", "a": "1881", "faux": ["1882", "1870", "1789"]}, {"q": "La loi qui rend l'école obligatoire et laïque date de…", "a": "1882", "faux": ["1881", "1892", "1848"]}, {"q": "La République qui dure est proclamée en…", "a": "1870", "faux": ["1848", "1882", "1789"], "img": "affiche-proclamation-1870.jpg"}, {"q": "En 1892, la France fête…", "a": "les 100 ans de la Ire République", "faux": ["les 100 ans de l'école", "la fin de l'Empire", "la naissance de Jules Ferry"]}, {"ordre": ["1870", "1881", "1882", "1892"]}], "🏫 Les lois": [{"q": "L'école gratuite, ça veut dire…", "a": "les parents ne paient plus", "faux": ["on peut y aller si on veut", "on n'y apprend pas de religion", "elle est ouverte le dimanche"]}, {"q": "L'école obligatoire, ça veut dire…", "a": "tous les enfants doivent y aller", "faux": ["les parents paient l'école", "seuls les garçons y vont", "on y va seulement l'hiver"]}, {"q": "L'école de Jules Ferry est obligatoire…", "a": "de 6 à 13 ans", "faux": ["de 3 à 6 ans", "de 10 à 18 ans", "toute la vie"]}, {"q": "L'école laïque, ça veut dire…", "a": "on n'y apprend pas de religion", "faux": ["les parents ne paient plus", "on y apprend toutes les religions", "les filles n'y vont pas"]}, {"q": "Avant 1881, pourquoi des enfants n'allaient pas à l'école ?", "a": "elle était payante", "faux": ["elle était trop loin de Paris", "il n'y avait pas de maîtres", "elle était interdite"]}], "👤 Jules Ferry": [{"q": "Qui a fait voter les lois sur l'école ?", "a": "Jules Ferry", "faux": ["Léon Gambetta", "Napoléon III", "Louis XVI"], "img": "jules-ferry.jpg"}, {"q": "Jules Ferry était ministre de…", "a": "l'Instruction publique", "faux": ["la Guerre", "l'Agriculture", "la Marine"]}, {"q": "Pour Jules Ferry, la religion s'apprend…", "a": "dans les familles", "faux": ["à l'école", "à la mairie", "nulle part"]}, {"q": "La République veut une école pour tous pour que les enfants deviennent…", "a": "des citoyens", "faux": ["des soldats", "des rois", "des ministres"]}, {"q": "Vers 1900, dans une classe, les élèves écrivent avec…", "a": "une plume et de l'encre", "faux": ["un stylo-bille", "une tablette", "un ordinateur"], "img": "classe-1912.jpg"}]}};
+  function niveauRepublique(label, cle) {
+    return {
+      label: label,
+      blocks: Object.keys(REPUBLIQUE[cle]).map(function (k, i) {
+        return { id: "rep" + i, label: (i + 1) + ". " + k, title: k, questions: REPUBLIQUE[cle][k].map(function (x) {
+          if (x.ordre) return { ordre: x.ordre };
+          const q = { q: x.q, a: x.a, choices: [x.a].concat(x.faux) };
+          if (x.img) q.image = { url: "images/" + x.img, credit: "Wikimedia Commons" };
+          return q;
+        }) };
+      })
+    };
+  }
+  function buildLevel(label, dates, personnages, monuments) {
+    return {
+      label: label,
+      blocks: [
+        { id: "dates", label: "1. Dates clés", title: "Question de dates", questions: dates },
+        { id: "personnages", label: "2. Personnages célèbres", title: "Question de personnages", questions: personnages },
+        { id: "monuments", label: "3. Monuments", title: "Question de monuments", questions: monuments },
+      ]
+    };
+  }
+  const LEVELS = [
+    buildLevel("Niveau 1", DATES_N1, PERSONNAGES_N1, MONUMENTS_N1),
+    buildLevel("Niveau 2", DATES_N2, PERSONNAGES_N2, MONUMENTS_N2),
+    buildLevel("Niveau 3", DATES_N3, PERSONNAGES_N3, MONUMENTS_N3),
+    niveauRepublique("Jules Ferry", "Ferry"),
+    niveauRepublique("République", "Essentiel"),
+    niveauRepublique("République · Défi", "Défi"),
+  ];
+
+  // ==================================================================
+  // ---- État et éléments du DOM ----
+  // ==================================================================
+  let currentLevel = 0, currentBlock = 0, currentQ = 0, answered = false;
+  let scores = LEVELS.map(function (lvl) { return lvl.blocks.map(function () { return 0; }); });
+
+  const levelMenuEl = document.getElementById("levelMenu");
+  const menuEl = document.getElementById("blockMenu");
+  const areaEl = document.getElementById("quizArea");
+
+  function blockMaxScore(block) { return block.questions.length; }
+
+  function shuffle(arr) {
+    const a = arr.slice();
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  function renderLevelMenu() {
+    levelMenuEl.innerHTML = "";
+    LEVELS.forEach(function (lvl, i) {
+      const btn = document.createElement("button");
+      btn.textContent = lvl.label;
+      if (i === currentLevel) btn.classList.add("active");
+      btn.addEventListener("click", function () {
+        currentLevel = i; currentBlock = 0; currentQ = 0;
+        renderLevelMenu(); renderMenu(); renderQuestion();
+      });
+      levelMenuEl.appendChild(btn);
+    });
+  }
+
+  function renderMenu() {
+    menuEl.innerHTML = "";
+    LEVELS[currentLevel].blocks.forEach(function (b, i) {
+      const btn = document.createElement("button");
+      btn.textContent = b.label.split(". ")[0];
+      btn.title = b.label;
+      if (i === currentBlock) btn.classList.add("active");
+      btn.addEventListener("click", function () { currentBlock = i; currentQ = 0; renderMenu(); renderQuestion(); });
+      menuEl.appendChild(btn);
+    });
+  }
+
+  // ==================================================================
+  // ---- Routage et rendu des questions (QCM à 4 choix uniquement) ----
+  // ==================================================================
+  function renderQuestion() {
+    const block = LEVELS[currentLevel].blocks[currentBlock];
+    if (currentQ >= block.questions.length) { renderRecap(); return; }
+    answered = false;
+    if (block.questions[currentQ].ordre) renderOrdre(block); else renderClassicQuestion(block);
+  }
+
+  function renderClassicQuestion(block) {
+    const q = block.questions[currentQ];
+    const choices = shuffle(q.choices);
+    areaEl.innerHTML =
+      '<div class="progress">' + LEVELS[currentLevel].label + ' · Question ' + (currentQ + 1) + ' / ' + block.questions.length + '</div>' +
+      '<div class="question-title">' + q.q + '</div>' +
+      '<div class="cadre-reponse" id="cadreReponse">?</div>' +
+      '<div class="choices" id="choicesRow"></div>' +
+      '<div class="feedback" id="feedback"></div>' +
+      '<div class="nextrow"><button class="next" id="btnNext">Suivant →</button></div>';
+    const row = document.getElementById("choicesRow");
+    choices.forEach(function (c) {
+      const btn = document.createElement("button");
+      btn.className = "choice";
+      btn.textContent = c;
+      glisserVers(btn, function (x, y) { return sous(x, y, "#cadreReponse"); }, function () {
+        document.getElementById("cadreReponse").textContent = c; selectAnswer(btn, c, q);
+      });
+      row.appendChild(btn);
+    });
+  }
+
+  // ---- Glisser (doigt, souris, stylet) ----
+  function sous(x, y, sel) { const l = document.elementsFromPoint(x, y); for (let k = 0; k < l.length; k++) if (l[k].matches && l[k].matches(sel)) return l[k]; return null; }
+  function glisserVers(objet, cible, auDepot) {
+    objet.addEventListener("pointerdown", function (ev) {
+      if (answered || objet.disabled) return;
+      ev.preventDefault();
+      const r = objet.getBoundingClientRect(), dx = ev.clientX - r.left, dy = ev.clientY - r.top;
+      const vol = objet.cloneNode(true); vol.classList.add("vol-choix"); vol.style.width = r.width + "px";
+      vol.style.left = r.left + "px"; vol.style.top = r.top + "px"; document.body.appendChild(vol); objet.style.visibility = "hidden";
+      let survol = null;
+      function bouge(e) { vol.style.left = (e.clientX - dx) + "px"; vol.style.top = (e.clientY - dy) + "px"; const c = cible(e.clientX, e.clientY); if (survol && survol !== c) survol.classList.remove("survol"); if (c) c.classList.add("survol"); survol = c; }
+      function lache(e) {
+        document.removeEventListener("pointermove", bouge); document.removeEventListener("pointerup", lache);
+        vol.remove(); objet.style.visibility = ""; if (survol) survol.classList.remove("survol");
+        const c = cible(e.clientX, e.clientY); if (c) auDepot(c);
+      }
+      document.addEventListener("pointermove", bouge); document.addEventListener("pointerup", lache);
+    });
+  }
+
+  // ---- Remettre dans l'ordre : on glisse chaque étiquette à sa place sur la frise ----
+  function renderOrdre(block) {
+    const q = block.questions[currentQ];
+    let erreur = false, posees = 0;
+    areaEl.innerHTML =
+      '<div class="progress">' + LEVELS[currentLevel].label + ' · Question ' + (currentQ + 1) + ' / ' + block.questions.length + '</div>' +
+      '<div class="question-title">⏳ → ⏳ → ⏳</div>' +
+      '<div class="frise" id="frise"></div>' +
+      '<div class="choices" id="choicesRow"></div>' +
+      '<div class="feedback" id="feedback"></div>' +
+      '<div class="nextrow"><button class="next" id="btnNext">Suivant →</button></div>';
+    const frise = document.getElementById("frise"), row = document.getElementById("choicesRow");
+    q.ordre.forEach(function (_, k) { const p = document.createElement("div"); p.className = "place"; p.dataset.k = k; p.dataset.n = k + 1; frise.appendChild(p); });
+    shuffle(q.ordre).forEach(function (t) {
+      const btn = document.createElement("button"); btn.className = "choice"; btn.textContent = t; row.appendChild(btn);
+      glisserVers(btn, function (x, y) { return sous(x, y, ".frise .place:not(.remplie)"); }, function (place) {
+        const fb = document.getElementById("feedback");
+        if (q.ordre[+place.dataset.k] === t) {
+          place.textContent = t; place.classList.add("remplie"); btn.remove(); posees++; fb.textContent = ""; fb.className = "feedback";
+          if (posees === q.ordre.length) {
+            answered = true; if (!erreur) scores[currentLevel][currentBlock] += 1;
+            fb.textContent = "✅ Bravo !"; fb.className = "feedback good";
+            const n = document.getElementById("btnNext"); n.style.display = "inline-block"; n.onclick = function () { currentQ++; renderQuestion(); };
+          }
+        } else { erreur = true; fb.textContent = "❌"; fb.className = "feedback bad"; }
+      });
+    });
+  }
+
+  function selectAnswer(btn, chosen, q) {
+    if (answered) return;
+    answered = true;
+    const correct = chosen === q.a;
+    if (correct) scores[currentLevel][currentBlock] += 1;
+    document.querySelectorAll("#choicesRow .choice").forEach(function (b) {
+      b.disabled = true;
+      if (b.textContent === q.a) b.classList.add("correct");
+      else if (b === btn) b.classList.add("wrong");
+    });
+    const fb = document.getElementById("feedback");
+    const btnNext = document.getElementById("btnNext");
+    btnNext.onclick = function () { currentQ++; renderQuestion(); };
+    if (q.image) {
+      document.querySelector(".nextrow").style.display = "none";
+      const carte = document.createElement("div");
+      carte.className = "reveal-image-card";
+      const img = document.createElement("img");
+      img.src = q.image.url;
+      img.alt = q.a;
+      carte.appendChild(img);
+      var lb = legendeBing(q.image.url); if (lb) carte.appendChild(lb);
+      const legende = document.createElement("div");
+      legende.className = "reveal-image-caption";
+      legende.textContent = (correct ? "✅ Bravo ! " : "❌ Pas tout à fait, la bonne réponse était : ") + q.a + " — " + q.image.credit;
+      carte.appendChild(legende);
+      btnNext.className = "next next-coin";
+      btnNext.style.display = "inline-block";
+      carte.appendChild(btnNext);
+      fb.appendChild(carte);
+    } else {
+      fb.textContent = correct ? "✅ Bravo !" : "❌ Pas tout à fait. La bonne réponse était " + q.a + ".";
+      fb.classList.add(correct ? "good" : "bad");
+      btnNext.style.display = "inline-block";
+    }
+  }
+
+  function renderRecap() {
+    const blocks = LEVELS[currentLevel].blocks;
+    const block = blocks[currentBlock];
+    const max = blockMaxScore(block);
+    areaEl.innerHTML =
+      '<div class="recap">' +
+      '<h2>Résultat — ' + LEVELS[currentLevel].label + ' · ' + block.label + '</h2>' +
+      '<p style="font-size:1.4rem;font-weight:700;">' + scores[currentLevel][currentBlock] + ' / ' + max + '</p>' +
+      '<p>👏 Bravo, tu as répondu correctement à ' + scores[currentLevel][currentBlock] + ' question' + (scores[currentLevel][currentBlock] > 1 ? 's' : '') + ' sur ' + max + ' !</p>' +
+      '<table>' +
+      '<tr><th></th>' + blocks.map(function (b) { return '<th>' + b.label.split('. ')[0] + '</th>'; }).join('') + '</tr>' +
+      '<tr><td>Score</td>' + blocks.map(function (b, i) { return '<td>' + scores[currentLevel][i] + ' / ' + blockMaxScore(b) + '</td>'; }).join('') + '</tr>' +
+      '</table>' +
+      '<button class="restart" id="btnRestartBlock">🔁 Refaire ce bloc</button>' +
+      (currentBlock < blocks.length - 1 ? '<button class="restart" id="btnNextBlock">Bloc suivant →</button>' : '') +
+      '</div>';
+    document.getElementById("btnRestartBlock").addEventListener("click", function () {
+      scores[currentLevel][currentBlock] = 0; currentQ = 0; renderQuestion();
+    });
+    const nb = document.getElementById("btnNextBlock");
+    if (nb) nb.addEventListener("click", function () { currentBlock++; currentQ = 0; renderMenu(); renderQuestion(); });
+  }
+
+  (function () {
+    const h = decodeURIComponent(location.hash.slice(1));
+    if (h === "ferry") currentLevel = LEVELS.length - 3;
+    else if (h === "republique") currentLevel = LEVELS.length - 2;
+    else if (h === "republique-defi") currentLevel = LEVELS.length - 1;
+    else if (/^\d$/.test(h) && +h >= 1 && +h <= LEVELS.length) currentLevel = +h - 1;
+  })();
+  renderLevelMenu();
+  renderMenu();
+  renderQuestion();
+</script>
+<!-- DEUX GESTES -->
+<script>
+/* ==== DEUX GESTES (GTH) : chaque jeu se joue en glissant OU en touchant (demande de Karim du 01/10) ====
+   REGLES  : jeu au glisser-déposer → on peut aussi toucher l'objet (il s'entoure), puis toucher sa place ; s'il n'a qu'une place
+             possible (une case réponse), un seul toucher le pose (10/10) :
+             le module rejoue exactement le même glisser-déposer, le jeu garde ses règles.
+   INVERSE : jeu au toucher (toucher la carte, puis la zone) → on peut aussi glisser la carte sur la zone.
+   Installé par .claude/outils/deux-gestes/injecter.py ; ne pas modifier dans le jeu, mais dans ce fichier. */
+(function () {
+  var REGLES = [{"source": ".choice", "cible": "#cadreReponse, .frise .place:not(.remplie)"}], INVERSE = [];
+  // setPointerCapture refuse les pointeurs rejoués : on ignore l'erreur
+  ["setPointerCapture", "releasePointerCapture"].forEach(function (m) {
+    var o = Element.prototype[m]; if (!o) return;
+    Element.prototype[m] = function (id) { try { return o.call(this, id); } catch (e) { return undefined; } };
+  });
+  var st = document.createElement("style");
+  st.textContent = ".dg-choisi{outline:7px solid #1f7a8c !important; outline-offset:4px !important;}" +
+    ".dg-vol{position:fixed !important; z-index:9999; pointer-events:none; opacity:.92; transform:scale(1.05) rotate(-2deg); margin:0 !important;}";
+  document.head.appendChild(st);
+
+  var choix = null, bas = null, rejeu = false, avalerClic = 0;
+  function sous(x, y) { return document.elementFromPoint(x, y); }
+  function trouver(el, liste, cle) {
+    if (!el || !el.closest) return null;
+    for (var i = 0; i < liste.length; i++) { var e = el.closest(liste[i][cle]); if (e) return { regle: liste[i], el: e }; }
+    return null;
+  }
+  function oublier() { if (choix) choix.el.classList.remove("dg-choisi"); choix = null; }
+  function evt(type, cible, x, y) {
+    var e = new PointerEvent(type, { bubbles: true, cancelable: true, composed: true, clientX: x, clientY: y, pointerId: 777,
+      pointerType: "touch", isPrimary: true, button: 0, buttons: type === "pointerup" ? 0 : 1 });
+    (cible && cible.isConnected ? cible : document).dispatchEvent(e);
+  }
+  // Rejoue le glisser-déposer du jeu : de l'objet jusqu'au point touché
+  function rejouer(src, x, y) {
+    if (!src.isConnected) return;
+    var r = src.getBoundingClientRect(), x0 = r.left + r.width / 2, y0 = r.top + r.height / 2;
+    var depart = sous(x0, y0); if (!depart || !src.contains(depart)) depart = src;
+    rejeu = true;
+    try {
+      evt("pointerdown", depart, x0, y0);
+      for (var k = 1; k <= 12; k++) evt("pointermove", depart, x0 + (x - x0) * k / 12, y0 + (y - y0) * k / 12);
+      evt("pointerup", depart, x, y);
+    } finally { rejeu = false; }
+  }
+
+  // ---------- REGLES : toucher l'objet, puis sa place ----------
+  document.addEventListener("pointerdown", function (e) {
+    if (rejeu || !e.isTrusted || !REGLES.length) return;
+    if (choix && !choix.el.isConnected) oublier();
+    // l'objet touché est repéré dès que le doigt se pose : ensuite, le jeu le cache pour le faire glisser
+    bas = { x: e.clientX, y: e.clientY, cible: null, src: trouver(e.target, REGLES, "source") };
+    if (choix) {
+      var c = e.target.closest && e.target.closest(choix.regle.cible);
+      if (c && !(e.target.closest(choix.regle.source))) { bas.cible = c; e.stopImmediatePropagation(); e.preventDefault(); }
+    }
+  }, true);
+  document.addEventListener("pointerup", function (e) {
+    if (rejeu || !e.isTrusted || !bas || !REGLES.length) return;
+    var b = bas; bas = null;
+    var tap = Math.hypot(e.clientX - b.x, e.clientY - b.y) < 12;
+    if (b.cible) {   // le toucher sur la place : le jeu ne le voit pas, on rejoue le glisser à cet endroit
+      e.stopImmediatePropagation(); e.preventDefault(); avalerClic = Date.now();
+      if (tap && choix) { var s = choix.el; oublier(); var x = e.clientX, y = e.clientY; setTimeout(function () { rejouer(s, x, y); }, 0); }
+      return;
+    }
+    if (!tap) { oublier(); return; }   // un vrai glisser : le jeu s'en occupe
+    var src = b.src;
+    setTimeout(function () {   // après le jeu : l'objet touché est choisi (ou ne l'est plus)
+      if (!src || !src.el.isConnected) { return; }
+      // une seule place où le poser (une case réponse) : un toucher suffit, la réponse part dans la case (Karim, 10/10)
+      var places = Array.prototype.filter.call(document.querySelectorAll(src.regle.cible), function (c) {
+        var r = c.getBoundingClientRect(); return r.width > 0 && r.height > 0 && !src.el.contains(c) && getComputedStyle(c).visibility !== "hidden"; });
+      if (places.length === 1) { oublier(); var r = places[0].getBoundingClientRect(); rejouer(src.el, r.left + r.width / 2, r.top + r.height / 2); return; }
+      if (choix && choix.el === src.el) { oublier(); return; }
+      oublier(); choix = src; src.el.classList.add("dg-choisi");
+    }, 0);
+  }, true);
+  document.addEventListener("click", function (e) {
+    if (Date.now() - avalerClic < 500 && e.isTrusted) { e.stopImmediatePropagation(); e.preventDefault(); }
+  }, true);
+
+  // ---------- INVERSE : glisser la carte sur la zone = la toucher, puis toucher la zone ----------
+  var g = null;
+  document.addEventListener("pointerdown", function (e) {
+    if (rejeu || !e.isTrusted || !INVERSE.length) return;
+    var src = trouver(e.target, INVERSE, "source"); if (!src) return;
+    g = { src: src, x: e.clientX, y: e.clientY, vol: null };
+  }, true);
+  document.addEventListener("pointermove", function (e) {
+    if (!g || rejeu) return;
+    if (!g.vol && Math.hypot(e.clientX - g.x, e.clientY - g.y) < 12) return;
+    if (!g.vol) {
+      var r = g.src.el.getBoundingClientRect();
+      g.vol = g.src.el.cloneNode(true); g.vol.classList.add("dg-vol"); g.vol.style.width = r.width + "px";
+      g.dx = g.x - r.left; g.dy = g.y - r.top; document.body.appendChild(g.vol);
+    }
+    g.vol.style.left = (e.clientX - g.dx) + "px"; g.vol.style.top = (e.clientY - g.dy) + "px";
+  }, true);
+  document.addEventListener("pointerup", function (e) {
+    if (!g || rejeu || !e.isTrusted) return;
+    var d = g; g = null;
+    if (!d.vol) return;   // simple toucher : le jeu s'en occupe
+    d.vol.remove(); e.stopImmediatePropagation(); e.preventDefault(); avalerClic = Date.now();
+    var dessous = sous(e.clientX, e.clientY), zone = dessous && dessous.closest ? dessous.closest(d.src.regle.cible) : null;
+    if (!zone) return;
+    rejeu = true;
+    try { evt("pointerup", d.src.el, e.clientX, e.clientY); evt("pointerup", zone, e.clientX, e.clientY); }
+    finally { rejeu = false; }
+  }, true);
+})();
+</script>
+<!-- /DEUX GESTES -->
+<!-- MENU -->
+<script>
+/* ==== LE MENU ☰ (GTH, 10/10) : interface épurée — à l'écran, seulement le titre, le score, la consigne et l'activité ====
+   Tout le reste (niveaux, onglets de méthode, ✏️, 🔊, 🖨️, aide…) part dans un menu ☰, ouvert d'un toucher.
+   Réglage par outil (CONF, posé par l'injecteur) : ancre = où mettre le bouton ☰ (sinon en haut à droite de l'écran) ;
+   cacher = ce qui part dans le menu (sinon : tout ce qui, dans « .barre .droite », n'est pas un score).
+   Installé par .claude/outils/menu-outil/injecter.py ; ne pas modifier dans l'outil, mais dans ce fichier. */
+(function () {
+  var CONF = {"cacher": ["#levelMenu", "#blockMenu"]};
+  var st = document.createElement("style");
+  st.textContent =
+    ".menu-btn{width:58px; height:58px; border-radius:16px; border:2px solid rgba(0,0,0,.15); background:#fff; color:#1f2a33; font-size:2rem; line-height:1; cursor:pointer; flex:none; padding:0;}" +
+    ".menu-btn.fixe{position:fixed; top:10px; right:12px; z-index:150; box-shadow:0 4px 14px rgba(0,0,0,.15);}" +
+    ".menu-btn.ouvert{background:#1f2a33; color:#fff;}" +
+    ".menu-panneau{position:fixed; top:76px; right:16px; z-index:200; background:#fff; color:#1f2a33; border-radius:18px; box-shadow:0 18px 50px rgba(0,0,0,.28); padding:16px 18px;" +
+    "  display:flex; flex-direction:column; align-items:flex-start; gap:12px; max-width:min(620px, 92vw); max-height:80vh; overflow:auto;}" +
+    ".menu-panneau[hidden]{display:none !important;}" +
+    ".menu-panneau h4{margin:0; font-family:sans-serif; font-size:.85rem; text-transform:uppercase; letter-spacing:.6px; color:#6d7a85;}" +
+    ".menu-panneau > *{position:static !important; margin:0 !important;}" +
+    ".menu-panneau > div,.menu-panneau > nav{display:flex; flex-wrap:wrap; gap:8px;}";
+  document.head.appendChild(st);
+  function installer() {
+    var autres = [];
+    if (CONF.cacher) CONF.cacher.forEach(function (s) { document.querySelectorAll(s).forEach(function (e) { if (autres.indexOf(e) === -1) autres.push(e); }); });
+    else { var d = document.querySelector(".barre .droite"); if (d) autres = Array.prototype.filter.call(d.children, function (e) { return !e.classList.contains("score"); }); }
+    if (!autres.length) return;
+    var btn = document.createElement("button"); btn.type = "button"; btn.className = "menu-btn"; btn.title = "Niveaux et réglages"; btn.textContent = "☰";
+    var pan = document.createElement("div"); pan.className = "menu-panneau"; pan.hidden = true;
+    var t = document.createElement("h4"); t.textContent = "Niveaux et réglages"; pan.appendChild(t);
+    autres.forEach(function (e) { pan.appendChild(e); });
+    var ancre = document.querySelector(CONF.ancre || ".barre .droite");
+    if (ancre) ancre.appendChild(btn); else { btn.classList.add("fixe"); document.body.appendChild(btn); }
+    document.body.appendChild(pan);
+    function ouvrir(o) { pan.hidden = !o; btn.classList.toggle("ouvert", o); }
+    btn.addEventListener("click", function (e) { e.stopPropagation(); ouvrir(pan.hidden); });
+    // un niveau choisi, ou une fenêtre ouverte (✏️, 🖨️) : le menu se referme ; on garde le menu ouvert pour choisir un type de jeu
+    pan.addEventListener("click", function (e) { var b = e.target.closest("button"); if (b && !b.closest(CONF.garderOuvert || ".types")) setTimeout(function () { ouvrir(false); }, 120); });
+    document.addEventListener("pointerdown", function (e) { if (!pan.hidden && !pan.contains(e.target) && e.target !== btn) ouvrir(false); });
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", installer); else installer();
+})();
+</script>
+<!-- /MENU -->
+</body>
+</html>

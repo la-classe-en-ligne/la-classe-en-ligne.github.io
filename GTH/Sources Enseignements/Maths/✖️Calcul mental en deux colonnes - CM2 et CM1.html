@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>✖️ Calcul mental en deux colonnes</title>
+<!--
+  Karim, 21/11 : « penser les activités de calcul mental pour deux niveaux : à gauche les CM2, à droite les CM1 », « avec l'activité, pas des diapos ».
+  L'activité « ✖️ Multiplier par 10, 20, 300 » ouverte deux fois côte à côte. Je mène : un calcul à gauche, un calcul à droite.
+  Le niveau de chaque côté se change dans son ☰ ; l'adresse peut le donner : #x4000/x20 (gauche/droite). Par défaut : × 300 à gauche, × 20 à droite.
+-->
+<style>
+html,body { margin:0; height:100%; overflow:hidden; background:#263238; font-family:"Segoe UI",Calibri,Arial,sans-serif; }
+#deux { display:grid; grid-template-columns:1fr 1fr; gap:6px; height:100%; }
+.cote { position:relative; background:#fff; display:flex; flex-direction:column; }
+.cote h2 { margin:0; padding:4px 0; text-align:center; font-size:26px; color:#fff; }
+.g h2 { background:#1565c0; } .d h2 { background:#c62828; }
+iframe { flex:1; border:0; width:100%; }
+</style>
+</head>
+<body>
+<div id="deux">
+  <div class="cote g"><h2>⬅ CM2</h2><iframe id="gauche" title="CM2"></iframe></div>
+  <div class="cote d"><h2>CM1 ➡</h2><iframe id="droite" title="CM1"></iframe></div>
+</div>
+<script>
+// 24/11 : chaque côté peut accueillir une autre activité : #f25-x5/c10 → × 5 (× 10 puis la moitié) à gauche, les compléments à 10 à droite
+//   x… : ✖️ Multiplier par 10, 20, 300 · f25-x5, f25-x25, f25-x50, f25-tout : ✖️ Fois 5, 25, 50 · c10, c100 : 🧮 La barre des compléments (à l'ardoise)
+const A = "✖️Multiplier par 10, 20, 300 - le tableau.html", F25 = "✖️Fois 5, 25, 50 - je fais × 100 puis je partage.html", BARRE = "🧮La barre des compléments - calcul mental.html";
+const src = v => /^f25-/.test(v) ? F25 + "#" + v.slice(4) : /^c(10|100)$/.test(v) ? BARRE + "#" + v.slice(1) + "-ardoise" : A + "#" + v;
+const [g, d] = (location.hash.slice(1) || "x300/x20").split("/");
+document.getElementById("gauche").src = src(g || "x300");
+document.getElementById("droite").src = src(d || "x20");
+</script>
+</body>
+</html>

@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Les rangées de cubes</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cg fill='%2342a5f5' stroke='%230d47a1' stroke-width='3'%3E%3Crect x='6' y='10' width='16' height='16'/%3E%3Crect x='24' y='10' width='16' height='16'/%3E%3Crect x='42' y='10' width='16' height='16'/%3E%3Crect x='6' y='34' width='16' height='16'/%3E%3Crect x='24' y='34' width='16' height='16'/%3E%3Crect x='42' y='34' width='16' height='16'/%3E%3C/g%3E%3C/svg%3E">
+<!--
+  🎲 Les rangées de cubes — apprendre les tables de multiplication (idée de Karim, 21/10, à la place de la table de Pythagore).
+  « Quand je dis 6 × 7, 6 cubes s'affichent, et la rangée de 6 cubes se multiplie par 7 ; puis on attend le résultat. »
+  Une rangée de a cubes apparaît, cube après cube ; puis elle se recopie, rangée après rangée, jusqu'à b rangées (le compteur dit
+  « 6 × 1, 6 × 2… ») ; l'élève tape le résultat sur la calculette. Toucher les cubes rejoue l’animation. ✏️ : le maître tape sa multiplication, jusqu'à 50 × 30 (21/11) ; lien direct #12x15.
+  Coin : Tables de 2 à 5 · de 6 à 9 · Toutes. Liens : #2a5, #6a9, #toutes. L'outil ne donne jamais le résultat : l'indice dit
+  « compte de 6 en 6 » et, au deuxième indice, montre les nombres au bout des rangées sauf le dernier.
+  Hors ligne (ENI, Chromebook).
+-->
+<style>
+:root{--fond:#eef5fb;--bleu:#1e88e5;--bleuf:#0d47a1;--encre:#163a5f;--vert:#2e7d32;--rouge:#c62828;--talbot:#1f7a8c}
+html,body{margin:0;height:100%;background:#163a5f;overflow:hidden;font-family:Arial,Helvetica,sans-serif;color:var(--encre)}
+#scene{position:absolute;left:0;top:0;width:1920px;height:1080px;transform-origin:0 0;background:var(--fond);
+  background-image:linear-gradient(rgba(30,136,229,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(30,136,229,.06) 1px,transparent 1px);background-size:40px 40px}
+#barre{height:84px;display:flex;align-items:center;gap:22px;padding:0 28px;background:#163a5f;color:#fff}
+#barre h1{margin:0;font-size:34px;display:flex;align-items:center;gap:12px;color:#90caf9}
+#barre h1 svg{width:50px;height:50px}
+#coin{margin-left:auto;text-align:right;font-size:20px;line-height:1.45}
+#coin b{font-size:26px;color:#90caf9}
+#niveaux{display:flex;gap:6px;margin-left:30px;align-items:center}
+#niveaux button{font:inherit;font-size:24px;font-weight:700;min-width:48px;padding:6px 10px;border-radius:10px;border:2px solid transparent;color:#0a1f2e;cursor:pointer;background:hsl(var(--h),85%,62%)}
+#niveaux button.groupe{background:#1f4b75;color:#fff;font-size:18px;font-weight:400;border-color:#42688f}
+#niveaux button.groupe.on{background:var(--talbot);border-color:var(--talbot)} #niveaux button.on{box-shadow:0 0 0 3px #fff}
+#consigne{height:100px;display:flex;align-items:center;justify-content:center;font-size:50px;font-weight:700;text-align:center}
+#consigne .q{color:var(--bleu)}
+#jeu{position:absolute;left:0;right:0;top:184px;bottom:110px}
+#bas{position:absolute;left:0;right:0;bottom:0;height:110px;display:flex;align-items:center;justify-content:center;gap:30px}
+#verdict{font-size:38px;font-weight:700;min-width:760px;text-align:center}
+#verdict.ok{color:var(--vert)} #verdict.ko{color:var(--rouge)}
+#indice{position:absolute;right:26px;top:96px;width:82px;height:82px;padding:0;border-radius:50%;font-size:44px;line-height:1;z-index:20;border:2px solid #d4b106;background:#fff8c4;cursor:pointer}
+#crayon{position:absolute;left:26px;top:96px;width:82px;height:82px;border-radius:50%;border:2px solid #90caf9;background:#fff;font-size:40px;cursor:pointer;z-index:20}
+#bulle{position:absolute;right:124px;top:100px;max-width:640px;background:#fff8c4;border:2px solid #d4b106;border-radius:18px;padding:16px 26px;font-size:28px;display:none;z-index:20;box-shadow:0 6px 18px rgba(0,0,0,.15)}
+/* les cubes */
+#cubes{position:absolute;left:60px;top:10px;width:900px;height:660px;touch-action:none;cursor:pointer;user-select:none;-webkit-user-select:none}
+.rangee.choisie{outline:3px dashed var(--talbot);outline-offset:3px;border-radius:6px}
+.rangee{position:absolute;left:var(--x0,150px);display:flex;gap:var(--g,6px);animation:recopie .35s ease-out}
+@keyframes recopie{from{transform:translateY(-58px);opacity:0}to{transform:none;opacity:1}}
+.cube{width:var(--s,52px);height:var(--s,52px);flex:none;position:relative;animation:pop .2s ease-out}
+@keyframes pop{from{transform:scale(0)}}
+/* 21/11 (Karim : « on ne peut multiplier que jusqu'à 25 ») : des cubes plus petits quand il y en a beaucoup, rangés par dix (un petit écart après chaque dizaine) */
+.cube:nth-child(10n+1):not(:first-child){margin-left:var(--g,6px)}
+.cube::before{content:"";position:absolute;inset:0;background:hsl(var(--h,207),75%,58%);border:3px solid hsl(var(--h,207),70%,30%);border-radius:4px;box-shadow:inset 6px 6px 0 rgba(255,255,255,.35),inset -6px -6px 0 rgba(0,0,0,.12)}
+#cubes.petits .cube::before{border-width:2px;box-shadow:inset 3px 3px 0 rgba(255,255,255,.35)}
+.compte{position:absolute;left:calc(var(--x0,150px) - 150px);width:132px;text-align:right;font-size:var(--fc,26px);font-weight:700;color:#5c7a99;line-height:var(--s,52px);white-space:nowrap}
+.bout{position:absolute;font-size:26px;font-weight:700;color:var(--talbot);line-height:52px}
+.accolade{position:absolute;border:4px solid var(--talbot);border-left:none;border-radius:0 18px 18px 0;width:16px}
+.paquet{position:absolute;font-size:28px;font-weight:700;color:var(--talbot);white-space:nowrap;transform:translateY(-50%)}
+.somme{position:absolute;font-size:30px;font-weight:700;color:var(--encre);white-space:nowrap}
+/* la progression dans une table : 10 calculs (× 1 à × 10), une petite case par calcul trouvé */
+#progres{position:absolute;left:50%;top:166px;transform:translateX(-50%);display:flex;gap:5px}
+#progres i{width:26px;height:8px;border-radius:4px;background:#d6e2ee}
+#progres i.fait{background:hsl(var(--h,207),70%,50%)}
+#ecrit{position:absolute;left:1170px;top:250px;display:flex;align-items:center;gap:16px;font-size:64px;font-weight:700}
+#reponse{min-width:150px;height:84px;border:5px solid var(--talbot);border-radius:14px;background:#fff;display:flex;align-items:center;justify-content:center;font-size:56px}
+#reponse.ko{border-color:var(--rouge);animation:secoue .45s 2} #reponse.ok{border-color:var(--vert)}
+@keyframes secoue{0%,100%{transform:translateX(0)}25%{transform:translateX(-10px)}75%{transform:translateX(10px)}}
+#lignes{position:absolute;left:1170px;top:430px;font-size:44px;font-weight:700;line-height:1.35;color:var(--encre)}
+#lignes div{animation:ligne .35s ease-out} @keyframes ligne{from{opacity:0;transform:translateY(-10px)}}
+#phrase{position:absolute;left:1170px;top:360px;font-size:34px;font-weight:700;color:#5c7a99}
+/* 🧮 la calculette : petite, sur le côté, on touche les touches */
+#pave{position:absolute;right:40px;top:400px;display:grid;grid-template-columns:repeat(3,64px);gap:8px;padding:14px;background:#37474f;border-radius:20px;box-shadow:0 6px 0 #263238}
+#pave button{height:52px;font:700 26px Arial,sans-serif;border-radius:10px;border:none;background:#eceff1;color:#263238;box-shadow:0 3px 0 #90a4ae;cursor:pointer}
+#pave button:active{transform:translateY(2px);box-shadow:none}
+#choix{position:absolute;inset:0;background:rgba(22,58,95,.55);display:none;align-items:center;justify-content:center;z-index:40}
+#choix div{background:#fff;border-radius:20px;padding:30px 44px;font-size:40px;font-weight:700;display:flex;gap:16px;align-items:center}
+#choix input{font:inherit;font-size:44px;width:90px;text-align:center}
+#choix button{font:inherit;font-size:30px;padding:10px 30px;border-radius:30px;border:3px solid var(--talbot);background:var(--talbot);color:#fff;cursor:pointer}
+/* 🧮 calculette discrète (21/10) : petite, pâle, petits chiffres */
+#pave{padding:8px !important; gap:5px !important; grid-template-columns:repeat(3,46px) !important; background:#eceff1 !important; box-shadow:none !important; border:2px solid #cfd8dc; border-radius:14px !important; opacity:.85}
+#pave button{height:38px !important; font-size:19px !important; border-radius:8px !important; background:#fff !important; color:#607d8b !important; box-shadow:none !important; border:1px solid #cfd8dc !important}
+</style>
+</head>
+<body>
+<div id="scene">
+  <div id="barre">
+    <h1><svg viewBox="0 0 64 64"><g fill="#42a5f5" stroke="#fff" stroke-width="3"><rect x="6" y="10" width="16" height="16"/><rect x="24" y="10" width="16" height="16"/><rect x="42" y="10" width="16" height="16"/><rect x="6" y="34" width="16" height="16"/><rect x="24" y="34" width="16" height="16"/><rect x="42" y="34" width="16" height="16"/></g></svg>Les rangées de cubes</h1>
+    <div id="niveaux"><button data-n="t2">2</button><button data-n="t3">3</button><button data-n="t4">4</button><button data-n="t5">5</button><button data-n="t6">6</button><button data-n="t7">7</button><button data-n="t8">8</button><button data-n="t9">9</button><button data-n="t10">10</button><button data-n="2a5" class="groupe">2 à 5</button><button data-n="6a9" class="groupe">6 à 9</button><button data-n="toutes" class="groupe">Toutes</button></div>
+    <div id="coin"><div>Série sans faute : <b id="score">0</b> · 🏆 Record : <b id="record">0</b></div></div>
+  </div>
+  <div id="consigne"></div>
+  <div id="progres"></div>
+  <div id="jeu">
+    <div id="cubes"></div>
+    <div id="ecrit"><span id="calcul"></span><span>=</span><div id="reponse"></div></div>
+    <div id="phrase"></div>
+    <div id="lignes"></div>
+    <div id="pave"></div>
+  </div>
+  <button id="crayon" title="Taper ma multiplication">✏️</button>
+  <button id="indice" title="Indice">💡</button>
+  <div id="bulle"></div>
+  <div id="choix"><div><input id="ca" type="number" min="1" max="50" value="6"> × <input id="cb" type="number" min="1" max="30" value="7"><button id="ok">C'est parti</button></div></div>
+  <div id="bas"><div id="verdict"></div></div>
+</div>
+<script>
+"use strict";
+const NIV = { "2a5": [2, 3, 4, 5], "6a9": [6, 7, 8, 9], toutes: [2, 3, 4, 5, 6, 7, 8, 9, 10] };
+for (let k = 2; k <= 10; k++) NIV["t" + k] = [k];   // la table de k : k cubes par rangée
+const teinte = n => [0, 28, 50, 90, 140, 170, 195, 215, 250, 285][n - 1];   // les teintes de la grille des tables (une par table)
+const etat = { n: "2a5", a: 6, b: 7, tape: "", score: 0, aide: 0, pret: false, vus: [], groupes: [] };
+window.CUBES = etat;   // pour le test automatique
+const $ = id => document.getElementById(id);
+const mem = { lire(k) { try { return +localStorage.getItem(k) || 0; } catch (e) { return 0; } }, ecrire(k, v) { try { localStorage.setItem(k, v); } catch (e) {} } };
+const cleRecord = () => "rangees-cubes-record-" + etat.n;
+function afficheScore() { $("score").textContent = etat.score; $("record").textContent = mem.lire(cleRecord()); }
+function marque() { etat.score++; if (etat.score > mem.lire(cleRecord())) mem.ecrire(cleRecord(), etat.score); afficheScore(); }
+function verdict(t, cls) { const v = $("verdict"); v.textContent = t; v.className = cls || ""; if (cls === "ko" && etat.score) { etat.score = 0; afficheScore(); } }   // série sans faute : une erreur la remet à 0
+function bulle(t) { const b = $("bulle"); b.textContent = t; b.style.display = "block"; clearTimeout(bulle.t); bulle.t = setTimeout(() => b.style.display = "none", 7000); }
+let minuteurs = [];
+const plusTard = (f, ms) => minuteurs.push(setTimeout(f, ms));
+const stop = () => { minuteurs.forEach(clearTimeout); minuteurs = []; };
+
+// ---------- une multiplication : a cubes par rangée, b rangées ----------
+const progres = k => { try { return JSON.parse(localStorage.getItem("rangees-cubes-table-" + k) || "[]"); } catch (e) { return []; } };
+function noteProgres(a, b) { try { const L = progres(a); if (!L.includes(b)) { L.push(b); localStorage.setItem("rangees-cubes-table-" + a, JSON.stringify(L)); } } catch (e) {} }
+function dessineProgres() {
+  const P = $("progres"); if (etat.n[0] !== "t") { P.innerHTML = ""; return; }
+  const k = +etat.n.slice(1), L = progres(k); P.style.setProperty("--h", teinte(k));
+  P.innerHTML = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(b => '<i class="' + (L.includes(b) ? "fait" : "") + '" title="' + k + " × " + b + '"></i>').join("");
+}
+function tire() {
+  const T = NIV[etat.n]; let a, b, g = 0;
+  if (etat.n[0] === "t") {   // dans une table : les calculs pas encore trouvés d'abord, puis tous, sans répéter le précédent
+    a = T[0]; const reste = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].filter(x => !progres(a).includes(x) && a + "x" + x !== etat.vus[etat.vus.length - 1]);
+    const L = reste.length ? reste : [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].filter(x => a + "x" + x !== etat.vus[etat.vus.length - 1]);
+    b = L[Math.floor(Math.random() * L.length)]; etat.vus.push(a + "x" + b); return [a, b];
+  }
+  do { a = T[Math.floor(Math.random() * T.length)]; b = 2 + Math.floor(Math.random() * 9); } while (etat.vus.includes(a + "x" + b) && g++ < 50);
+  etat.vus.push(a + "x" + b); if (etat.vus.length > 30) etat.vus.shift();
+  return [a, b];
+}
+function nouvelle(a, b) {
+  stop(); etat.a = a; etat.b = b; etat.tape = ""; taille(a, b); $("cubes").style.setProperty("--h", teinte(a) ?? 207); $("cubes").style.setProperty("--x0", xDebut(a) + "px"); etat.aide = 0; etat.pret = false; etat.groupes = []; $("lignes").innerHTML = "";
+  $("calcul").textContent = a + " × " + b; $("reponse").textContent = ""; $("reponse").className = ""; $("phrase").textContent = ""; verdict(""); $("bulle").style.display = "none";
+  $("consigne").innerHTML = '<span><span class="q">' + a + " × " + b + "</span></span>";
+  anime();
+}
+// l'animation : la rangée de a cubes apparaît cube après cube, puis elle se recopie jusqu'à b rangées
+// la taille d'un cube : 52 px jusqu'à 10 × 10 ; plus petit au-delà, pour que a cubes tiennent en largeur et b rangées en hauteur (jusqu'à 50 × 30)
+let PAS = 58, COTE = 52, ECART = 6;
+const largeur = a => a * COTE + (a - 1) * ECART + Math.floor((a - 1) / 10) * ECART;   // l'écart en plus après chaque dizaine
+function taille(a, b) {
+  ECART = a > 12 || b > 11 ? 4 : 6;
+  COTE = Math.max(10, Math.min(52, Math.floor((720 - (a - 1) * ECART - Math.floor((a - 1) / 10) * ECART) / a), Math.floor((660 + ECART) / b) - ECART));
+  PAS = COTE + ECART;
+  const C = $("cubes"); C.style.setProperty("--s", COTE + "px"); C.style.setProperty("--g", ECART + "px"); C.style.setProperty("--fc", Math.min(26, Math.max(13, COTE * .55)) + "px");
+  C.classList.toggle("petits", COTE < 34);
+}
+const xDebut = a => Math.round((900 - largeur(a)) / 2) + 40;   // le bord gauche de la rangée, pour qu'elle soit centrée
+function anime() {
+  stop(); etat.pret = false; const C = $("cubes"); C.innerHTML = "";
+  const { a, b } = etat, h0 = Math.max(0, (660 - b * PAS) / 2);
+  const rangee = k => { const r = document.createElement("div"); r.className = "rangee"; r.style.top = (h0 + k * PAS) + "px"; return r; };
+  const r0 = rangee(0); r0.style.animation = "none"; C.appendChild(r0);
+  const dc = Math.min(160, 2400 / a), dr = Math.min(450, 7000 / b);   // beaucoup de cubes : l'animation va plus vite
+  for (let i = 0; i < a; i++) plusTard(() => { const c = document.createElement("div"); c.className = "cube"; r0.appendChild(c); }, i * dc);
+  const t1 = a * dc + 400;
+  plusTard(() => C.insertAdjacentHTML("beforeend", '<div class="compte" style="top:' + h0 + 'px">' + a + " × 1</div>"), t1 - 200);
+  for (let k = 1; k < b; k++) plusTard(() => {
+    const r = rangee(k); for (let i = 0; i < a; i++) r.insertAdjacentHTML("beforeend", '<div class="cube" style="animation:none"></div>'); C.appendChild(r);
+    C.insertAdjacentHTML("beforeend", '<div class="compte" style="top:' + (h0 + k * PAS) + 'px">' + a + " × " + (k + 1) + "</div>");
+  }, t1 + (k - 1) * dr);
+  plusTard(() => { etat.pret = true; $("consigne").innerHTML = '<span>Combien de <span class="q">cubes</span> ?</span>'; }, t1 + (b - 1) * dr + 200);
+}
+// ---------- la calculette ----------
+["7", "8", "9", "4", "5", "6", "1", "2", "3", "", "0", "⌫"].forEach(k => { const b = document.createElement("button"); b.textContent = k; if (!k) b.style.visibility = "hidden"; b.onclick = () => touche(k); $("pave").appendChild(b); });
+function touche(k) {
+  if (!k || $("reponse").classList.contains("ok")) return;
+  if (k === "⌫") etat.tape = etat.tape.slice(0, -1); else if (etat.tape.length < 4) etat.tape += k;
+  $("reponse").textContent = etat.tape;
+  const juste = String(etat.a * etat.b);
+  if (etat.tape === juste) {
+    $("reponse").className = "ok"; marque(); stop(); montreTout(); noteProgres(etat.a, etat.b); dessineProgres();
+    verdict("✅", "ok"); if (!etat.groupes.length) $("phrase").textContent = etat.b + " rangées de " + etat.a + " cubes = " + juste + " cubes";   // avec des paquets, les lignes du calcul suffisent
+    plusTard(() => nouvelle(...tire()), 2600);
+  } else if (etat.tape && !juste.startsWith(etat.tape)) {
+    $("reponse").className = "ko"; verdict("🤪 Compte encore les cubes.", "ko");
+    setTimeout(() => { $("reponse").className = ""; etat.tape = ""; $("reponse").textContent = ""; }, 900);
+  }
+}
+// les paquets, choisis au doigt (Karim, 21/10) : je touche (ou je balaie jusqu'à) une rangée → une accolade de la première rangée libre
+// jusqu'à elle, avec son calcul (6 × 2 = 12) ; le calcul complet s'écrit au fur et à mesure en bas ; toucher un paquet fait le défait
+const fait = () => etat.groupes.reduce((s, n) => s + n, 0);
+function dessineGroupes(jusqua) {
+  const C = $("cubes"); C.querySelectorAll(".accolade,.paquet,.somme").forEach(e => e.remove());
+  const { a, b } = etat, h0 = Math.max(0, (660 - b * PAS) / 2), x = xDebut(a) + largeur(a) + 12, d0 = fait();
+  C.querySelectorAll(".rangee").forEach(r => { const k = Math.round((parseFloat(r.style.top) - h0) / PAS); r.classList.toggle("choisie", jusqua !== undefined && k >= d0 && k <= jusqua); });
+  let d = 0;
+  etat.groupes.forEach(n => {
+    const y = h0 + d * PAS, h = n * PAS - ECART;
+    C.insertAdjacentHTML("beforeend", '<div class="accolade" style="left:' + x + "px;top:" + y + "px;height:" + h + 'px"></div><div class="paquet" style="left:' + (x + 28) + "px;top:" + (y + h / 2) + 'px">' + a + " × " + n + " = " + a * n + "</div>");
+    d += n;
+  });
+  const L = $("lignes"), ok = $("reponse").classList.contains("ok"), G = etat.groupes;
+  if (!G.length || (d === b && G.length === 1 && !ok)) { L.innerHTML = ""; return; }
+  const lignes = [a + " × " + b, "= " + G.map(n => a + " × " + n).join(" + ") + (d < b ? " + …" : "")];
+  if (d === b && G.length > 1) lignes.push("= " + G.map(n => a * n).join(" + "));
+  if (d === b && ok) lignes.push("= " + a * b);
+  const deja = [...L.children].map(e => e.textContent);
+  L.innerHTML = lignes.map((l, k) => "<div" + (deja[k] === l ? ' style="animation:none"' : "") + ">" + l + "</div>").join("");   // seules les lignes nouvelles s'animent
+}
+function rangeeSous(ev) {
+  const C = $("cubes"), r = C.getBoundingClientRect(), e = r.height / 660, h0 = Math.max(0, (660 - etat.b * PAS) / 2);
+  const k = Math.floor(((ev.clientY - r.top) / e - h0) / PAS); return k >= 0 && k < etat.b ? k : -1;
+}
+let choix = false;
+$("cubes").addEventListener("pointerdown", ev => {
+  if (!etat.pret) { stop(); etat.pret = true; anime.instant(); $("consigne").innerHTML = '<span>Combien de <span class="q">cubes</span> ?</span>'; return; }   // pendant l'animation : tout tout de suite
+  const k = rangeeSous(ev); if (k < 0) return;
+  if (k < fait()) { let d = 0; etat.groupes = etat.groupes.filter(n => { const garde = d + n <= k; d += n; return garde; }); dessineGroupes(); return; }   // défaire
+  choix = true; dessineGroupes(k);
+});
+$("cubes").addEventListener("pointermove", ev => { if (!choix) return; const k = rangeeSous(ev); if (k >= fait()) dessineGroupes(k); });
+addEventListener("pointerup", ev => {
+  if (!choix) return; choix = false; const k = rangeeSous(ev), d = fait();
+  const fin = k >= d ? k : Math.max(d, ...[...$("cubes").querySelectorAll(".rangee.choisie")].map(r => Math.round((parseFloat(r.style.top) - Math.max(0, (660 - etat.b * PAS) / 2)) / PAS)));
+  etat.groupes.push(fin - d + 1); dessineGroupes();
+});
+function montreTout() { if (!etat.pret) { stop(); etat.pret = true; anime.instant(); } dessineGroupes(); }
+anime.instant = () => {   // tout afficher d'un coup (réponse trouvée pendant l'animation)
+  const C = $("cubes"); C.innerHTML = ""; const { a, b } = etat, h0 = Math.max(0, (660 - b * PAS) / 2);
+  for (let k = 0; k < b; k++) { C.insertAdjacentHTML("beforeend", '<div class="rangee" style="top:' + (h0 + k * PAS) + 'px;animation:none">' + '<div class="cube" style="animation:none"></div>'.repeat(a) + '</div><div class="compte" style="top:' + (h0 + k * PAS) + 'px">' + a + " × " + (k + 1) + "</div>"); }
+};
+addEventListener("keydown", e => { if ($("choix").style.display === "flex") return; if (/^[0-9]$/.test(e.key)) touche(e.key); else if (e.key === "Backspace") touche("⌫"); });
+// l'indice : la méthode (compter de a en a), puis regrouper les rangées — jamais le résultat
+$("indice").onclick = () => {
+  etat.aide++;
+  if (etat.aide === 1) bulle("Compte de " + etat.a + " en " + etat.a + " : une rangée de plus, c'est " + etat.a + " cubes de plus.");
+  else bulle("Regroupe des rangées faciles (2, 5…) : calcule chaque paquet, puis ajoute.");
+};
+// ✏️ : le maître tape sa multiplication
+$("crayon").onclick = () => { $("choix").style.display = "flex"; };
+$("choix").addEventListener("pointerup", ev => { if (ev.target.id === "choix") $("choix").style.display = "none"; });
+$("ok").onclick = () => { const a = Math.min(50, Math.max(1, +$("ca").value || 1)), b = Math.min(30, Math.max(1, +$("cb").value || 1)); $("choix").style.display = "none"; nouvelle(a, b); };
+function ouvre(n) {
+  etat.n = n; etat.score = 0; etat.vus = [];
+  document.querySelectorAll("#niveaux button").forEach(b => { b.classList.toggle("on", b.dataset.n === n); b.style.borderColor = b.dataset.n === n ? "#fff" : ""; });
+  history.replaceState(null, "", "#" + n); afficheScore(); dessineProgres(); nouvelle(...tire());
+}
+document.querySelectorAll("#niveaux button").forEach(b => { b.onclick = () => ouvre(b.dataset.n); if (b.dataset.n[0] === "t") b.style.setProperty("--h", teinte(+b.dataset.n.slice(1))); });
+function ajuste() {
+  const e = Math.min(innerWidth / 1920, innerHeight / 1080), s = $("scene");
+  s.style.transform = "scale(" + e + ")"; s.style.left = ((innerWidth - 1920 * e) / 2) + "px"; s.style.top = ((innerHeight - 1080 * e) / 2) + "px"; s.dataset.ech = e;
+}
+addEventListener("resize", ajuste); ajuste();
+function depuisLien() {   // #12x15 : ouvre directement cette multiplication (jusqu'à 50 × 30)
+  const h = location.hash.slice(1), m = h.match(/^(\d+)x(\d+)$/);
+  if (m) { ouvre("toutes"); nouvelle(Math.min(50, Math.max(1, +m[1])), Math.min(30, Math.max(1, +m[2]))); return; }
+  ouvre(NIV[h] ? h : "2a5");
+}
+addEventListener("hashchange", depuisLien);
+depuisLien();
+</script>
+</body>
+</html>

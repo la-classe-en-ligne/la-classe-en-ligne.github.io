@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>La barre des compléments</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect x='4' y='22' width='34' height='20' rx='4' fill='%231f6fb2'/%3E%3Crect x='38' y='22' width='22' height='20' rx='4' fill='%23d62839'/%3E%3Crect x='35' y='14' width='6' height='36' rx='3' fill='%23222'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Quicksand:wght@600;700&display=swap">
+<style>
+  /* Univers : une grande barre de 0 à la cible (10, 100 … 1 million). La part bleue à gauche, la part rouge à droite ;
+     on bouge le curseur : les deux parts grandissent et rétrécissent ensemble, la somme ne change jamais.
+     Onglets : Je bouge (comprendre) · Ardoise (12/10, Karim : pas de questions tirées ; le maître place lui-même le curseur, une part reste cachée,
+     la classe écrit le complément sur l'ardoise, un toucher sur « ? » le montre ; toucher une part visible la cache à sa place). */
+  :root{ --encre:#1f2a33; --gris:#66737f; --bord:#dfe5ea; --bleu:#1f6fb2; --bleu-clair:#d8e8f6; --rouge:#d62839; --rouge-clair:#fbdde0;
+    --bien:#1a8f5c; --faux:#d6455d; --talbot:#1f7a8c; }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{margin:0; color:var(--encre); font-family:"Quicksand",system-ui,sans-serif; overflow:hidden; height:100vh; display:flex; flex-direction:column;
+    background:#f6f8fa; user-select:none; -webkit-user-select:none; touch-action:none;}
+  [hidden]{display:none !important;}
+  .barre{display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:20px; padding:8px 26px; background:#fff; border-bottom:3px solid var(--bord);}
+  .titre{display:flex; align-items:center; gap:12px;} .titre svg{width:54px; height:54px;}
+  .titre h1{font-family:"Baloo 2",cursive; font-weight:800; font-size:1.9rem; margin:0;}
+  .onglets{display:flex; gap:6px; justify-content:center;}
+  .onglets button{font:inherit; font-weight:700; font-size:1.1rem; padding:6px 18px; border-radius:999px; cursor:pointer; background:#fff; color:var(--gris); border:2px solid var(--bord); white-space:nowrap;}
+  .onglets button.actif{background:var(--encre); color:#fff; border-color:var(--encre);}
+  .droite{display:flex; align-items:center; gap:12px;}
+  .score{display:flex; flex-direction:column; align-items:center; padding:2px 14px; border-radius:12px; background:#fff; border:2px solid var(--bord); min-width:130px;}
+  .score small{font-size:.8rem; font-weight:700; color:var(--gris); text-transform:uppercase; letter-spacing:.5px;}
+  .score b{font-family:"Baloo 2",cursive; font-size:1.8rem; line-height:1.05;}
+  .niveaux{display:flex; gap:4px; flex-wrap:wrap;}
+  .niveaux button{font:inherit; font-weight:700; font-size:.95rem; padding:3px 14px; border-radius:999px; cursor:pointer; background:#fff; color:var(--gris); border:2px solid var(--bord);}
+  .niveaux button.actif{background:var(--encre); color:#fff; border-color:var(--encre);}
+  .btn-son{width:44px; height:44px; border-radius:50%; font-size:1.2rem; cursor:pointer; background:#fff; border:2px solid var(--bord);}
+  .consigne{display:flex; justify-content:center; padding:12px 20px 0;}
+  .consigne p{margin:0; font-family:"Baloo 2",cursive; font-weight:700; font-size:2.1rem; text-align:center; background:#fff; padding:2px 22px; border-radius:16px; border:2px solid var(--bord);}
+
+  .jeu{flex:1; min-height:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:20px; padding:0 60px;}
+  /* l'égalité, en très grand */
+  .egalite{font-family:"Baloo 2",cursive; font-weight:800; font-size:6rem; line-height:1; display:flex; gap:28px; align-items:baseline;}
+  .egalite .b{color:var(--bleu);} .egalite .r{color:var(--rouge);} .egalite .cache{color:var(--gris);}
+  /* la barre */
+  .zone{position:relative; width:1600px; max-width:100%; padding-top:120px;}
+  .bulle{position:absolute; top:0; transform:translateX(-50%); font-family:"Baloo 2",cursive; font-weight:800; font-size:3.4rem; line-height:1; color:#fff;
+    padding:10px 30px 4px; border-radius:22px; white-space:nowrap; transition:left .08s linear;}
+  .bulle::after{content:""; position:absolute; left:50%; bottom:-16px; margin-left:-16px; border:16px solid transparent; border-bottom:0; border-top-color:inherit;}
+  .bulle.b{background:var(--bleu); border-top-color:var(--bleu);} .bulle.r{background:var(--rouge); border-top-color:var(--rouge);}
+  .bulle.b::after{border-top-color:var(--bleu);} .bulle.r::after{border-top-color:var(--rouge);}
+  .bulle.cache{background:#fff; color:var(--gris); border:5px dashed var(--gris); cursor:pointer;}
+  .bulle.cache::after{border-top-color:var(--gris);}
+  .bulle.cible{outline:6px solid var(--talbot); outline-offset:4px;}
+  .bulle.revele{animation:revele .5s ease;}
+  @keyframes revele{0%{transform:translateX(-50%) scale(.4)}70%{transform:translateX(-50%) scale(1.15)}100%{transform:translateX(-50%) scale(1)}}
+  .piste{position:relative; height:130px; border-radius:22px; overflow:hidden; background:var(--rouge); box-shadow:inset 0 -10px 0 rgba(0,0,0,.12), 0 8px 20px rgba(0,0,0,.08); cursor:pointer; touch-action:none;}
+  .piste .bleue{position:absolute; left:0; top:0; bottom:0; background:var(--bleu); box-shadow:inset 0 -10px 0 rgba(0,0,0,.12);}
+  .piste.anime .bleue{transition:width .9s cubic-bezier(.3,.8,.3,1);}
+  .zone.anime .bulle, .zone.anime .curseur{transition:left .9s cubic-bezier(.3,.8,.3,1);}
+  .curseur{position:absolute; top:100px; width:46px; height:170px; margin-left:-23px; border-radius:23px; background:#fff; border:6px solid var(--encre);
+    box-shadow:0 6px 16px rgba(0,0,0,.25); cursor:grab; touch-action:none; z-index:3;}
+  .curseur::before,.curseur::after{content:""; position:absolute; left:50%; width:4px; height:40px; margin-left:-2px; top:58px; background:var(--encre); border-radius:2px;}
+  .curseur::before{margin-left:-10px;} .curseur::after{margin-left:6px;}
+  /* graduations */
+  .regle{position:relative; height:70px; margin-top:6px;}
+  .tic{position:absolute; top:0; width:3px; margin-left:-1.5px; background:var(--encre);}
+  .tic.grand{height:22px;} .tic.petit{height:10px; width:2px; background:#9aa6b0;}
+  .lab{position:absolute; top:24px; transform:translateX(-50%); font-family:"Baloo 2",cursive; font-weight:700; font-size:1.45rem; color:var(--gris); white-space:nowrap;}
+  .lab.fort{color:var(--encre); font-size:1.7rem;}
+  /* étiquettes */
+  .etiquettes{display:flex; gap:34px; justify-content:center; min-height:100px;}
+  .etiq{font-family:"Baloo 2",cursive; font-weight:800; font-size:3rem; padding:6px 30px 0; border-radius:16px; background:#fff; border:4px solid var(--encre); cursor:grab; touch-action:none;
+    box-shadow:0 6px 0 rgba(31,42,51,.18);}
+  .etiq.parti{visibility:hidden;} .etiq.choisi{outline:7px solid var(--talbot); outline-offset:4px;}
+  .etiq.tombe{animation:tombe .6s ease forwards;}
+  @keyframes tombe{to{transform:translateY(80px) rotate(25deg); opacity:0}}
+  .en-vol{position:fixed !important; z-index:50; pointer-events:none; margin:0 !important; transform:rotate(-4deg) scale(1.05);}
+  .secoue{animation:secoue .4s ease;} @keyframes secoue{0%,100%{transform:none}25%{transform:translateX(-12px)}75%{transform:translateX(12px)}}
+
+  /* 26/11 (Karim) : à la correction, les bonds : jusqu'au nombre rond, puis jusqu'à la cible (comme l'ascenseur) */
+  .bonds{position:relative; height:150px; margin-top:-6px;} .bonds svg{position:absolute; inset:0; width:100%; height:100%; overflow:visible;}
+  .bonds .lb{font-family:"Baloo 2",cursive; font-weight:800; font-size:2.6rem; fill:var(--rouge);}
+  .bonds .ar{fill:none; stroke:var(--rouge); stroke-width:6; stroke-linecap:round;}
+  .bonds .pt{fill:var(--encre);}
+  .bonds .nb{font-family:"Baloo 2",cursive; font-weight:800; font-size:1.8rem; fill:var(--encre);}
+  .phrase-bonds{font-family:"Baloo 2",cursive; font-weight:800; font-size:2.6rem; color:var(--rouge); min-height:3rem; text-align:center;}
+  .bas{display:flex; align-items:center; justify-content:center; gap:18px; padding:6px 0 14px; min-height:70px;}
+  .btn-indice{font:inherit; font-weight:700; font-size:1.2rem; padding:6px 16px; border-radius:999px; cursor:pointer; background:#fff8dc; border:2px solid #f1d27a; color:#7a5b00;}
+  .verdict{min-height:3rem; font-family:"Baloo 2",cursive; font-size:2rem; font-weight:800; text-align:center;}
+  .verdict:not(:empty){background:#fff; padding:0 24px; border-radius:14px;}
+  .verdict.bien{color:var(--bien);} .verdict.faux{color:var(--faux);} .verdict.indice{color:#7a5b00;}
+  .btn-suivant{font:inherit; font-family:"Baloo 2",cursive; font-weight:800; font-size:1.8rem; padding:4px 34px; border-radius:999px; cursor:pointer; background:var(--encre); color:#fff; border:none;}
+</style>
+</head>
+<body>
+<div class="barre">
+  <div class="titre">
+    <svg viewBox="0 0 64 64" aria-hidden="true"><rect x="4" y="22" width="34" height="20" rx="4" fill="#1f6fb2"/><rect x="38" y="22" width="22" height="20" rx="4" fill="#d62839"/><rect x="35" y="14" width="6" height="36" rx="3" fill="#222"/></svg>
+    <h1>La barre des compléments</h1>
+  </div>
+  <div class="onglets" id="onglets">
+    <button type="button" data-onglet="bouge" class="actif">Je bouge</button>
+    <button type="button" data-onglet="ardoise">Ardoise</button>
+  </div>
+  <div class="droite">
+    <div class="score"><small id="nomScore">Compléments vus</small><b id="score">0</b></div>
+    <div class="score" title="Le meilleur score à ce niveau, gardé sur cet ordinateur"><small>🏆 Record</small><b id="record">0</b></div>
+    <div class="niveaux" id="niveaux">
+      <button type="button" data-niveau="10">à 10</button>
+      <button type="button" data-niveau="100">à 100</button>
+      <button type="button" data-niveau="1000" class="actif">à 1 000</button>
+      <button type="button" data-niveau="10000">à 10 000</button>
+      <button type="button" data-niveau="100000">à 100 000</button>
+      <button type="button" data-niveau="1000000">à 1 million</button>
+    </div>
+    <button class="btn-son" id="btnSon" type="button" title="Son">🔊</button>
+  </div>
+</div>
+<div class="consigne"><p id="consigne"></p></div>
+<div class="jeu">
+  <div class="egalite" id="egalite"></div>
+  <div class="zone" id="zone">
+    <div class="bulle b" id="bulleB"></div>
+    <div class="bulle r" id="bulleR"></div>
+    <div class="piste" id="piste"><div class="bleue" id="bleue"></div></div>
+    <div class="curseur" id="curseur"></div>
+    <div class="regle" id="regle"></div>
+    <div class="bonds" id="bonds" hidden></div>
+  </div>
+  <div class="phrase-bonds" id="phraseBonds"></div>
+</div>
+<div class="bas">
+  <button class="btn-indice" id="btnIndice" type="button">💡 Indice</button>
+  <div class="verdict" id="verdict"></div>
+  <button class="btn-suivant" id="btnSuivant" type="button" hidden>➜</button>
+</div>
+<script>
+(function () {
+  // Nombres tirés au hasard à chaque fois (pas tirés de la banque). Pas du curseur : 10 et 100 → 1 ; 1 000 → 10 ; 10 000 → 100…
+  var PAS = { 10: 1, 100: 1, 1000: 10, 10000: 100, 100000: 1000, 1000000: 10000 };
+  var el = function (id) { return document.getElementById(id); };
+  var cible = 1000, onglet = "bouge", v = 350, cache = null, score = 0, erreurs = 0, fini = false, sonActif = true, ctx = null;
+  function n(x) { return String(x).replace(/\B(?=(\d{3})+(?!\d))/g, " "); }
+  function hasard(a, b) { return a + Math.floor(Math.random() * (b - a + 1)); }
+  function pas() { return PAS[cible]; }
+  function son(type) {
+    if (!sonActif) return;
+    try {
+      ctx = ctx || new (window.AudioContext || window.webkitAudioContext)();
+      var t = ctx.currentTime, notes = type === "bien" ? [[784, 0, .3], [988, .08, .3], [1175, .16, .45]] : type === "tic" ? [[1200, 0, .04, "sine"]] : type === "revele" ? [[523, 0, .15], [784, .1, .35]] : [[300, 0, .35, "sine", 140]];
+      notes.forEach(function (q) { var o = ctx.createOscillator(), g = ctx.createGain(); o.type = q[3] || "triangle"; o.frequency.setValueAtTime(q[0], t + q[1]);
+        if (q[4]) o.frequency.exponentialRampToValueAtTime(q[4], t + q[1] + q[2]);
+        o.connect(g); g.connect(ctx.destination); g.gain.setValueAtTime(.0001, t + q[1]); g.gain.exponentialRampToValueAtTime(type === "tic" ? .05 : .14, t + q[1] + .01);
+        g.gain.exponentialRampToValueAtTime(.0001, t + q[1] + q[2]); o.start(t + q[1]); o.stop(t + q[1] + q[2] + .05); });
+    } catch (e) {}
+  }
+  function cleRecord() { return "barre-complements-record-" + onglet + "-" + cible; }
+  function majScore() {
+    var r = 0; try { r = parseInt(localStorage.getItem(cleRecord()), 10) || 0; } catch (e) {}
+    if (score > r) { r = score; try { localStorage.setItem(cleRecord(), String(r)); } catch (e) {} }
+    el("score").textContent = score; el("record").textContent = r;
+    el("nomScore").textContent = onglet === "ardoise" ? "Compléments trouvés" : "Compléments vus";
+  }
+  function verdict(t, c) { el("verdict").textContent = t; el("verdict").className = "verdict" + (c ? " " + c : ""); }
+  function secoue(x) { x.classList.remove("secoue"); void x.offsetWidth; x.classList.add("secoue"); }
+
+  // ---------- la règle graduée ----------
+  function regle() {
+    var R = el("regle"); R.innerHTML = "";
+    var petits = cible === 10 ? 10 : 100;
+    for (var k = 0; k <= petits; k++) {
+      var grand = k % (petits / 10) === 0, t = document.createElement("div"); t.className = "tic " + (grand ? "grand" : "petit"); t.style.left = (100 * k / petits) + "%"; R.appendChild(t);
+      if (grand) { var l = document.createElement("div"); var val = cible * k / petits; l.className = "lab" + (val === 0 || val === cible || val === cible / 2 ? " fort" : "");
+        l.style.left = (100 * k / petits) + "%"; l.textContent = n(val); R.appendChild(l); }
+    }
+  }
+  // ---------- dessiner la valeur v (la part bleue) ----------
+  function dessiner() {
+    var f = v / cible, b = v, r = cible - v;
+    el("bleue").style.width = (100 * f) + "%";
+    el("curseur").style.left = (100 * f) + "%";
+    var W = el("zone").clientWidth, wb = W * f, wr = W - wb;
+    var B = el("bulleB"), Rr = el("bulleR");
+    B.textContent = cache === "b" ? "?" : n(b); Rr.textContent = cache === "r" ? "?" : n(r);
+    B.className = "bulle b" + (cache === "b" ? " cache" : ""); Rr.className = "bulle r" + (cache === "r" ? " cache" : "");
+    // chaque bulle au milieu de sa part, sans sortir de la barre ni chevaucher l'autre
+    var lb = B.offsetWidth, lr = Rr.offsetWidth, xb = Math.max(lb / 2, wb / 2), xr = Math.min(W - lr / 2, wb + wr / 2);
+    if (xr - lr / 2 < xb + lb / 2 + 12) { var m = (xb + lb / 2 + xr - lr / 2) / 2; xb = Math.max(lb / 2, m - 6 - lb / 2); xr = Math.min(W - lr / 2, m + 6 + lr / 2);
+      if (xr - lr / 2 < xb + lb / 2 + 12) { xb = Math.min(xb, W - lr - lb / 2 - 12); xr = xb + lb / 2 + 12 + lr / 2; } }
+    B.style.left = xb + "px"; Rr.style.left = xr + "px";
+    var e = el("egalite");
+    e.innerHTML = '<span class="' + (cache === "b" ? "cache" : "b") + '">' + (cache === "b" ? "?" : n(b)) + '</span><span>+</span><span class="' + (cache === "r" ? "cache" : "r") + '">' +
+      (cache === "r" ? "?" : n(r)) + "</span><span>=</span><span>" + n(cible) + "</span>";
+    bonds();
+  }
+  // ---------- 26/11 : les bonds, montrés à la correction ----------
+  var bondsVisibles = false;
+  function arrondi(x) {   // le prochain nombre rond : 5 pour la cible 10 (si on est en dessous), sinon la dizaine, la centaine… suivante
+    if (cible === 10) return x < 5 ? 5 : 10;
+    var r = cible / 10; return Math.min(cible, Math.ceil(x / r) * r);
+  }
+  function bonds() {
+    var B = el("bonds"), P = el("phraseBonds");
+    if (!bondsVisibles || v >= cible) { B.hidden = true; B.innerHTML = ""; P.textContent = ""; return; }
+    var pts = [v], a = arrondi(v); if (a > v && a < cible) pts.push(a); pts.push(cible);
+    B.hidden = false; var W = el("zone").clientWidth, H = 150, X = function (x) { return W * x / cible; };
+    var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '">', sauts = [];
+    for (var i = 0; i < pts.length - 1; i++) {
+      var x1 = X(pts[i]), x2 = X(pts[i + 1]), m = (x1 + x2) / 2, h = Math.min(110, 40 + (x2 - x1) / 4), d = pts[i + 1] - pts[i]; sauts.push(d);
+      svg += '<path class="ar" d="M' + x1 + ' 8 Q' + m + ' ' + (8 + 2 * h) + ' ' + x2 + ' 8"/>' +
+        '<path class="ar" d="M' + (x2 - 14) + ' 22 L' + x2 + ' 8 L' + (x2 + 4) + ' 26"/>' +
+        '<text class="lb" text-anchor="middle" x="' + m + '" y="' + (8 + h + 30) + '">+' + n(d) + '</text>';
+    }
+    pts.forEach(function (p) { svg += '<circle class="pt" cx="' + X(p) + '" cy="8" r="8"/>'; });
+    B.innerHTML = svg + "</svg>";
+    P.textContent = pts.map(n).join(" → ") + (sauts.length > 1 ? "   ·   " + sauts.map(n).join(" + ") + " = " + n(cible - v) : "");
+  }
+  // ---------- Je bouge : glisser le curseur ou toucher la barre ----------
+  function valeurA(x) { var r = el("piste").getBoundingClientRect(), f = Math.min(1, Math.max(0, (x - r.left) / r.width)); return Math.round(f * cible / pas()) * pas(); }
+  var tient = false;
+  function bouger(x) { var nv = valeurA(x); if (nv !== v) { v = nv; son("tic"); dessiner(); } }
+  var partCachee = "r";   // ardoise : la part que je cache (la rouge au départ)
+  function debut(ev) {
+    ev.preventDefault(); tient = true;
+    bondsVisibles = false;
+    if (onglet === "ardoise" && !cache) { cache = partCachee; fini = false; verdict(""); consigne("Écris le nombre caché sur l'ardoise."); }
+    bouger(ev.clientX); dessiner();
+  }
+  el("curseur").addEventListener("pointerdown", debut); el("piste").addEventListener("pointerdown", debut);
+  document.addEventListener("pointermove", function (ev) { if (tient) bouger(ev.clientX); });
+  document.addEventListener("pointerup", function () { if (tient) { tient = false; if (onglet === "bouge") { score++; majScore(); } } });
+
+  // ---------- Ardoise : je place le curseur, une part est cachée ----------
+  function consigne(t) { el("consigne").textContent = t; }
+  function reponse() { return cache === "b" ? v : cible - v; }
+  function reveler() {
+    if (fini || !cache) return; fini = true; var c = cache; cache = null; bondsVisibles = true; dessiner();
+    el(c === "b" ? "bulleB" : "bulleR").classList.add("revele"); son("revele");
+    score++; majScore(); consigne("Vous aviez trouvé ? Bouge le curseur pour un autre.");
+  }
+  function toucherBulle(c) {
+    if (onglet !== "ardoise") return;
+    if (cache === c) return reveler();
+    partCachee = c; cache = c; fini = false; bondsVisibles = false; verdict(""); dessiner(); consigne("Écris le nombre caché sur l'ardoise.");   // cacher l'autre part
+  }
+  el("bulleB").addEventListener("click", function () { toucherBulle("b"); });
+  el("bulleR").addEventListener("click", function () { toucherBulle("r"); });
+
+  // ---------- 💡 la méthode des bonds, jamais le résultat ----------
+  el("btnIndice").addEventListener("click", function () {
+    if (onglet === "bouge" || !cache) return verdict("💡 Plus la part bleue grandit, plus la part rouge rétrécit : ensemble, elles font toujours " + n(cible), "indice");
+    var connu = cible - reponse();
+    if (cible === 10) return verdict("💡 Pars de " + n(connu) + " et compte jusqu'à 10 sur tes doigts", "indice");
+    verdict("💡 Pars de " + n(connu) + " : fais des bonds jusqu'au prochain nombre rond, puis jusqu'à " + n(cible), "indice");
+  });
+  el("btnSon").addEventListener("click", function () { sonActif = !sonActif; el("btnSon").textContent = sonActif ? "🔊" : "🔇"; });
+
+  function lancer() {
+    score = 0; cache = null; fini = false; bondsVisibles = false; verdict(""); el("btnSuivant").hidden = true;
+    document.querySelectorAll("#onglets button").forEach(function (b) { b.classList.toggle("actif", b.dataset.onglet === onglet); });
+    document.querySelectorAll("#niveaux button").forEach(function (b) { b.classList.toggle("actif", +b.dataset.niveau === cible); });
+    el("zone").classList.remove("anime"); el("piste").classList.remove("anime"); el("piste").style.cursor = "pointer";
+    regle(); majScore();
+    v = Math.round(cible * .35 / pas()) * pas();
+    if (onglet === "ardoise") { partCachee = "r"; cache = "r"; consigne("Écris le nombre caché sur l'ardoise."); }
+    else consigne("Bouge le curseur : regarde les deux parts.");
+    dessiner();
+  }
+  document.querySelectorAll("#onglets button").forEach(function (b) { b.addEventListener("click", function () { onglet = b.dataset.onglet; lancer(); }); });
+  document.querySelectorAll("#niveaux button").forEach(function (b) { b.addEventListener("click", function () { cible = +b.dataset.niveau; lancer(); }); });
+  function lireHash() {   // #1000, #ardoise-100… (les anciens liens #etiquettes ouvrent l'ardoise)
+    decodeURIComponent(location.hash.slice(1)).split("-").forEach(function (h) { if (PAS[h]) cible = +h; if (h === "etiquettes") h = "ardoise"; if (["bouge", "ardoise"].indexOf(h) !== -1) onglet = h; });
+    lancer();
+  }
+  window.addEventListener("hashchange", lireHash); window.addEventListener("resize", dessiner);
+  lireHash();
+  window.__barre = { etat: function () { return { cible: cible, onglet: onglet, v: v, cache: cache, fini: fini, score: score, reponse: cache ? reponse() : null,
+    bulles: [el("bulleB").textContent, el("bulleR").textContent], egalite: el("egalite").textContent }; } };
+})();
+</script>
+<!-- MENU -->
+<script>
+/* ==== LE MENU ☰ (GTH, 10/10) : interface épurée — à l'écran, seulement le titre, le score, la consigne et l'activité ====
+   Tout le reste (niveaux, onglets de méthode, ✏️, 🔊, 🖨️, aide…) part dans un menu ☰, ouvert d'un toucher.
+   Réglage par outil (CONF, posé par l'injecteur) : ancre = où mettre le bouton ☰ (sinon en haut à droite de l'écran) ;
+   cacher = ce qui part dans le menu (sinon : tout ce qui, dans « .barre .droite », n'est pas un score).
+   Installé par .claude/outils/menu-outil/injecter.py ; ne pas modifier dans l'outil, mais dans ce fichier. */
+(function () {
+  var CONF = {};
+  var st = document.createElement("style");
+  st.textContent =
+    ".menu-btn{width:58px; height:58px; border-radius:16px; border:2px solid rgba(0,0,0,.15); background:#fff; color:#1f2a33; font-size:2rem; line-height:1; cursor:pointer; flex:none; padding:0;}" +
+    ".menu-btn.fixe{position:fixed; top:10px; right:12px; z-index:150; box-shadow:0 4px 14px rgba(0,0,0,.15);}" +
+    ".menu-btn.ouvert{background:#1f2a33; color:#fff;}" +
+    ".menu-panneau{position:fixed; top:76px; right:16px; z-index:200; background:#fff; color:#1f2a33; border-radius:18px; box-shadow:0 18px 50px rgba(0,0,0,.28); padding:16px 18px;" +
+    "  display:flex; flex-direction:column; align-items:flex-start; gap:12px; max-width:min(620px, 92vw); max-height:80vh; overflow:auto;}" +
+    ".menu-panneau[hidden]{display:none !important;}" +
+    ".menu-panneau h4{margin:0; font-family:sans-serif; font-size:.85rem; text-transform:uppercase; letter-spacing:.6px; color:#6d7a85;}" +
+    ".menu-panneau > *{position:static !important; margin:0 !important;}" +
+    ".menu-panneau > div,.menu-panneau > nav{display:flex; flex-wrap:wrap; gap:8px;}";
+  document.head.appendChild(st);
+  function installer() {
+    var autres = [];
+    if (CONF.cacher) CONF.cacher.forEach(function (s) { document.querySelectorAll(s).forEach(function (e) { if (autres.indexOf(e) === -1) autres.push(e); }); });
+    else { var d = document.querySelector(".barre .droite"); if (d) autres = Array.prototype.filter.call(d.children, function (e) { return !e.classList.contains("score"); }); }
+    if (!autres.length) return;
+    var btn = document.createElement("button"); btn.type = "button"; btn.className = "menu-btn"; btn.title = "Niveaux et réglages"; btn.textContent = "☰";
+    var pan = document.createElement("div"); pan.className = "menu-panneau"; pan.hidden = true;
+    var t = document.createElement("h4"); t.textContent = "Niveaux et réglages"; pan.appendChild(t);
+    autres.forEach(function (e) { pan.appendChild(e); });
+    var ancre = document.querySelector(CONF.ancre || ".barre .droite");
+    if (ancre) ancre.appendChild(btn); else { btn.classList.add("fixe"); document.body.appendChild(btn); }
+    document.body.appendChild(pan);
+    function ouvrir(o) { pan.hidden = !o; btn.classList.toggle("ouvert", o); }
+    btn.addEventListener("click", function (e) { e.stopPropagation(); ouvrir(pan.hidden); });
+    // un niveau choisi, ou une fenêtre ouverte (✏️, 🖨️) : le menu se referme ; on garde le menu ouvert pour choisir un type de jeu
+    pan.addEventListener("click", function (e) { var b = e.target.closest("button"); if (b && !b.closest(CONF.garderOuvert || ".types")) setTimeout(function () { ouvrir(false); }, 120); });
+    document.addEventListener("pointerdown", function (e) { if (!pan.hidden && !pan.contains(e.target) && e.target !== btn) ouvrir(false); });
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", installer); else installer();
+})();
+</script>
+<!-- /MENU -->
+<!-- INDICE-COTE -->
+<script>
+/* 💡 sur le côté (Karim, 21/10) : dans les jeux qui ont un bouton « 💡 Indice » (.btn-indice), le bouton devient une ampoule seule,
+   collée au bord droit de l'écran, à mi-hauteur ; l'indice s'ouvre dans une bulle à côté d'elle, jamais sous le jeu.
+   Le jeu garde son propre code : au toucher, on regarde quel texte il vient d'écrire (zone #indice, ou la ligne de message),
+   on le reprend dans la bulle et on remet la zone comme avant. Installé par injecter.py. */
+(function () {
+  var b = document.querySelector(".btn-indice"); if (!b) return;
+  var st = document.createElement("style");
+  st.textContent =
+    ".btn-indice.cote{position:fixed !important; right:18px; top:50%; transform:translateY(-50%); width:76px; height:76px; padding:0 !important; border-radius:50% !important;" +
+    " font-size:40px !important; line-height:1; z-index:60; margin:0 !important; display:flex; align-items:center; justify-content:center}" +
+    "#bulle-cote{position:fixed; right:110px; top:50%; transform:translateY(-50%); max-width:520px; background:#fff8c4; border:2px solid #d4b106; border-radius:18px;" +
+    " padding:16px 22px; font-size:26px; line-height:1.35; z-index:60; box-shadow:0 6px 18px rgba(0,0,0,.15); display:none}" +
+    "#bulle-cote::after{content:''; position:absolute; right:-14px; top:50%; margin-top:-12px; border:12px solid transparent; border-left:14px solid #d4b106; border-right:none}";
+  document.head.appendChild(st);
+  b.classList.add("cote"); b.textContent = "💡"; b.title = "Indice"; document.body.appendChild(b);
+  var bulle = document.createElement("div"); bulle.id = "bulle-cote"; document.body.appendChild(bulle);
+  var zones = function () { return Array.prototype.slice.call(document.querySelectorAll("#indice, .indice, #message, .message, #verdict, .verdict, #consigne-aide")); };
+  var avant = [], minuteur = null;
+  b.addEventListener("click", function () { avant = zones().map(function (z) { return [z, z.textContent, z.className]; }); }, true);   // avant le code du jeu
+  b.addEventListener("click", function () {
+    setTimeout(function () {
+      var txt = "";
+      avant.forEach(function (a) {
+        var z = a[0], neuf = z.textContent;
+        if (neuf !== a[1] && neuf.trim()) { txt = neuf; z.textContent = a[1]; z.className = a[2]; }
+      });
+      if (!txt) return;   // le jeu montre l'indice autrement : on le laisse faire
+      bulle.textContent = txt.replace(/^\s*💡\s*/, ""); bulle.style.display = "block";
+      clearTimeout(minuteur); minuteur = setTimeout(function () { bulle.style.display = "none"; }, 8000);
+    }, 0);
+  });
+  document.addEventListener("pointerdown", function (e) { if (e.target !== b && e.target !== bulle) bulle.style.display = "none"; });
+})();
+</script>
+<!-- /INDICE-COTE -->
+</body>
+</html>

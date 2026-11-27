@@ -1,0 +1,384 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Le carnet des produits</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect x='14' y='6' width='42' height='52' rx='4' fill='%23fff' stroke='%231f4e9c' stroke-width='4'/%3E%3Cpath d='M22 22h26M22 32h26M22 42h18' stroke='%231f4e9c' stroke-width='3'/%3E%3Cg fill='none' stroke='%23555' stroke-width='3'%3E%3Cpath d='M8 14h10M8 26h10M8 38h10M8 50h10'/%3E%3C/g%3E%3C/svg%3E">
+<!--
+  ✖️ Le carnet des produits — opérations P2, 📅 2 et 3 (GTH v2 : donnees/seances/maths/ma-s2-operations.js et ma-s3-operations.js).
+  ERMEL CM2, situation « Calculs multiplicatifs », phase 1 « Fabriquer des produits » (p. 27-28). Maquette validée par Karim le 21/10.
+  Univers : le carnet à spirale de l'apprenti ; à gauche les produits connus, au centre la machine qui en fabrique un nouveau.
+  Onglets : « J'ajoute » (deux lignes du carnet) et « × 10, je double » (une ligne et un tampon). Coin : le carnet de 25, 35, 68 ou 136
+  (comme les feuilles des séances : 25 pour les CM1, 35-68-136 pour les CM2 ; rien n'est étiqueté CM1 ou CM2 à l'écran).
+  Liens : #ajouter-25, #ajouter-35, #fois10-68… Gestes : glisser une ligne (ou la toucher, puis toucher la case) ; l'élève tape lui-même le résultat
+  sur le pavé : l'outil ne calcule jamais à sa place ; la réponse est vérifiée dès qu'elle a le bon nombre de chiffres.
+  Un produit juste qui n'est pas la cible va quand même dans le carnet (il pourra servir) ; seule la cible compte dans le score.
+  Contenu : les résultats donnés et le principe viennent d'ERMEL ; les suites de cibles sont de moi (l'annexe d'ERMEL est à télécharger).
+  Fonctionne hors ligne (ENI, Chromebook).
+-->
+<style>
+:root{--papier:#fdfdfb;--carreau:#dbe6f5;--marge:#e57373;--encre:#1f3b6f;--bleu:#1f4e9c;--vert:#2e7d32;--vertc:#e3f2e5;--rouge:#c62828;--talbot:#1f7a8c;--jaune:#fff4b8}
+html,body{margin:0;height:100%;background:#28334a;overflow:hidden;font-family:Arial,Helvetica,sans-serif;color:var(--encre)}
+#scene{position:absolute;left:0;top:0;width:1920px;height:1080px;transform-origin:0 0;background:var(--papier);
+  background-image:linear-gradient(var(--carreau) 1px,transparent 1px),linear-gradient(90deg,var(--carreau) 1px,transparent 1px);background-size:32px 32px}
+/* étage 1 */
+#barre{height:84px;display:flex;align-items:center;gap:22px;padding:0 28px;background:#e8eef8;border-bottom:3px solid #b9c9e3}
+#barre h1{margin:0;font-size:34px;display:flex;align-items:center;gap:12px;color:var(--bleu)}
+#barre h1 svg{width:50px;height:50px}
+.onglets{display:flex;gap:8px;margin-left:24px}
+.onglets button{font:inherit;font-size:24px;padding:10px 22px;border-radius:14px 14px 0 0;border:2px solid #b9c9e3;border-bottom:none;background:#dde6f4;color:var(--bleu);cursor:pointer}
+.onglets button.on{background:var(--papier);font-weight:700;color:var(--encre)}
+#coin{margin-left:auto;text-align:right;font-size:20px;line-height:1.45}
+#coin b{font-size:26px}
+#niveaux{display:flex;gap:6px;justify-content:flex-end;margin-top:2px}
+#niveaux button{font:inherit;font-size:16px;padding:3px 10px;border-radius:10px;border:1.5px solid #9fb3d6;background:#fff;cursor:pointer}
+#niveaux button.on{background:var(--talbot);color:#fff;border-color:var(--talbot)}
+/* étage 2 */
+#consigne{height:100px;display:flex;align-items:center;justify-content:center;font-size:50px;font-weight:700;text-align:center}
+#consigne .q{color:var(--talbot)}
+/* étage 3 */
+#jeu{position:absolute;left:0;right:0;top:188px;bottom:110px}
+#bas{position:absolute;left:0;right:0;bottom:0;height:110px;display:flex;align-items:center;justify-content:center;gap:30px}
+#indice{font:inherit;font-size:24px;padding:12px 26px;border-radius:30px;border:2px solid #d4b106;background:#fff8c4;cursor:pointer}
+#verdict{font-size:38px;font-weight:700;min-width:760px;text-align:center}
+#verdict.ok{color:var(--vert)} #verdict.ko{color:var(--rouge)}
+#bulle{position:absolute;left:50%;bottom:118px;transform:translateX(-50%);max-width:1100px;background:#fff8c4;border:2px solid #d4b106;border-radius:18px;padding:16px 26px;font-size:30px;display:none;box-shadow:0 6px 18px rgba(0,0,0,.15)}
+/* le carnet */
+#carnet{position:absolute;left:40px;top:6px;bottom:6px;width:540px;background:#fff;border:3px solid #9fb3d6;border-radius:10px 18px 18px 10px;box-shadow:0 8px 20px rgba(31,59,111,.18);padding:20px 22px 20px 74px;box-sizing:border-box}
+#carnet::before{content:"";position:absolute;left:58px;top:0;bottom:0;width:3px;background:var(--marge)}
+#carnet .spirale{position:absolute;left:-14px;top:24px;bottom:24px;width:46px;display:flex;flex-direction:column;justify-content:space-between}
+#carnet .spirale i{display:block;height:16px;border:4px solid #6b7280;border-radius:10px;background:#28334a}
+#carnet h2{margin:0 0 12px;font-size:28px;color:var(--bleu)}
+#lignes{display:grid;grid-template-columns:1fr;gap:10px}
+#lignes.serre{grid-template-columns:1fr 1fr;gap:8px 10px} #lignes.serre .ligne{font-size:21px;padding:6px 8px}
+.ligne{font-size:30px;font-weight:700;padding:10px 12px;border-radius:12px;background:var(--vertc);color:#1b5e20;border:3px solid #a5d6a7;cursor:grab;touch-action:none;user-select:none;white-space:nowrap}
+.ligne.neuve{animation:neuve 1.2s}
+@keyframes neuve{0%{background:var(--jaune);transform:scale(1.15)}100%{background:var(--vertc);transform:scale(1)}}
+.ligne.interdite{background:#fdecea;border:3px solid #e57373;color:#a32020;text-decoration:line-through;cursor:not-allowed;opacity:.8}
+.ligne.cible{background:#fff;border:3px dashed #9fb3d6;color:#8a9bb8;cursor:default}
+.ligne.choisi,.tampon.choisi{outline:6px solid var(--talbot);outline-offset:3px}
+.vole{position:fixed;z-index:30;pointer-events:none;opacity:.92}
+#tampons{display:flex;gap:40px;justify-content:center;min-height:0}
+.tampon{display:flex;flex-direction:column;align-items:center;font-size:30px;font-weight:700;color:#a32020;cursor:grab;touch-action:none;user-select:none;padding:4px 10px;border-radius:14px}
+.tampon svg{width:110px;height:92px}
+/* la machine */
+#machine{position:absolute;left:620px;right:330px;top:6px;bottom:6px;display:flex;flex-direction:column;align-items:center;gap:18px;padding-top:10px}
+#calcul{display:flex;align-items:center;gap:18px;font-size:38px;font-weight:700}
+.case{min-width:220px;height:76px;border:5px dashed #9fb3d6;border-radius:18px;display:flex;align-items:center;justify-content:center;color:#9fb3d6;font-size:26px;background:rgba(255,255,255,.75);padding:0 14px;box-sizing:border-box}
+.case.pleine{border-style:solid;border-color:var(--bleu);color:var(--encre);font-size:36px;background:#fff}
+.case.survol{background:#e0f2f5;border-color:var(--talbot)}
+#op{min-width:60px;text-align:center;color:var(--bleu)}
+#ecrit{font-size:40px;font-weight:700;min-height:0;display:flex;flex-direction:column;align-items:flex-start;gap:4px;align-self:center}
+#ecrit div{display:flex;align-items:center;gap:12px;min-height:56px}
+#reponse{display:inline-flex;min-width:150px;height:58px;border:4px solid var(--bleu);border-radius:12px;background:#fff;align-items:center;justify-content:center;font-size:38px}
+#reponse.ko{border-color:var(--rouge);animation:secoue .45s 2}
+@keyframes secoue{0%,100%{transform:translateX(0)}25%{transform:translateX(-10px)}75%{transform:translateX(10px)}}
+#bas-machine{display:flex;gap:80px;align-items:flex-end}
+#tour{position:relative;width:400px;height:300px;border-bottom:4px solid #7a8aa8}
+#tour .barre{position:absolute;box-sizing:border-box;border:2px solid;border-radius:5px;display:flex;align-items:center;justify-content:center;font-weight:700;color:#1f3b6f;animation:tombe .45s ease-out}
+#tour .barre.a{background:#bbdefb;border-color:#1e88e5} #tour .barre.b{background:#ffe0b2;border-color:#fb8c00} #tour .barre.c{background:#e3e9f3;border-color:#9fb3d6}
+#tour .eti{position:absolute;font-size:22px;font-weight:700;white-space:nowrap}
+#tour .eti.a{color:#1565c0} #tour .eti.b{color:#e65100} #tour .eti.t{color:var(--talbot);font-size:24px;white-space:normal;width:400px}
+@keyframes tombe{from{transform:translateY(-60px);opacity:0}to{transform:none;opacity:1}}
+#pave{display:grid;grid-template-columns:repeat(4,66px);gap:10px}
+#pave button{font:inherit;font-size:30px;font-weight:700;height:58px;border-radius:16px;border:3px solid #9fb3d6;background:#fff;color:var(--encre);cursor:pointer}
+#pave button:active{background:#e0f2f5}
+#vider{font:inherit;font-size:22px;padding:8px 22px;border-radius:24px;border:2px solid #9fb3d6;background:#fff;color:var(--bleu);cursor:pointer}
+/* 💡 sur le côté (21/10) : l'ampoule seule, au bout de la consigne ; la bulle à côté, jamais sous le jeu */
+#indice{position:absolute;right:26px;top:96px;width:82px;height:82px;padding:0;border-radius:50%;font-size:44px;line-height:1;z-index:20}
+#bulle{left:auto;right:124px;top:100px;bottom:auto;transform:none;max-width:640px;font-size:28px;z-index:20}
+/* 🧮 la calculette (21/10) : petite, sur le côté, on touche les touches */
+#pave{position:absolute !important; left:auto !important; right:-300px !important; top:auto !important; bottom:60px !important; bottom:auto !important; grid-template-columns:repeat(3,64px) !important; gap:8px !important;
+  padding:14px; background:#37474f; border-radius:20px; box-shadow:0 6px 0 #263238; z-index:15}
+#pave button{height:52px !important; font-size:26px !important; border-radius:10px !important; border:none !important; background:#eceff1 !important; color:#263238 !important; box-shadow:0 3px 0 #90a4ae; grid-column:auto !important}
+#pave button:active{transform:translateY(2px); box-shadow:none}
+/* ✏️ mes nombres (21/10) */
+#crayon{position:absolute;left:26px;top:96px;width:82px;height:82px;border-radius:50%;border:2px solid #b0bec5;background:#fff;font-size:40px;cursor:pointer;z-index:20}
+#choix{position:absolute;left:0;top:0;right:0;bottom:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;z-index:40}
+#choix > div{background:#fff;border-radius:20px;padding:30px 44px;font-size:36px;font-weight:700;display:flex;flex-direction:column;gap:20px;align-items:center;color:#263238}
+#choix .ligne-choix{display:flex;align-items:center;gap:12px}
+#choix input,#choix select{font:inherit;font-size:40px;width:110px;text-align:center;padding:4px}
+#choix button{font:inherit;font-size:30px;padding:10px 30px;border-radius:30px;border:3px solid #1f7a8c;background:#1f7a8c;color:#fff;cursor:pointer}
+#choix .int{font-size:28px;padding:6px 16px;border-radius:14px;border:3px solid #cfd8dc;background:#fff;color:#263238;margin:0 4px;cursor:pointer}
+#choix .int.on{background:#fdecea;border-color:#e57373;color:#a32020;text-decoration:line-through}
+#choix .err{color:#c62828;font-size:24px;min-height:28px}
+/* 🧮 calculette discrète (21/10) : petite, pâle, petits chiffres */
+#pave{padding:8px !important; gap:5px !important; grid-template-columns:repeat(3,46px) !important; background:#eceff1 !important; box-shadow:none !important; border:2px solid #cfd8dc; border-radius:14px !important; opacity:.85}
+#pave button{height:38px !important; font-size:19px !important; border-radius:8px !important; background:#fff !important; color:#607d8b !important; box-shadow:none !important; border:1px solid #cfd8dc !important}
+</style>
+</head>
+<body>
+<div id="scene">
+  <div id="barre">
+    <h1><svg viewBox="0 0 64 64"><rect x="14" y="6" width="42" height="52" rx="4" fill="#fff" stroke="#1f4e9c" stroke-width="4"/><path d="M22 20h26M22 30h26M22 40h18" stroke="#1f4e9c" stroke-width="3"/><path d="M34 46l6 6 10-12" stroke="#2e7d32" stroke-width="4" fill="none" stroke-linecap="round"/><g fill="none" stroke="#555" stroke-width="3"><path d="M8 14h10M8 26h10M8 38h10M8 50h10"/></g></svg>Le carnet des produits</h1>
+    <div id="coin"><div>Série sans faute : <b id="score">0</b> · 🏆 Record : <b id="record">0</b></div><div id="niveaux"><button data-n="25">Carnet de 25</button><button data-n="36">de 36</button><button data-n="35">de 35</button><button data-n="68">de 68</button><button data-n="136">de 136</button></div></div>
+  </div>
+  <div id="consigne"></div>
+  <div id="jeu">
+    <div id="carnet"><div class="spirale"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><h2 id="titre-carnet"></h2><div id="lignes"></div></div>
+    <div id="machine">
+      <div id="tampons"></div>
+      <div id="calcul"><div class="case" id="caseA">glisse une ligne</div><div id="op">+</div><div class="case" id="caseB">glisse une ligne</div></div>
+      <div id="ecrit"></div>
+      <div id="bas-machine"><div id="tour"></div><div id="pave"></div></div>
+    </div>
+  </div>
+  <div id="bulle"></div>
+  <button id="crayon" title="Mes nombres">✏️</button>
+  <div id="choix"><div><div class="ligne-choix">Carnet de <input id="cn" type="number" min="2" max="999" value="47"></div><div class="ligne-choix">Calculer <input id="ck" type="number" min="3" max="99" value="6"> × le nombre</div><div class="ligne-choix" style="font-size:28px">🚫 Interdits : <span id="interdits"></span></div><span class="err" id="err"></span><button id="ok">C'est parti</button></div></div>
+  <button id="indice" title="Indice">💡</button><div id="bas"><div id="verdict"></div></div>
+</div>
+<script>
+"use strict";
+// ---------- les carnets (résultats donnés : ERMEL pour 35, 68, 136 ; la feuille CM1 pour 25) et les cibles ----------
+const DONNES = { 25: [1, 2], 36: [1, 2], 35: [1, 2, 4], 68: [1, 2], 136: [1, 2, 3] };
+// J'ajoute : chaque cible est la somme de deux lignes déjà dans le carnet (ou déjà fabriquées avant)
+const CIBLES = {
+  ajouter: { 25: [3, 4, 5, 6, 8, 10, 12, 16, 20, 36], 36: [3, 4, 5, 6, 8, 10, 12, 20, 24, 25], 35: [3, 5, 6, 8, 10, 12, 16, 20, 24, 40], 68: [3, 4, 5, 6, 8, 10, 12, 20, 25, 30], 136: [4, 5, 6, 9, 10, 12, 20, 30, 60, 63] },
+  // × 10, je double : une ligne passée dans un tampon (× 10 ou × 2), parfois deux fois de suite
+  fois10: { 25: [10, 20, 30, 40, 60, 100, 200, 400, 1000, 50], 36: [10, 20, 40, 100, 200, 30, 60, 80, 400, 1000], 35: [10, 20, 40, 80, 100, 200, 30, 60, 400, 1000], 68: [10, 20, 40, 100, 200, 30, 60, 80, 400, 1000], 136: [10, 20, 30, 60, 100, 200, 40, 50, 400, 1000] }
+};
+// au départ de « × 10, je double », le carnet a aussi les petits produits (3, 4, 5 fois…) déjà fabriqués dans « J'ajoute »
+const DEPART10 = [1, 2, 3, 4, 5];
+// 🚫 Sans avoir le droit (Karim, 23-25/11 : « fais ce résultat sans avoir le droit d'utiliser telle multiplication ») : [le produit à fabriquer, la ligne interdite].
+// Le carnet de départ a 1, 2, 3, 4, 5 et 10 fois le nombre ; on assemble deux lignes, ou une ligne et un tampon (× 2, × 10). Chaque défi a au moins un chemin.
+const DEPARTSD = [1, 2, 3, 4, 5, 10];
+const DEFIS = { std: [[6, 3], [8, 4], [20, 10], [12, 10], [30, 3], [40, 4], [24, 12], [50, 5]], 68: [[6, 3], [20, 10], [8, 4], [25, 5], [12, 10], [40, 20], [30, 3], [50, 5]] };
+const defisDe = n => DEFIS[n] || DEFIS.std;
+const etat = { onglet: "ajouter", n: 25, connus: [], cible: 0, interdits: [], perso: null, i: 0, A: null, B: null, tape: "", score: 0, aide: 0 };
+window.CARNET = etat;   // pour le test automatique
+const $ = id => document.getElementById(id);
+const fmt = v => String(v).replace(/\B(?=(\d{3})+(?!\d))/g, " ");   // espace des milliers (aussi sur le multiplicateur : 1 000 × 35)
+const mem = { lire(k) { try { return +localStorage.getItem(k) || 0; } catch (e) { return 0; } }, ecrire(k, v) { try { localStorage.setItem(k, v); } catch (e) {} } };
+const cleRecord = () => "carnet-produits-record-" + etat.onglet + "-" + etat.n;
+function afficheScore() { $("score").textContent = etat.score; $("record").textContent = mem.lire(cleRecord()); }
+function marque() { etat.score++; if (etat.score > mem.lire(cleRecord())) mem.ecrire(cleRecord(), etat.score); afficheScore(); }
+function verdict(t, cls) { const v = $("verdict"); v.textContent = t; v.className = cls || ""; if (cls === "ko" && etat.score) { etat.score = 0; afficheScore(); } }   // série sans faute : une erreur la remet à 0
+function consigne(h) { $("consigne").innerHTML = "<span>" + h + "</span>"; }
+function bulle(t) { const b = $("bulle"); b.textContent = t; b.style.display = "block"; clearTimeout(bulle.t); bulle.t = setTimeout(() => b.style.display = "none", 7000); }
+
+// ---------- les deux gestes : glisser, ou toucher puis toucher la case ----------
+const choix = { el: null, f: null };
+function rendGlissable(el, cibles, quandDepose) {
+  el.addEventListener("pointerdown", ev => {
+    ev.preventDefault();
+    const sx = ev.clientX, sy = ev.clientY, r0 = el.getBoundingClientRect();
+    let bouge = false, survol = null, fantome = null;
+    const move = e => {
+      if (!bouge && Math.hypot(e.clientX - sx, e.clientY - sy) > 12) {
+        bouge = true; fantome = el.cloneNode(true); fantome.classList.add("vole");
+        Object.assign(fantome.style, { left: r0.left + "px", top: r0.top + "px", width: r0.width + "px", transform: "scale(" + echelle() + ")", transformOrigin: "0 0" });
+        document.body.appendChild(fantome);
+      }
+      if (!bouge) return;
+      fantome.style.left = (r0.left + e.clientX - sx) + "px"; fantome.style.top = (r0.top + e.clientY - sy) + "px";
+      const c = cibles().find(t => { const r = t.getBoundingClientRect(); return e.clientX > r.left && e.clientX < r.right && e.clientY > r.top && e.clientY < r.bottom; }) || null;
+      if (c !== survol) { survol && survol.classList.remove("survol"); survol = c; survol && survol.classList.add("survol"); }
+    };
+    const up = () => {
+      removeEventListener("pointermove", move); removeEventListener("pointerup", up);
+      survol && survol.classList.remove("survol"); fantome && fantome.remove();
+      if (!bouge) {
+        document.querySelectorAll(".choisi").forEach(x => x !== el && x.classList.remove("choisi"));
+        el.classList.toggle("choisi"); choix.el = el.classList.contains("choisi") ? el : null; choix.f = quandDepose; return;
+      }
+      if (survol) quandDepose(survol);
+    };
+    addEventListener("pointermove", move); addEventListener("pointerup", up);
+  });
+}
+function cibleTouchable(t) { t.addEventListener("pointerup", () => { if (!choix.el) return; const f = choix.f; choix.el.classList.remove("choisi"); choix.el = null; f(t); }); }
+const echelle = () => +($("scene").dataset.ech || 1);
+const cases = () => [$("caseA"), $("caseB")];
+cases().forEach(cibleTouchable);
+
+// ---------- le carnet ----------
+function dessineCarnet(neuve) {
+  $("titre-carnet").textContent = "Mon carnet de " + etat.n;
+  const L = $("lignes"); L.innerHTML = "";
+  L.classList.toggle("serre", etat.connus.length > 9);   // une colonne tant que le carnet est court
+  const tous = [...new Set(etat.connus.concat(etat.cible ? [etat.cible] : [], etat.onglet === "sansdroit" ? etat.interdits : []))].sort((a, b) => a - b);
+  for (const k of tous) {
+    const d = document.createElement("div");
+    if (etat.onglet === "sansdroit" && etat.interdits.includes(k)) { d.className = "ligne interdite"; d.textContent = "🚫 " + fmt(k) + " × " + etat.n; L.appendChild(d); continue; }
+    if (etat.connus.includes(k)) {
+      d.className = "ligne" + (k === neuve ? " neuve" : ""); d.textContent = fmt(k) + " × " + etat.n + " = " + fmt(k * etat.n); d.dataset.k = k;
+      rendGlissable(d, cases, c => pose(c, { k }));
+    } else { d.className = "ligne cible"; d.textContent = fmt(k) + " × " + etat.n + " = ?"; }
+    L.appendChild(d);
+  }
+  const T = $("tampons"); T.innerHTML = "";
+  if (etat.onglet === "fois10" || etat.onglet === "sansdroit") for (const m of [10, 2]) {
+    const t = document.createElement("div"); t.className = "tampon"; t.dataset.m = m; t.title = "multiplie par " + m;
+    t.innerHTML = '<svg viewBox="0 0 84 70"><rect x="31" y="2" width="22" height="30" rx="10" fill="#a1683a" stroke="#6d4521" stroke-width="2"/><rect x="12" y="30" width="60" height="14" rx="3" fill="#6d4521"/><rect x="8" y="44" width="68" height="20" rx="3" fill="#e57373" stroke="#a32020" stroke-width="2"/></svg>× ' + m;
+    rendGlissable(t, () => [$("caseB")], c => pose(c, { m })); T.appendChild(t);
+  }
+}
+
+// ---------- la machine ----------
+function pose(c, objet) {
+  if (objet.m && c.id === "caseA") { verdict("🤪 Mets d'abord une ligne du carnet.", "ko"); return; }
+  if (c.id === "caseA") etat.A = objet; else etat.B = objet;
+  etat.tape = ""; verdict(""); dessineMachine();
+}
+function produitFabrique() {
+  const A = etat.A, B = etat.B; if (!A || !B) return null;
+  if (B.m) return { k: A.k * B.m, l1: "(" + A.k + " × " + etat.n + ") × " + B.m, l2: "= " + fmt(A.k * etat.n) + " × " + B.m };
+  return { k: A.k + B.k, l1: A.k + " × " + etat.n + " + " + B.k + " × " + etat.n, l2: "= " + fmt(A.k * etat.n) + " + " + fmt(B.k * etat.n) };
+}
+function dessineMachine() {
+  const A = etat.A, B = etat.B;
+  const remplir = (el, o) => { el.className = "case" + (o ? " pleine" : ""); el.textContent = !o ? (el.id === "caseB" && etat.onglet !== "ajouter" ? "une ligne ou un tampon" : "glisse une ligne") : o.m ? "× " + o.m : o.k + " × " + etat.n; };
+  remplir($("caseA"), A); remplir($("caseB"), B);
+  if (!B && etat.onglet === "fois10") $("caseB").textContent = "× 10 ou × 2";
+  $("op").textContent = B && B.m ? "" : "+";
+  const p = produitFabrique();
+  // le calcul s'écrit au fur et à mesure : dès la première ligne posée (Karim, 21/10)
+  if (p) $("ecrit").innerHTML = "<div>" + p.l1 + "</div><div>" + p.l2 + '</div><div>= <span id="reponse">' + (etat.tape ? fmt(etat.tape) : "") + "</span></div>";
+  else if (A) $("ecrit").innerHTML = "<div>" + A.k + " × " + etat.n + ' + <span style="color:#9fb3d6">…</span></div><div>= ' + fmt(A.k * etat.n) + ' + <span style="color:#9fb3d6">…</span></div>';
+  else $("ecrit").innerHTML = "";
+  $("pave").style.visibility = p ? "visible" : "hidden";
+  dessineTour();
+}
+// la tour de barres : une barre = 1 fois le nombre du carnet ; on voit pourquoi 4 × 35 + 2 × 35 = 6 × 35 (Karim, 21/10)
+function dessineTour() {
+  const T = $("tour"), A = etat.A, B = etat.B, H = 300, W = 400; T.innerHTML = "";
+  if (!A) return;
+  const barres = (n, x, w, cls, bas, h) => {   // n barres empilées à partir de « bas », hauteur h chacune ; au-delà de 60, un seul bloc
+    if (n > 60) { T.insertAdjacentHTML("beforeend", '<div class="barre ' + cls + '" style="left:' + x + 'px;width:' + w + 'px;bottom:' + bas + 'px;height:' + (n * h) + 'px;font-size:18px">' + fmt(n) + ' barres</div>'); return; }
+    for (let i = 0; i < n; i++) T.insertAdjacentHTML("beforeend", '<div class="barre ' + cls + '" style="left:' + x + 'px;width:' + w + 'px;bottom:' + (bas + i * h) + 'px;height:' + Math.max(h - 2, 2) + 'px;font-size:' + Math.min(20, h - 6) + 'px;animation-delay:' + (i * 0.04) + 's">' + (h >= 22 ? etat.n : "") + '</div>');
+  };
+  const eti = () => {};   // plus d'étiquettes : on voit les barres (Karim, 21/10)
+  if (!B || !B.m) {   // j'ajoute : une seule tour, A en bleu, B empilé dessus en orange
+    const total = A.k + (B ? B.k : 0), h = Math.min(40, (H - 40) / total);
+    barres(A.k, 0, 200, "a", 0, h); eti(fmt(A.k) + " × " + etat.n, "a", 212, A.k * h / 2 - 12);
+    if (B) { barres(B.k, 0, 200, "b", A.k * h, h); eti("+ " + fmt(B.k) + " × " + etat.n, "b", 212, A.k * h + B.k * h / 2 - 12); eti("= " + fmt(total) + " barres de " + etat.n, "t", 0, total * h + 6); }
+    return;
+  }
+  // un tampon : la tour de A recopiée m fois, côte à côte
+  const m = B.m, gap = m === 10 ? 6 : 20, w = (W - gap * (m - 1)) / m, h = Math.min(40, (H - 40) / A.k);
+  for (let j = 0; j < m; j++) barres(A.k, j * (w + gap), w, j ? "c" : "a", 0, h);
+  eti("× " + m + " : " + m + " tours de " + fmt(A.k) + " = " + fmt(A.k * m) + " barres de " + etat.n, "t", 0, A.k * h + 6);
+}
+function touche(t) {
+  const p = produitFabrique(); if (!p) return;
+  if (t === "⌫") { etat.tape = etat.tape.slice(0, -1); dessineMachine(); return; }
+  if (etat.tape.length >= 7) return;
+  etat.tape += t; dessineMachine();
+  const juste = String(p.k * etat.n);
+  if (etat.tape.length < juste.length) return;
+  if (etat.tape === juste) reussi(p.k);
+  else { verdict("🤪 Refais le calcul.", "ko"); const r = $("reponse"); r.classList.add("ko"); setTimeout(() => { etat.tape = ""; dessineMachine(); }, 900); }
+}
+function reussi(k) {
+  if (etat.onglet === "sansdroit" && etat.interdits.includes(k)) { etat.A = etat.B = null; etat.tape = ""; verdict("🚫 C'est la ligne interdite : trouve un autre chemin.", "ko"); dessineMachine(); return; }
+  const neuf = !etat.connus.includes(k);
+  if (neuf) etat.connus.push(k);
+  etat.A = etat.B = null; etat.tape = "";
+  if (k === etat.cible) {
+    marque(); verdict("✅ " + fmt(k) + " × " + etat.n + " = " + fmt(k * etat.n), "ok");
+    etat.i++; etat.aide = 0; prochaineCible(k);
+  } else {
+    verdict(neuf ? "✅ Juste ! " + fmt(k) + " × " + etat.n + " va dans ton carnet." : "✅ Juste, mais tu l'avais déjà.", "ok");
+    dessineCarnet(k); dessineMachine();
+  }
+}
+function prochaineCible(neuve) {
+  if (etat.onglet === "sansdroit") {
+    const D = etat.perso ? [etat.perso] : defisDe(etat.n).map(([c, x]) => [c, [x]]);
+    if (etat.i >= D.length) { etat.cible = 0; etat.interdits = []; consigne('Tous les défis sont <span class="q">relevés</span>'); dessineCarnet(neuve); dessineMachine(); return; }
+    [etat.cible, etat.interdits] = D[etat.i];
+    etat.connus = DEPARTSD.filter(x => !etat.interdits.includes(x) && x !== etat.cible);   // chaque défi repart du même carnet
+    consigne('<span class="q">' + etat.cible + " × " + etat.n + '</span> = … <span style="color:#a32020">sans avoir le droit d\'utiliser 🚫 ' + etat.interdits.map(x => x + " × " + etat.n).join(", ni ") + "</span>");
+    dessineCarnet(neuve); dessineMachine(); return;
+  }
+  const L = CIBLES[etat.onglet][etat.n];
+  while (etat.i < L.length && etat.connus.includes(L[etat.i])) etat.i++;
+  if (etat.i >= L.length) {
+    etat.cible = 0; consigne('Carnet <span class="q">rempli</span>');
+    dessineCarnet(neuve); dessineMachine(); return;
+  }
+  etat.cible = L[etat.i];
+  consigne('<span class="q">' + etat.cible + " × " + etat.n + "</span> =");
+  dessineCarnet(neuve); dessineMachine();
+}
+
+
+// ---------- ✏️ mes nombres : le maître tape sa question ; elle remplace la question en cours ----------
+$("crayon").onclick = () => { $("err").textContent = ""; prepareChoix(); $("choix").style.display = "flex"; };
+$("choix").addEventListener("pointerup", ev => { if (ev.target.id === "choix") $("choix").style.display = "none"; });
+const val = id => +String($(id).value).replace(",", ".");
+function prepareChoix() { $("cn").value = etat.n;
+  // les lignes de départ du carnet : touchées, elles deviennent interdites ; aucune touchée → le carnet normal (J'ajoute)
+  $("interdits").innerHTML = DEPARTSD.map(x => '<button type="button" class="int" data-x="' + x + '">' + x + " ×</button>").join("");
+  $("interdits").querySelectorAll(".int").forEach(b => b.onclick = () => b.classList.toggle("on")); }
+$("ok").onclick = () => {
+  const n = val("cn"), k = val("ck");
+  if (!(n >= 2 && n <= 999 && n % 1 === 0)) { $("err").textContent = "Un carnet de 2 à 999."; return; }
+  if (!(k >= 3 && k <= 99 && k % 1 === 0)) { $("err").textContent = "Un produit de 3 à 99 fois le nombre."; return; }
+  const I = [...$("interdits").querySelectorAll(".int.on")].map(b => +b.dataset.x);
+  if (I.length) {   // un défi « sans avoir le droit » choisi par le maître
+    if (I.includes(k)) { $("err").textContent = "Le produit à calculer ne peut pas être interdit."; return; }
+    etat.perso = [k, I]; $("choix").style.display = "none"; ouvre("sansdroit", n, true); return;
+  }
+  if (!DONNES[n]) DONNES[n] = [1, 2];
+  CIBLES.ajouter[n] = [k].concat([3, 4, 5, 6, 8, 10, 12, 16, 20].filter(x => x !== k)).slice(0, 10);
+  $("choix").style.display = "none"; ouvre("ajouter", n);
+};
+// ---------- démarrer ----------
+function demarre() {
+  etat.connus = etat.onglet === "fois10" ? DEPART10.slice() : etat.onglet === "sansdroit" ? DEPARTSD.slice() : DONNES[etat.n].slice();
+  etat.i = 0; etat.score = 0; etat.A = etat.B = null; etat.tape = ""; etat.aide = 0;
+  afficheScore(); verdict(""); $("bulle").style.display = "none";
+  prochaineCible();
+}
+function ouvre(o, n, garder) {
+  if (!garder) etat.perso = null;
+  etat.onglet = o; if (n) etat.n = n;
+  document.querySelectorAll(".onglets button").forEach(b => b.classList.toggle("on", b.dataset.o === o));
+  document.querySelectorAll("#niveaux button").forEach(b => b.classList.toggle("on", +b.dataset.n === etat.n));
+  history.replaceState(null, "", "#" + o + "-" + etat.n);
+  demarre();
+}
+document.querySelectorAll("#niveaux button").forEach(b => b.onclick = () => ouvre(etat.onglet, +b.dataset.n));
+["7", "8", "9", "4", "5", "6", "1", "2", "3", "0"].concat([]).forEach(t => { const b = document.createElement("button"); b.textContent = t; b.onclick = () => touche(t); $("pave").appendChild(b); });
+{ const b = document.createElement("button"); b.textContent = "⌫"; b.style.gridColumn = "3 / 5"; b.onclick = () => touche("⌫"); $("pave").appendChild(b); }
+// toucher une case pleine la vide (il n'y a plus de bouton « Vider »)
+cases().forEach(c => c.addEventListener("pointerup", () => { if (choix.el) return; if (c.id === "caseA" && etat.A) etat.A = null; else if (c.id === "caseB" && etat.B) etat.B = null; else return; etat.tape = ""; verdict(""); dessineMachine(); }));
+addEventListener("keydown", e => { if ($("choix").style.display === "flex") return; if (/^[0-9]$/.test(e.key)) touche(e.key); else if (e.key === "Backspace") touche("⌫"); });
+// l'indice donne la méthode : d'abord la question à se poser, puis comment couper le nombre ; jamais le résultat
+$("indice").onclick = () => {
+  const c = etat.cible; if (!c) { bulle("Ton carnet est rempli : choisis un autre carnet en haut à droite."); return; }
+  etat.aide++;
+  if (etat.onglet === "sansdroit") {
+    const I = etat.interdits, i = I.join(" ni ");
+    if (etat.aide === 1) bulle("La ligne " + i + " × " + etat.n + " est interdite. Quelles autres lignes de ton carnet, ou quel tampon, font " + c + " fois " + etat.n + " ?");
+    else bulle(c % 10 === 0 && !I.includes(c / 10) && etat.connus.includes(c / 10) ? c + ", c'est " + (c / 10) + " × 10 : la ligne " + (c / 10) + " × " + etat.n + " et le tampon × 10."
+      : c % 2 === 0 && !I.includes(c / 2) && etat.connus.includes(c / 2) ? c + ", c'est le double de " + (c / 2) + " : la ligne " + (c / 2) + " × " + etat.n + " et le tampon × 2."
+      : "Coupe " + c + " en deux nombres de ton carnet, sans " + i + " : par exemple " + (c >= 10 && !I.includes(10) ? "10 + " + (c - 10) : "5 + " + (c - 5)) + " (fabrique d'abord la ligne qui manque).");
+    return;
+  }
+  if (etat.onglet === "ajouter") {
+    const paire = (() => { for (const a of etat.connus) if (etat.connus.includes(c - a)) return [Math.max(a, c - a), Math.min(a, c - a)]; return null; })();
+    if (etat.aide === 1 || !paire) bulle("Cherche dans ton carnet deux nombres qui font " + c + " ensemble. Si tu n'en trouves pas, fabrique d'abord une autre ligne.");
+    else bulle(c + ", c'est " + paire[0] + " + " + paire[1] + " : glisse la ligne " + paire[0] + " × " + etat.n + " et la ligne " + paire[1] + " × " + etat.n + ".");
+  } else {
+    const d10 = c % 10 === 0 && etat.connus.includes(c / 10), d2 = c % 2 === 0 && etat.connus.includes(c / 2);
+    if (etat.aide === 1) bulle("× 10 : chaque unité devient une dizaine. × 2 : je double. Quelle ligne de ton carnet, passée dans un tampon, donne " + c + " fois " + etat.n + " ?");
+    else if (d10) bulle(c + ", c'est " + (c / 10) + " × 10 : glisse la ligne " + (c / 10) + " × " + etat.n + ", puis le tampon × 10.");
+    else if (d2) bulle(c + ", c'est le double de " + (c / 2) + " : glisse la ligne " + (c / 2) + " × " + etat.n + ", puis le tampon × 2.");
+    else bulle("Fabrique d'abord une ligne qui t'aidera : par exemple " + (c / 2 % 1 ? c / 10 : c / 2) + " × " + etat.n + ".");
+  }
+};
+function ajuste() {
+  const e = Math.min(innerWidth / 1920, innerHeight / 1080), s = $("scene");
+  s.style.transform = "scale(" + e + ")"; s.style.left = ((innerWidth - 1920 * e) / 2) + "px"; s.style.top = ((innerHeight - 1080 * e) / 2) + "px"; s.dataset.ech = e;
+}
+addEventListener("resize", ajuste); ajuste();
+function depuisLien() { const m = location.hash.slice(1).match(/^(ajouter|fois10|sansdroit)?-?(25|36|35|68|136)?$/); ouvre(m && m[1] ? m[1] : "ajouter", m && m[2] ? +m[2] : 25); }
+addEventListener("hashchange", depuisLien);
+depuisLien();
+</script>
+</body>
+</html>

@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>🕰️ Les mots de l'heure</title>
+<!--
+  24/11 (Karim, sur l'heure du 20/11) : « il faut aussi comprendre que deux heures ça fait 120 minutes, des trucs basiques ; il y a aussi les formulations
+  moins le quart, et demie… » ; et le décor de l'horloge de la gare est « bof ». Une activité courte, fond clair, une question à la fois :
+  #quart : l'horloge montre une heure pile, et quart, et demie ou moins le quart ; on touche la bonne façon de la dire (le quart de l'horloge se colore).
+  #minutes : heures et minutes (1 h = 60 min, 2 h = 120 min, une demi-heure, un quart d'heure, 90 min = 1 h 30…) ; le ruban d'une heure, coupé en quatre quarts,
+  montre la réponse quand je touche « Réponse ». Les élèves répondent sur l'ardoise d'abord.
+-->
+<style>
+:root { --encre:#17252b; --bleu:#1565c0; --vert:#2e7d32; --rouge:#c62828; --gris:#607d8b; --fond:#f6f8fa; --quart:#bbdefb; }
+html,body { margin:0; height:100%; background:var(--fond); color:var(--encre); font-family:"Segoe UI",Calibri,Arial,sans-serif; user-select:none; }
+#app { height:100%; display:grid; grid-template-rows:auto 1fr auto; padding:12px 24px; box-sizing:border-box; }
+#haut { display:flex; align-items:center; gap:22px; }
+#haut h1 { margin:0; font-size:28px; }
+.ong button { font:inherit; font-size:22px; background:none; border:0; border-bottom:3px solid transparent; color:var(--gris); cursor:pointer; padding:4px 2px; margin-right:16px; }
+.ong button.on { color:var(--encre); border-bottom-color:#1f7a8c; }
+#zone { display:grid; place-items:center; min-height:0; }
+.quart { display:grid; grid-template-columns:auto auto; gap:60px; align-items:center; }
+.choix { display:grid; gap:16px; }
+.choix button { font:inherit; font-size:34px; padding:14px 26px; border-radius:14px; border:2px solid #cfd8dc; background:#fff; cursor:pointer; text-align:left; min-width:520px; }
+.choix button.ok { background:#e3f2e8; border-color:var(--vert); color:var(--vert); font-weight:700; }
+.choix button.ko { background:#fbe4e0; border-color:var(--rouge); color:var(--rouge); text-decoration:line-through; }
+.minutes { text-align:center; }
+.minutes .q { font-size:72px; font-weight:700; }
+.minutes .r { font-size:64px; color:var(--vert); font-weight:700; min-height:84px; margin-top:10px; }
+.ruban { margin:26px auto 0; width:960px; height:70px; display:grid; border:3px solid var(--encre); border-radius:8px; overflow:hidden; }
+.ruban div { border-right:2px dashed var(--gris); display:grid; place-items:center; font-size:22px; color:var(--gris); }
+.ruban div:last-child { border-right:0; }
+.ruban div.plein { background:var(--quart); color:var(--encre); font-weight:700; }
+.etiquettes { width:960px; margin:6px auto 0; display:flex; justify-content:space-between; font-size:20px; color:var(--gris); }
+.cadrans { display:flex; gap:40px; justify-content:center; margin-top:30px; }
+.cadrans svg { width:300px; height:330px; }
+.compte { font-size:46px; font-weight:700; color:#1565c0; min-height:60px; margin-top:16px; }
+#bas { display:flex; justify-content:center; gap:14px; }
+#bas button { font:inherit; font-size:22px; padding:8px 18px; border-radius:10px; border:2px solid #cfd8dc; background:#fff; cursor:pointer; }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="haut"><h1>🕰️ Les mots de l'heure</h1><div class="ong"><button data-o="quart">et quart, et demie, moins le quart</button><button data-o="minutes">heures et minutes</button></div></div>
+  <div id="zone"></div>
+  <div id="bas"><button id="rep">Réponse</button><button id="suiv">Suivant ▶</button></div>
+</div>
+<script>
+const NOMS = ["minuit", "une", "deux", "trois", "quatre", "cinq", "six", "sept", "huit", "neuf", "dix", "onze", "midi"];
+const h12 = h => (h % 12 === 0 ? 12 : h % 12);
+const dit = h => h12(h) === 12 ? (h === 0 ? "minuit" : "midi") : NOMS[h12(h)] + (h12(h) === 1 ? " heure" : " heures");
+// [heure, minutes] : pile, et quart, et demie, moins le quart
+const QUART = [[3, 15], [3, 30], [3, 45], [8, 0], [10, 30], [6, 45], [1, 15], [11, 45], [5, 30], [9, 15], [12, 45], [7, 0]];
+// 26/11 (Karim) : les mots du quart (« une heure et quart ») au lieu de « 1 h 15 » ; et une vraie visualisation : un cadran par heure,
+// coupé en quatre quarts d'heure ; à « Réponse », les quarts se remplissent un à un en comptant 15, 30, 45, 60, 75…
+// [question, réponse, nombre de quarts d'heure]
+const MIN = [["une heure = … minutes", "60 minutes", 4], ["un quart d'heure = … minutes", "15 minutes", 1], ["une demi-heure = … minutes", "30 minutes", 2],
+  ["trois quarts d'heure = … minutes", "45 minutes", 3], ["deux heures = … minutes", "120 minutes", 8], ["une heure et quart = … minutes", "75 minutes", 5],
+  ["une heure et demie = … minutes", "90 minutes", 6], ["90 minutes = une heure et …", "une heure et demie", 6], ["45 minutes = … d'heure", "trois quarts d'heure", 3],
+  ["120 minutes = … heures", "deux heures", 8], ["trois heures = … minutes", "180 minutes", 12], ["deux heures et quart = … minutes", "135 minutes", 9]];
+let ong = "quart", i = 0, vu = false;
+const $ = id => document.getElementById(id);
+function horloge(h, m) {
+  const cx = 230, cy = 230, R = 200, a = d => (d - 90) * Math.PI / 180, P = (d, r) => [cx + r * Math.cos(a(d)), cy + r * Math.sin(a(d))];
+  let s = '<svg width="460" height="460" viewBox="0 0 460 460">';
+  if (m) { const [x1, y1] = P(0, R), [x2, y2] = P(m * 6, R); s += '<path d="M' + cx + ' ' + cy + ' L' + x1 + ' ' + y1 + ' A' + R + ' ' + R + ' 0 ' + (m > 30 ? 1 : 0) + ' 1 ' + x2 + ' ' + y2 + ' Z" fill="' + (vu ? "#bbdefb" : "#eef3f7") + '"/>'; }
+  if (vu && m === 45) { const [x1, y1] = P(270, R), [x2, y2] = P(360, R); s += '<path d="M' + cx + ' ' + cy + ' L' + x1 + ' ' + y1 + ' A' + R + ' ' + R + ' 0 0 1 ' + x2 + ' ' + y2 + ' Z" fill="#ffe0b2"/>'; const [tx, ty] = P(318, R * .42); s += '<text x="' + tx + '" y="' + (ty + 8) + '" font-size="22" font-weight="700" fill="#e65100" text-anchor="middle">il manque</text><text x="' + tx + '" y="' + (ty + 34) + '" font-size="22" font-weight="700" fill="#e65100" text-anchor="middle">¼ d’heure</text>'; }
+  [0, 90, 180, 270].forEach(d => { const [x, y] = P(d, R); s += '<line x1="' + cx + '" y1="' + cy + '" x2="' + x + '" y2="' + y + '" stroke="#90a4ae" stroke-width="3" stroke-dasharray="8 6"/>'; });
+  s += '<circle cx="' + cx + '" cy="' + cy + '" r="' + R + '" fill="none" stroke="#17252b" stroke-width="8"/>';
+  for (let k = 0; k < 60; k++) { const [x1, y1] = P(k * 6, R - (k % 5 ? 10 : 22)), [x2, y2] = P(k * 6, R - 2); s += '<line x1="' + x1 + '" y1="' + y1 + '" x2="' + x2 + '" y2="' + y2 + '" stroke="#17252b" stroke-width="' + (k % 5 ? 2 : 5) + '"/>'; }
+  for (let k = 1; k <= 12; k++) { const [x, y] = P(k * 30, R - 52); s += '<text x="' + x + '" y="' + (y + 14) + '" font-size="40" text-anchor="middle" font-weight="700">' + k + '</text>'; }
+  const [hx, hy] = P((h % 12) * 30 + m / 2, 110), [mx, my] = P(m * 6, 165);
+  s += '<line x1="' + cx + '" y1="' + cy + '" x2="' + hx + '" y2="' + hy + '" stroke="#17252b" stroke-width="14" stroke-linecap="round"/>';
+  s += '<line x1="' + cx + '" y1="' + cy + '" x2="' + mx + '" y2="' + my + '" stroke="#1565c0" stroke-width="8" stroke-linecap="round"/><circle cx="' + cx + '" cy="' + cy + '" r="10" fill="#17252b"/></svg>';
+  return s;
+}
+function phrases(h, m) {
+  const pile = dit(h) + (h12(h) === 12 ? "" : " pile"), quart = dit(h) + " et quart", demie = dit(h) + (h12(h) === 12 ? " et demie" : " et demie"), moins = dit((h + 1) % 24) + " moins le quart";
+  const juste = { 0: pile, 15: quart, 30: demie, 45: moins }[m];
+  return { juste, L: [pile, quart, demie, moins] };
+}
+function dessiner() {
+  document.querySelectorAll(".ong button").forEach(b => b.classList.toggle("on", b.dataset.o === ong));
+  const z = $("zone");
+  if (ong === "quart") {
+    const [h, m] = QUART[i % QUART.length], P = phrases(h, m);
+    z.innerHTML = '<div class="quart"><div id="cadran">' + horloge(h, m) + '</div><div class="choix"></div></div>';
+    P.L.forEach(t => { const b = document.createElement("button"); b.textContent = t; b.onclick = () => { b.className = t === P.juste ? "ok" : "ko"; if (t === P.juste) { vu = true; $("cadran").innerHTML = horloge(h, m); } }; z.querySelector(".choix").appendChild(b); });
+    if (vu) z.querySelectorAll(".choix button").forEach(b => { if (b.textContent === P.juste) b.className = "ok"; });
+  } else {
+    const [q, r, quarts] = MIN[i % MIN.length], heures = Math.max(1, Math.ceil(quarts / 4));
+    z.innerHTML = '<div class="minutes"><div class="q"></div><div class="cadrans"></div><div class="compte"></div><div class="r"></div></div>';
+    z.querySelector(".q").textContent = q;
+    for (let c = 0; c < heures; c++) z.querySelector(".cadrans").insertAdjacentHTML("beforeend", cadran(c));
+    if (vu) remplir(quarts, r);
+  }
+}
+// un cadran d'une heure, coupé en 4 quarts d'heure (les quarts se remplissent à « Réponse »)
+function cadran(c) {
+  const cx = 150, cy = 150, R = 130, P = (d, r) => [cx + r * Math.sin(d * Math.PI / 180), cy - r * Math.cos(d * Math.PI / 180)];
+  let s = '<svg viewBox="0 0 300 330">';
+  for (let k = 0; k < 4; k++) { const [x1, y1] = P(k * 90, R), [x2, y2] = P(k * 90 + 90, R), [lx, ly] = P(k * 90 + 45, R * .55);
+    s += '<path id="q' + (c * 4 + k) + '" d="M' + cx + ' ' + cy + ' L' + x1 + ' ' + y1 + ' A' + R + ' ' + R + ' 0 0 1 ' + x2 + ' ' + y2 + ' Z" fill="#fff" stroke="#90a4ae" stroke-width="3" stroke-dasharray="8 6"/>'
+      + '<text id="t' + (c * 4 + k) + '" x="' + lx + '" y="' + (ly + 14) + '" font-size="40" font-weight="700" text-anchor="middle" fill="#17252b"></text>'; }
+  s += '<circle cx="' + cx + '" cy="' + cy + '" r="' + R + '" fill="none" stroke="#17252b" stroke-width="7"/>';
+  [[0, "12"], [90, "3"], [180, "6"], [270, "9"]].forEach(([d, t]) => { const [x, y] = P(d, R + 2); s += '<circle cx="' + x + '" cy="' + y + '" r="6" fill="#17252b"/>'; });
+  return s + '<text x="150" y="322" font-size="24" text-anchor="middle" fill="#607d8b">' + (c + 1) + (c ? "e" : "re") + ' heure</text></svg>';
+}
+let minuteur = null;
+function remplir(quarts, r) {
+  clearInterval(minuteur); let k = 0; const compte = document.querySelector(".compte"), L = [];
+  const pas = () => {
+    if (k >= quarts) { clearInterval(minuteur); document.querySelector(".minutes .r").textContent = r; return; }
+    const q = document.getElementById("q" + k), t = document.getElementById("t" + k);
+    if (q) { q.setAttribute("fill", "#bbdefb"); q.setAttribute("stroke", "#1565c0"); q.removeAttribute("stroke-dasharray"); }
+    if (t) t.textContent = (k + 1) * 15;
+    const n = k + 1, parts = Array(Math.floor(n / 4)).fill(60).concat(n % 4 ? [n % 4 * 15] : []); compte.textContent = (parts.length > 1 ? parts.join(" + ") + " = " : "") + n * 15 + " minutes"; k++;
+  };
+  pas(); minuteur = setInterval(pas, 650);
+}
+$("rep").onclick = () => { vu = true; dessiner(); };
+$("suiv").onclick = () => { clearInterval(minuteur); i++; vu = false; dessiner(); };
+document.querySelectorAll(".ong button").forEach(b => b.onclick = () => { location.hash = b.dataset.o; });
+function lien() { const h = location.hash.slice(1); ong = h === "minutes" ? "minutes" : "quart"; i = 0; vu = false; dessiner(); }
+window.addEventListener("hashchange", lien); lien();
+</script>
+</body>
+</html>

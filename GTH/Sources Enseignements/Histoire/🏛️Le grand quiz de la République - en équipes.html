@@ -1,0 +1,346 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Le grand quiz de la République</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath d='M32 4 4 20h56z' fill='%232e7d32'/%3E%3Cg fill='%23a5d6a7'%3E%3Crect x='9' y='24' width='8' height='28'/%3E%3Crect x='23' y='24' width='8' height='28'/%3E%3Crect x='37' y='24' width='8' height='28'/%3E%3Crect x='51' y='24' width='5' height='28'/%3E%3C/g%3E%3Crect x='4' y='54' width='56' height='6' fill='%232e7d32'/%3E%3C/svg%3E">
+<!--
+  🏛️ Le grand quiz de la République, en équipes (Karim, 21/11 : « tu aurais pu faire une activité avec un quiz bien plus interactif,
+  bien plus visuel » à la place des 12 diapos de questions). Histoire CM2, thème 1 « Le temps de la République », avant l'évaluation.
+  Univers : chaque équipe bâtit sa colonne du monument de la République (pas de « temple » : l'école est laïque, Karim 21/11) ; une bonne réponse = une pierre de plus.
+  Déroulé : je lis la question, les équipes ont 30 s (la barre se vide) et écrivent une LETTRE sur l'ardoise ; ardoises levées ;
+  je touche 👁 La réponse (la bonne case s'allume, la carte va à sa place, l'image reçoit sa légende) ; je touche la colonne de chaque
+  équipe qui avait juste (on retouche pour enlever) ; ▶ Question suivante.
+  Quatre sortes de questions, toutes à lettre : la frise (A à F), le document (A, B, C), le tri (un droit, un devoir, les deux),
+  les trois mots de l'école de Jules Ferry.
+  Niveaux : #tout (12 questions, tout le thème) · #frise (les 6 événements sur la frise) · #tri (droit, devoir ou les deux : 8 cartes).
+  Contenu : les séances hi-s1 à hi-s3 de GTH v2 (libertés, droit de vote, devoirs) et la frise de l'évaluation ; rien d'inventé hors
+  de ces séances. Images : images/ (légendes dans images/legendes.js, montrées après la réponse).
+-->
+<style>
+:root{--vert:#2e7d32;--vertc:#a5d6a7;--fond:#f4f8f1;--encre:#17252b;--talbot:#1f7a8c;--or:#f9a825}
+html,body{margin:0;height:100%;background:#1b3d1d;overflow:hidden;font-family:"Segoe UI",Arial,sans-serif;color:var(--encre)}
+#scene{position:absolute;left:0;top:0;width:1920px;height:1080px;transform-origin:0 0;background:var(--fond);overflow:hidden}
+button{font-family:inherit;cursor:pointer}
+[hidden]{display:none !important}
+/* 1. la barre du haut */
+/* Karim, 21/11 : « trop d'infos à l'écran » : plus de bandeau, de titre ni de niveaux visibles ; « 3 / 12 » en petit et ☰ dans le coin */
+#barre{height:56px;display:flex;align-items:center;gap:14px;padding:0 24px;color:#90a4ae;justify-content:flex-end}
+#barre h1{display:none !important}
+#menu{font-size:34px;border:0;background:none;color:#90a4ae;width:50px;height:50px}
+#barre h1{margin:0;font-size:34px;display:flex;align-items:center;gap:14px;color:#c8e6c9}
+#barre h1 svg{width:52px;height:52px}
+#niveaux{display:none;position:absolute;top:56px;right:20px;z-index:30;flex-direction:column;gap:8px;background:#fff;padding:14px;border-radius:16px;box-shadow:0 12px 40px #0002}
+#niveaux.ouvert{display:flex}
+#niveaux button{font-size:22px;padding:8px 18px;border-radius:12px;border:2px solid #cfd8dc;background:#fff;color:#37474f;text-align:left}
+#niveaux button.on{background:var(--talbot);border-color:#fff}
+#coin{font-size:22px}
+#coin b{font-weight:600;color:#78909c}
+/* 2. la consigne */
+#consigne{height:70px;display:flex;align-items:center;justify-content:center;padding:0 40px;font-size:32px;font-weight:600;color:#546e7a;text-align:center;line-height:1.1}
+#temps{position:absolute;left:60px;width:1180px;top:134px;height:12px;border-radius:6px;background:#dfe8dc;overflow:hidden}
+#temps i{display:block;height:100%;width:100%;background:var(--or);transform-origin:0 0}
+/* 3. le jeu : la question à gauche, le monument à droite */
+#question{position:absolute;left:40px;top:170px;width:1240px;height:780px}
+#monument{position:absolute;right:30px;top:150px;width:580px;height:810px}
+#bas{position:absolute;left:40px;width:1240px;bottom:22px;height:90px;display:flex;align-items:center;justify-content:center;gap:24px}
+#bas button{font-size:34px;font-weight:700;padding:14px 40px;border-radius:40px;border:0;color:#fff;background:var(--talbot);box-shadow:0 5px 0 #145866}
+#bas button:active{transform:translateY(3px);box-shadow:0 2px 0 #145866}
+#bas button[hidden]{display:none}
+#indice{position:absolute;left:30px;bottom:30px;width:76px;height:76px;border-radius:50%;font-size:40px;border:2px solid #d4b106;background:#fff8c4;z-index:5}
+#bulle::after{content:"  ✕";color:#a1887f;font-size:.8em}
+#bulle{cursor:pointer;position:absolute;left:30px;bottom:124px;max-width:900px;background:#fff8c4;border:2px solid #d4b106;border-radius:18px;padding:14px 24px;font-size:28px;display:none;z-index:6}
+/* le monument */
+#fronton{position:absolute;left:0;top:0;width:580px;height:120px}
+#colonnes{position:absolute;left:20px;right:20px;top:118px;bottom:118px;display:flex;justify-content:space-around;align-items:flex-end;border-bottom:10px solid var(--vert)}
+.col{position:relative;width:70px;height:100%;display:flex;flex-direction:column-reverse;align-items:center;cursor:pointer;border-radius:10px}
+.col .pierre{width:62px;height:40px;margin-top:3px;border-radius:5px;background:var(--c);box-shadow:inset 0 -6px 0 rgba(0,0,0,.18),inset 0 4px 0 rgba(255,255,255,.35);animation:tombe .45s cubic-bezier(.3,1.4,.6,1)}
+.col .pierre.neuve{outline:4px solid #fff;outline-offset:-4px}
+@keyframes tombe{from{transform:translateY(-420px);opacity:.3}}
+.col.peut{background:rgba(31,122,140,.08);outline:3px dashed rgba(31,122,140,.45)}
+.col.ok-ici{background:rgba(46,125,50,.14)}
+#socle{position:absolute;left:20px;right:20px;bottom:0;height:112px;display:flex;justify-content:space-around}
+#socle div{width:84px;text-align:center;font-size:17px;font-weight:700;line-height:1.1}
+#socle span{display:block;font-size:44px;line-height:1.1}
+#socle b{display:block;font-size:30px;color:var(--c)}
+/* les cartes-réponses */
+.q-txt{font-size:42px;font-weight:700;text-align:center;margin:0 0 24px;line-height:1.15}
+.doc{display:flex;gap:34px;align-items:flex-start;justify-content:center}
+.doc figure{margin:0;position:relative;flex:none}
+.doc img{display:block;max-width:560px;max-height:560px;border-radius:14px;box-shadow:0 6px 18px rgba(0,0,0,.2)}
+.legende{position:absolute;left:10px;bottom:10px;right:10px;background:rgba(0,0,0,.72);color:#fff;border-radius:10px;padding:10px 14px;font-size:18px;line-height:1.25;animation:monte .4s}
+.legende b{font-size:21px;display:block} .legende i{font-style:normal;opacity:.8;display:block}
+@keyframes monte{from{opacity:0;transform:translateY(16px)}}
+.choix{display:flex;flex-direction:column;gap:18px;flex:1;min-width:0}
+.doc.sans .choix{max-width:980px}
+.carte{display:flex;align-items:center;gap:20px;background:#fff;border:4px solid #c9d8c5;border-radius:22px;padding:16px 22px;font-size:34px;font-weight:600;line-height:1.15;transition:.3s}
+.carte .l{flex:none;width:62px;height:62px;border-radius:50%;background:var(--vert);color:#fff;font-size:36px;font-weight:800;display:flex;align-items:center;justify-content:center}
+.vu .carte.juste{border-color:var(--vert);background:#e8f5e9;transform:scale(1.03);box-shadow:0 0 0 6px rgba(46,125,50,.25)}
+.vu .carte:not(.juste){opacity:.35}
+/* la frise */
+.frise{position:relative;width:1240px;height:540px}
+.frise svg{position:absolute;left:0;top:0;width:1240px;height:460px}
+.evt{position:absolute;left:50%;top:0;transform:translateX(-50%);background:#fff;border:4px solid var(--or);border-radius:22px;padding:14px 30px;font-size:40px;font-weight:700;white-space:nowrap;transition:left .8s,top .8s}
+.frise.vu .evt{border-color:var(--vert);font-size:26px;padding:8px 16px}
+/* le tri */
+.tri-carte{margin:10px auto 40px;width:max-content;max-width:900px;background:#fff;border:4px solid var(--or);border-radius:22px;padding:22px 44px;font-size:48px;font-weight:700;text-align:center;transition:transform .8s}
+.bacs{display:flex;gap:30px;justify-content:center}
+.bac{width:350px;height:280px;border-radius:26px;border:5px dashed #9fb89a;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding-top:22px;font-size:36px;font-weight:700;gap:14px;transition:.3s}
+.bac .l{width:70px;height:70px;border-radius:50%;background:var(--vert);color:#fff;font-size:40px;display:flex;align-items:center;justify-content:center}
+.vu .bac.juste{border-style:solid;border-color:var(--vert);background:#e8f5e9}
+.vu .bac:not(.juste){opacity:.35}
+/* les mots de Jules Ferry */
+.mots{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;max-width:1100px;margin:0 auto}
+.mots .carte{justify-content:flex-start}
+.vu .mots .carte:not(.juste){text-decoration:line-through}
+/* l'ouverture et la fin */
+#ouverture,#fin{position:absolute;inset:56px 0 0 0;background:var(--fond);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:34px;z-index:10}
+#ouverture h2,#fin h2{margin:0;font-size:44px;color:var(--vert)}
+#ouverture p{margin:0;font-size:30px;max-width:1300px;text-align:center;line-height:1.35}
+/* Karim, 21/11 : chaque équipe choisit son animal ; sa colonne apparaît aussitôt dans le monument */
+#ouverture{right:620px !important}
+#nb{display:grid;grid-template-columns:repeat(3,230px);gap:22px}
+#nb button{height:190px;border-radius:30px;border:5px solid #d7e3d3;background:#fff;font-size:30px;font-weight:700;color:#90a4ae;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px}
+#nb button span{font-size:86px;line-height:1;filter:grayscale(1);opacity:.5}
+#nb button.on{border-color:var(--c);background:color-mix(in srgb,var(--c) 12%,#fff);color:var(--c)}
+#nb button.on span{filter:none;opacity:1}
+#go{font-size:36px;font-weight:800;padding:14px 46px;border-radius:40px;border:0;background:var(--talbot);color:#fff;box-shadow:0 5px 0 #145866}
+#go:disabled{opacity:.35;box-shadow:none}
+/* la fin (Karim, 21/11 : « il manque un petit truc pour la curiosité, l'émerveillement ») : les colonnes montent une à une, du dernier au premier,
+   les points comptent ; le gagnant saute, reçoit sa couronne, les confettis tombent */
+#fin h2{font-size:58px !important;min-height:80px;transition:transform .3s}
+#fin h2.boum{animation:boum .6s}
+@keyframes boum{0%{transform:scale(.4)}60%{transform:scale(1.15)}100%{transform:scale(1)}}
+#podium{display:flex;gap:30px;align-items:flex-end;height:560px}
+#podium div{width:200px;text-align:center;font-size:28px;font-weight:700;position:relative;opacity:.25;transition:opacity .4s}
+#podium div.vu{opacity:1}
+#podium span{display:block;font-size:80px;position:relative}
+#podium i{display:block;font-style:normal;background:var(--c);color:#fff;border-radius:16px 16px 0 0;font-size:44px;padding-top:12px;height:0;transition:height 1s cubic-bezier(.3,1.3,.5,1);overflow:hidden}
+#podium div.gagne span{animation:saute .7s infinite alternate}
+@keyframes saute{from{transform:translateY(0)}to{transform:translateY(-30px)}}
+#podium .couronne{position:absolute;left:50%;top:-58px;transform:translateX(-50%);font-size:60px;animation:pose .6s}
+@keyframes pose{from{transform:translate(-50%,-200px) rotate(-40deg);opacity:0}}
+#confettis{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+#confettis i{position:absolute;top:-20px;width:14px;height:22px;border-radius:3px;animation:tombe linear forwards}
+@keyframes tombe{to{transform:translateY(1150px) rotate(720deg)}}
+#fin button{font-size:30px;padding:12px 34px;border-radius:30px;border:0;background:var(--talbot);color:#fff}
+</style>
+</head>
+<body>
+<div id="scene">
+  <div id="barre">
+    <h1><svg viewBox="0 0 64 64"><path d="M32 4 4 20h56z" fill="#c8e6c9"/><g fill="#a5d6a7"><rect x="9" y="24" width="8" height="28"/><rect x="23" y="24" width="8" height="28"/><rect x="37" y="24" width="8" height="28"/><rect x="50" y="24" width="7" height="28"/></g><rect x="4" y="54" width="56" height="6" fill="#c8e6c9"/></svg>Le grand quiz de la République</h1>
+    <div id="niveaux"><button data-n="tout">Tout le thème</button><button data-n="frise">La frise</button><button data-n="tri">Droit ou devoir</button></div>
+    <div id="coin"><b id="num">1</b> / <b id="total">12</b><b id="record" hidden>0</b></div><button id="menu" title="Niveaux">☰</button>
+  </div>
+  <div id="consigne"></div>
+  <div id="temps"><i id="barreTemps"></i></div>
+  <div id="question"></div>
+  <div id="monument">
+    <svg id="fronton" viewBox="0 0 580 120"><path d="M290 6 10 112h560z" fill="#c8e6c9" stroke="#2e7d32" stroke-width="6" stroke-linejoin="round"/><text x="290" y="92" text-anchor="middle" font-size="30" font-weight="800" fill="#1b5e20" font-family="Segoe UI,Arial">RÉPUBLIQUE</text></svg>
+    <div id="colonnes"></div>
+    <div id="socle"></div>
+  </div>
+  <div id="bas"><button id="voir">👁 La réponse</button><button id="suite" hidden>▶ Question suivante</button></div>
+  <button id="indice" title="Indice">💡</button>
+  <div id="bulle"></div>
+  <div id="ouverture">
+    <h2>Chaque équipe choisit son animal</h2>
+    <div id="nb"></div>
+    <button id="go" disabled>▶ C'est parti</button>
+  </div>
+  <div id="fin" hidden><h2 id="fin-titre">Et le classement…</h2><div id="podium"></div><button id="rejouer">↺ Rejouer</button><div id="confettis"></div></div>
+</div>
+<script src="images/legendes.js"></script>
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+const IMG = "images/";
+const EQUIPES = [["🦊", "Renards", "#ef6c00"], ["🦉", "Chouettes", "#6a1b9a"], ["🐬", "Dauphins", "#1565c0"], ["🐻", "Ours", "#6d4c41"], ["🐸", "Grenouilles", "#2e7d32"], ["🐝", "Abeilles", "#f9a825"]];
+// la frise : 6 points lettrés, les mêmes que dans l'évaluation (A 1792 … F 1944) ; G = 1974 est donné
+const FRISE = [[1792, "A"], [1848, "B"], [1870, "C"], [1882, "D"], [1892, "E"], [1944, "F"]];
+const EVT = {
+  1792: ["La République est proclamée pour la première fois", "Avant, il y avait un roi."],
+  1848: ["Tous les hommes peuvent voter", "Avant, seuls les hommes riches votaient."],
+  1870: ["La République revient, et cette fois elle dure", "Avant, il y avait un empereur."],
+  1882: ["L'école devient gratuite, laïque et obligatoire", "C'est Jules Ferry."],
+  1892: ["La République fête ses cent ans", "Cent ans après la première fois."],
+  1944: ["Les femmes obtiennent le droit de vote", "Presque cent ans après les hommes."]
+};
+const QF = an => ({ type: "frise", an, indice: "Regarde la frise de la classe : avant ou après le roi, l'empereur ?" });
+const QT = (txt, r) => ({ type: "tri", txt, r, indice: "Un droit, c'est ce que j'ai le droit de faire ; un devoir, ce que je dois faire. Pense aux documents du dossier." });
+const Q = {
+  tout: [
+    QF(1792),
+    { type: "choix", q: "En 1848, qui peut voter ?", img: "suffrage-universel-1848.jpg", ch: ["Seulement les hommes riches", "Tous les hommes", "Les hommes et les femmes"], r: 1, indice: "Regarde qui vote sur le dessin, et ce qu'il pose par terre." },
+    QF(1870),
+    { type: "mots", q: "Les trois mots de l'école de Jules Ferry ?", mots: ["gratuite", "payante", "laïque", "religieuse", "obligatoire", "pour les garçons"], r: [0, 2, 4], img: "classe-1912.jpg", indice: "Trois lettres. Tous les enfants y vont, sans payer, et la religion reste dehors." },
+    { type: "choix", q: "Pourquoi Daumier va-t-il en prison en 1832 ?", img: "gargantua.jpg", ch: ["Il a volé de l'argent", "Il s'est moqué du roi dans un dessin", "Il n'a pas payé ses impôts"], r: 1, indice: "Regarde qui est le géant du dessin." },
+    { type: "choix", q: "Aujourd'hui, Daumier irait-il en prison pour ce dessin ?", img: "gargantua.jpg", ch: ["Oui, on n'a pas le droit de dessiner le président", "Non : la liberté d'expression est protégée", "Oui, s'il ne paie pas d'amende"], r: 1, indice: "La Déclaration de 1789 : dire ce qu'on pense." },
+    QF(1944),
+    { type: "choix", q: "Pourquoi les femmes ont-elles attendu presque cent ans pour voter ?", img: "suffragettes-1914.jpg", ch: ["Elles ne voulaient pas voter", "On pensait qu'elles ne devaient pas faire de politique", "Il n'y avait pas d'élections"], r: 1, indice: "Sur la photo, elles manifestent : elles le voulaient." },
+    { type: "choix", q: "La loi de 1905 garantit à chacun…", img: "assemblee-desert.jpg", ch: ["la liberté de croire ou de ne pas croire", "l'obligation d'aller à la messe", "l'interdiction des religions"], r: 0, indice: "Sur le tableau, ces gens prient en cachette : leur religion était interdite." },
+    QT("Payer ses impôts", 1),
+    QT("Voter", 2),
+    QT("Dire ce que je pense", 0)
+  ],
+  frise: [1792, 1848, 1870, 1882, 1892, 1944].map(QF),
+  tri: [QT("Payer ses impôts", 1), QT("Dire ce que je pense", 0), QT("Voter", 2), QT("Respecter les lois", 1), QT("Croire ou ne pas croire en une religion", 0),
+    QT("Aller à l'école", 2), QT("Être juré si je suis tiré au sort", 1), QT("Respecter les biens publics", 1)]
+};
+const BACS = ["Un droit", "Un devoir", "Les deux"], LET = "ABCDEF";
+const etat = { n: "tout", eqs: [], i: 0, L: [], marques: [], vu: false };
+window.QUIZ = etat;   // pour le test automatique
+const mem = { lire(k) { try { return +localStorage.getItem(k) || 0; } catch (e) { return 0; } }, ecrire(k, v) { try { localStorage.setItem(k, v); } catch (e) {} } };
+const melange = L => { const M = L.slice(); for (let k = M.length - 1; k > 0; k--) { const j = Math.floor(Math.random() * (k + 1)); [M[k], M[j]] = [M[j], M[k]]; } return M; };
+
+// ---- le monument : une colonne par équipe ----
+const points = e => etat.marques.reduce((s, m) => s + (m && m.has(e) ? 1 : 0), 0);
+function monument(neuve) {
+  const E = etat.eqs.map(k => [EQUIPES[k], k]);
+  $("colonnes").innerHTML = E.map(([[, , c], e]) => '<div class="col' + (etat.vu ? " peut" : "") + (etat.marques[etat.i] && etat.marques[etat.i].has(e) ? " ok-ici" : "") + '" data-e="' + e + '" style="--c:' + c + '">'
+    + Array.from({ length: points(e) }, (_, k) => '<div class="pierre' + (neuve === e && k === points(e) - 1 ? " neuve" : "") + '"' + (neuve === e && k === points(e) - 1 ? "" : ' style="animation:none"') + "></div>").join("") + "</div>").join("");
+  $("socle").innerHTML = E.map(([[ic, nom, c], e]) => '<div style="--c:' + c + '"><span>' + ic + "</span>" + nom + "<b>" + points(e) + "</b></div>").join("");
+  $("colonnes").querySelectorAll(".col").forEach(c => c.onclick = () => marque(+c.dataset.e));
+}
+function marque(e) {   // je touche la colonne d'une équipe qui avait juste (retoucher l'enlève) — seulement une fois la réponse montrée
+  if (!etat.vu) { bulle("D'abord 👁 La réponse, puis je touche les colonnes des équipes qui avaient juste."); return; }
+  const m = etat.marques[etat.i] || (etat.marques[etat.i] = new Set());
+  if (m.has(e)) { m.delete(e); monument(); } else { m.add(e); monument(e); }
+  const meilleur = Math.max(...etat.eqs.map(k => points(k)));
+  if (meilleur > mem.lire("quiz-rep-record-" + etat.n)) mem.ecrire("quiz-rep-record-" + etat.n, meilleur);
+  $("record").textContent = mem.lire("quiz-rep-record-" + etat.n);
+}
+
+// ---- une question ----
+let minuteur = null;
+function chrono() {
+  clearInterval(minuteur); const t0 = Date.now(), b = $("barreTemps"); b.style.transform = "scaleX(1)"; b.style.background = "var(--or)";
+  minuteur = setInterval(() => { const r = Math.max(0, 1 - (Date.now() - t0) / 30000); b.style.transform = "scaleX(" + r + ")"; if (r < .2) b.style.background = "#e53935"; if (!r) { clearInterval(minuteur); consigne("⏱️ Ardoises levées !"); } }, 100);
+}
+const consigne = t => { $("consigne").innerHTML = t; };
+function legende(f) { const L = (window.LEGENDES_IMAGES || {})[f]; return L ? '<div class="legende"><b>' + L[0] + "</b><i>" + L[1] + "</i>" + L[2] + "</div>" : ""; }
+function pose() {
+  const q = etat.L[etat.i], Z = $("question"); etat.vu = false; $("bulle").style.display = "none";
+  $("num").textContent = etat.i + 1; $("total").textContent = etat.L.length; $("voir").hidden = false; $("suite").hidden = true;
+  if (q.type === "choix") {
+    consigne("Quelle lettre ?");
+    Z.innerHTML = '<p class="q-txt">' + q.q + '</p><div class="doc' + (q.img ? "" : " sans") + '">' + (q.img ? '<figure><img src="' + IMG + q.img + '" alt=""></figure>' : "")
+      + '<div class="choix">' + q.ch.map((c, k) => '<div class="carte' + (k === q.r ? " juste" : "") + '"><span class="l">' + LET[k] + "</span>" + c + "</div>").join("") + "</div></div>";
+  } else if (q.type === "mots") {
+    consigne("Quelles trois lettres ?");
+    Z.innerHTML = '<p class="q-txt">' + q.q + '</p><div class="mots">' + q.mots.map((m, k) => '<div class="carte' + (q.r.includes(k) ? " juste" : "") + '"><span class="l">' + LET[k] + "</span>" + m + "</div>").join("") + '</div><div class="doc" style="margin-top:28px" id="apres"></div>';
+  } else if (q.type === "tri") {
+    consigne("Un droit, un devoir, ou les deux ?");
+    Z.innerHTML = '<div class="tri-carte" id="tc">' + q.txt + '</div><div class="bacs">' + BACS.map((b, k) => '<div class="bac' + (k === q.r ? " juste" : "") + '" data-k="' + k + '"><span class="l">' + LET[k] + "</span>" + b + "</div>").join("") + "</div>";
+  } else {   // la frise
+    consigne("Quelle date ?");
+    const W = 1240, X0 = 40, X1 = 1200, x = an => X0 + (an - 1780) * (X1 - X0) / 220, Y = 250;
+    // Karim, 21/11 : « on ne sait même pas où sont placées les lettres » : la frise de la trace (qui gouverne : vert la République,
+    // gris un roi ou un empereur, hachuré la guerre), un trait tous les 10 ans, et chaque lettre reliée à son point par un trait qui traverse la bande
+    const P = [[1780, 1792, "roi"], [1792, 1804, "Rép."], [1804, 1848, "un empereur, puis des rois"], [1848, 1852, ""], [1852, 1870, "empereur"], [1870, 1940, "la République"], [1940, 1944, ""], [1944, 2000, "la République"]];
+    const H = 46;
+    let s = '<svg viewBox="0 0 ' + W + ' 460"><defs><pattern id="hq" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="8" height="8" fill="#fff"/><line x1="0" y1="0" x2="0" y2="8" stroke="#bdbdbd" stroke-width="4"/></pattern></defs>';
+    P.forEach(([a, b, t], k) => { const rep = /Rép/.test(t) || (k === 3); const fond = a === 1940 ? "url(#hq)" : rep ? "#a5d6a7" : "#e0e0e0";
+      s += '<rect x="' + x(a) + '" y="' + Y + '" width="' + (x(b) - x(a)) + '" height="' + H + '" fill="' + fond + '"/>';
+      if (t) s += '<text x="' + (x(a) + x(b)) / 2 + '" y="' + (Y + 30) + '" text-anchor="middle" font-size="' + (x(b) - x(a) < 90 ? 15 : 20) + '" font-weight="' + (rep ? 700 : 400) + '" fill="' + (rep ? "#1b5e20" : "#616161") + '">' + t + '</text>'; });
+    s += '<rect x="' + X0 + '" y="' + Y + '" width="' + (X1 - X0) + '" height="' + H + '" fill="none" stroke="#2e7d32" stroke-width="3"/>';
+    for (let an = 1780; an <= 2000; an += 10) { const g = an % 20 === 0;
+      s += '<line x1="' + x(an) + '" y1="' + (Y + H) + '" x2="' + x(an) + '" y2="' + (Y + H + (g ? 14 : 8)) + '" stroke="#555" stroke-width="2"/>';
+      if (g) s += '<text x="' + x(an) + '" y="' + (Y + H + 38) + '" text-anchor="middle" font-size="22" fill="#555">' + an + "</text>"; }
+    FRISE.concat([[1974, "G"]]).forEach(([an, l], k) => { const haut = k % 2 === 0, yb = haut ? Y - 78 : Y + H + 110, c = "#d84315";
+      s += '<line x1="' + x(an) + '" y1="' + (haut ? yb + 26 : Y - 6) + '" x2="' + x(an) + '" y2="' + (haut ? Y + H + 6 : yb - 26) + '" stroke="' + c + '" stroke-width="3"' + (haut ? "" : ' stroke-dasharray="0"') + '/>'
+        + '<line x1="' + x(an) + '" y1="' + (Y - 6) + '" x2="' + x(an) + '" y2="' + (Y + H + 6) + '" stroke="' + c + '" stroke-width="4"/>'
+        // Karim, 21/11 : « si tu demandes une date, mieux vaut afficher les dates que des lettres » : chaque point porte son année
+        + '<rect x="' + (x(an) - 48) + '" y="' + (yb - 24) + '" width="96" height="48" rx="24" fill="' + c + '"/><text x="' + x(an) + '" y="' + (yb + 11) + '" text-anchor="middle" font-size="30" font-weight="800" fill="#fff">' + an + "</text>"; });
+    s += '<g font-size="18" fill="#555"><rect x="' + X0 + '" y="440" width="22" height="16" fill="#a5d6a7"/><text x="' + (X0 + 30) + '" y="454">la République</text><rect x="' + (X0 + 190) + '" y="440" width="22" height="16" fill="#e0e0e0"/><text x="' + (X0 + 220) + '" y="454">un roi ou un empereur</text></g></svg>';
+    Z.innerHTML = '<div class="frise" id="fr">' + s + '<div class="evt" id="evt">' + EVT[q.an][0] + "</div></div>";
+    q._x = x(q.an); q._haut = FRISE.findIndex(f => f[0] === q.an) % 2 === 0;
+  }
+  monument(); chrono();
+}
+function montre() {
+  const q = etat.L[etat.i]; etat.vu = true; clearInterval(minuteur); $("voir").hidden = true; $("suite").hidden = false;
+  $("question").firstElementChild && $("question").classList.add("vu");
+  if (q.type === "choix") { const f = $("question").querySelector("figure"); if (f) f.insertAdjacentHTML("beforeend", legende(q.img)); consigne("Réponse " + LET[q.r]); }
+  else if (q.type === "mots") { $("apres").innerHTML = '<figure style="max-width:520px"><img src="' + IMG + q.img + '" alt="" style="max-height:300px">' + legende(q.img) + "</figure>"; consigne("Réponse A, C, E"); }
+  else if (q.type === "tri") {
+    const tc = $("tc"), bac = $("question").querySelector('.bac[data-k="' + q.r + '"]'), a = tc.getBoundingClientRect(), b = bac.getBoundingClientRect(), e = +($("scene").dataset.ech || 1);
+    tc.style.transform = "translate(" + ((b.left + b.width / 2 - a.left - a.width / 2) / e) + "px," + ((b.top + b.height * .66 - a.top - a.height / 2) / e) + "px) scale(.62)";
+    consigne("Réponse " + LET[q.r] + " : " + BACS[q.r].toLowerCase());
+  } else {
+    const ev = $("evt"), fr = $("fr"); fr.classList.add("vu"); const l = FRISE.find(f => f[0] === q.an)[1];
+    const w = ev.offsetWidth; ev.style.left = Math.max(w / 2 + 4, Math.min(1236 - w / 2, q._x)) + "px"; ev.style.top = (q._haut ? 70 : 470) + "px";
+    consigne("Réponse : " + q.an);
+  }
+  $("question").classList.add("vu"); monument();
+}
+function suite() {
+  $("question").classList.remove("vu");
+  if (etat.i + 1 >= etat.L.length) return fin();
+  etat.i++; pose();
+}
+function fin() {
+  clearInterval(minuteur); clearTimeout(fin.t);
+  const E = etat.eqs.map(k => [EQUIPES[k], points(k)]).sort((a, b) => b[1] - a[1]), max = Math.max(1, E[0][1]);
+  $("fin-titre").textContent = "Et le classement…"; $("fin-titre").className = ""; $("confettis").innerHTML = "";
+  $("podium").innerHTML = E.map(([[ic, nom, c], p], k) => '<div data-k="' + k + '" style="--c:' + c + '"><span>' + ic + "</span>" + nom + '<i data-h="' + (60 + 300 * p / max) + '" data-p="' + p + '">0</i></div>').join("");
+  $("fin").hidden = false;
+  const cols = [...$("podium").children], ordre = cols.map((_, k) => k).reverse();   // du dernier au premier : le suspense
+  let n = 0;
+  const suivant = () => {
+    if (n >= ordre.length) return fete(E, cols);
+    const d = cols[ordre[n++]], b = d.querySelector("i"), p = +b.dataset.p;
+    d.classList.add("vu"); b.style.height = b.dataset.h + "px"; son(300 + 60 * n);
+    let v = 0; const t = setInterval(() => { b.textContent = ++v > p ? p : v; if (v >= p) clearInterval(t); }, Math.max(60, 700 / Math.max(1, p)));
+    if (!p) b.textContent = "0";
+    fin.t = setTimeout(suivant, n === ordre.length - 1 ? 1800 : 1100);   // un temps de plus avant le premier
+  };
+  fin.t = setTimeout(suivant, 900);
+}
+function fete(E, cols) {
+  const top = E[0][1], gagnants = E.filter(e => e[1] === top);
+  const t = $("fin-titre");
+  t.textContent = gagnants.length > 1 ? "🎉 Égalité : " + gagnants.map(g => "les " + g[0][1]).join(" et ") + " !" : "🏆 Bravo les " + gagnants[0][0][1] + " !";
+  t.className = "boum";
+  cols.forEach((d, k) => { if (E[k][1] === top) { d.classList.add("gagne"); d.querySelector("span").insertAdjacentHTML("beforeend", '<b class="couronne">👑</b>'); } });
+  const C = ["#ef6c00", "#6a1b9a", "#1565c0", "#2e7d32", "#f9a825", "#e53935", "#00acc1"];
+  $("confettis").innerHTML = Array.from({ length: 120 }, () => '<i style="left:' + Math.random() * 100 + '%;background:' + C[Math.floor(Math.random() * C.length)] + ';animation-duration:' + (2.5 + Math.random() * 3) + 's;animation-delay:' + Math.random() * 1.5 + 's;transform:rotate(' + Math.random() * 360 + 'deg)"></i>').join("");
+  [523, 659, 784, 1047].forEach((f, k) => setTimeout(() => son(f, .18), k * 160));   // une petite fanfare
+}
+let ctx = null;
+function son(f, d) { try { ctx = ctx || new (window.AudioContext || window.webkitAudioContext)(); const o = ctx.createOscillator(), g = ctx.createGain(); o.type = "triangle"; o.frequency.value = f; g.gain.setValueAtTime(.12, ctx.currentTime); g.gain.exponentialRampToValueAtTime(.001, ctx.currentTime + (d || .25)); o.connect(g); g.connect(ctx.destination); o.start(); o.stop(ctx.currentTime + (d || .25)); } catch (e) {} }
+function commence() {
+  if (etat.eqs.length < 2) return; etat.i = 0; etat.marques = []; etat.L = etat.n === "tout" ? Q.tout.slice() : melange(Q[etat.n]);
+  $("ouverture").hidden = true; $("fin").hidden = true; pose();
+}
+function ouvre(n) {
+  etat.n = Q[n] ? n : "tout"; document.querySelectorAll("#niveaux button").forEach(b => b.classList.toggle("on", b.dataset.n === etat.n));
+  history.replaceState(null, "", "#" + etat.n); $("record").textContent = mem.lire("quiz-rep-record-" + etat.n);
+  clearInterval(minuteur); $("fin").hidden = true; $("ouverture").hidden = false; $("question").innerHTML = ""; consigne(""); etat.marques = []; animaux(); monument();
+}
+function bulle(t) { const b = $("bulle"); b.textContent = t; b.style.display = "block"; clearTimeout(bulle.t); bulle.t = setTimeout(() => b.style.display = "none", 7000); }
+$("bulle").onclick = () => { $("bulle").style.display = "none"; };   // 21/11 (Karim : « on ne peut pas refermer l'indice ») : un toucher sur la bulle la ferme
+$("indice").onclick = () => { if ($("bulle").style.display === "block") { $("bulle").style.display = "none"; return; } indiceOuvre(); };   // 💡 retouché : elle se ferme
+const indiceOuvre = () => { const q = etat.L[etat.i]; bulle(q && $("ouverture").hidden ? q.indice : "Chaque équipe touche son animal, puis ▶ C'est parti."); };
+$("menu").onclick = ev => { ev.stopPropagation(); $("niveaux").classList.toggle("ouvert"); };
+addEventListener("pointerdown", ev => { if (!$("niveaux").contains(ev.target) && ev.target !== $("menu")) $("niveaux").classList.remove("ouvert"); });
+$("voir").onclick = montre; $("suite").onclick = suite; $("rejouer").onclick = () => { clearTimeout(fin.t); ouvre(etat.n); };
+function animaux() {   // les 6 animaux ; un toucher ajoute ou retire l'équipe, et sa colonne pousse dans le monument tout de suite
+  $("nb").innerHTML = EQUIPES.map(([ic, nom, c], k) => '<button data-k="' + k + '" class="' + (etat.eqs.includes(k) ? "on" : "") + '" style="--c:' + c + '"><span>' + ic + "</span>" + nom + "</button>").join("");
+  $("nb").querySelectorAll("button").forEach(b => b.onclick = () => { const k = +b.dataset.k; etat.eqs = etat.eqs.includes(k) ? etat.eqs.filter(x => x !== k) : etat.eqs.concat(k); animaux(); monument(); });
+  $("go").disabled = etat.eqs.length < 2;
+}
+$("go").onclick = commence;
+document.querySelectorAll("#niveaux button").forEach(b => b.onclick = () => { $("niveaux").classList.remove("ouvert"); ouvre(b.dataset.n); });
+addEventListener("keydown", e => { if (!$("ouverture").hidden || !$("fin").hidden) return; if (e.key === " " || e.key === "ArrowRight") { e.preventDefault(); etat.vu ? suite() : montre(); } else if (/^[1-6]$/.test(e.key) && etat.eqs[+e.key - 1] !== undefined) marque(etat.eqs[+e.key - 1]); });
+function ajuste() {
+  const e = Math.min(innerWidth / 1920, innerHeight / 1080), s = $("scene");
+  s.style.transform = "scale(" + e + ")"; s.style.left = ((innerWidth - 1920 * e) / 2) + "px"; s.style.top = ((innerHeight - 1080 * e) / 2) + "px"; s.dataset.ech = e;
+}
+addEventListener("resize", ajuste); ajuste();
+etat.eqs = []; ouvre(location.hash.slice(1));
+</script>
+</body>
+</html>

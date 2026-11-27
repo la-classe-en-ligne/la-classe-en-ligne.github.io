@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Harcèlement ou pas ?</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cg fill='none' stroke='%232e9d6a' stroke-width='4' stroke-linecap='round'%3E%3Cpath d='M32 8v46M18 54h28M12 18h40'/%3E%3Cpath d='M12 18l-8 18h16zM52 18l-8 18h16z' stroke-linejoin='round'/%3E%3C/g%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700&family=Quicksand:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root { --nuit: #0a1f2e; --carte: #13324a; --texte: #eef4f7; --vert: #2e9d6a; --talbot: #1f7a8c; --rouge: #c8553d; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body { background: var(--nuit); color: var(--texte); font-family: Quicksand, sans-serif; display: flex; flex-direction: column;
+         padding: 14px 20px; gap: 14px; user-select: none; -webkit-user-select: none; touch-action: manipulation; }
+  header { display: flex; align-items: center; gap: 12px; }
+  header h1 { font-family: "Baloo 2", sans-serif; font-size: 2rem; margin: 0; flex: 1; }
+  header svg { width: 44px; height: 44px; }
+  .btn { font: 700 1.6rem "Baloo 2", sans-serif; background: var(--carte); color: var(--texte); border: 2px solid #2a5372;
+         border-radius: 14px; min-width: 64px; height: 56px; cursor: pointer; }
+  .btn[hidden] { display: none; }
+  #pioche { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; min-height: 60px; }
+  .carte { background: var(--carte); border: 3px solid #2a5372; border-radius: 16px; padding: 12px 16px; font-size: 1.35rem;
+           line-height: 1.35; font-weight: 600; cursor: pointer; position: relative; }
+  .carte b { font-family: "Baloo 2", sans-serif; color: #8fd3b6; margin-right: 6px; }
+  .carte.choisie { border-color: #f2c14e; box-shadow: 0 0 0 4px rgba(242,193,78,.35); }
+  .carte .verdict { position: absolute; top: -14px; right: -8px; font-size: 2rem; }
+  #zones { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; flex: 1; }
+  .zone { border: 3px dashed #3d6a8a; border-radius: 20px; padding: 10px; display: flex; flex-direction: column; gap: 10px; cursor: pointer; }
+  .zone h2 { font-family: "Baloo 2", sans-serif; font-size: 1.8rem; margin: 0; text-align: center; }
+  #oui { border-color: var(--rouge); } #oui h2 { color: #f08a72; }
+  #non { border-color: var(--vert); } #non h2 { color: #7fd1a8; }
+  .zone .carte { font-size: 1.1rem; padding-right: 40px; }
+  #cle { display: none; gap: 14px; justify-content: center; }
+  #cle.visible { display: flex; }
+  #cle span { font: 700 1.7rem "Baloo 2", sans-serif; background: var(--talbot); border-radius: 14px; padding: 6px 20px; }
+</style>
+</head>
+<body>
+<header>
+  <svg viewBox="0 0 64 64" aria-hidden="true"><g fill="none" stroke="#2e9d6a" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M32 8v46M18 54h28M12 18h40"/><path d="M12 18l-8 18h16zM52 18l-8 18h16z"/></g></svg>
+  <h1>Harcèlement ou pas ?</h1>
+  <button class="btn" id="verifier" hidden title="Vérifier">✔</button>
+  <button class="btn" id="bouton-cle" title="Les 3 indices">🔑</button>
+  <button class="btn" id="recommencer" title="Recommencer">↺</button>
+</header>
+<div id="cle"><span>ça se répète</span><span>plusieurs contre un</span><span>pour faire du mal</span></div>
+<div id="pioche"></div>
+<div id="zones">
+  <div class="zone" id="oui"><h2>Harcèlement</h2></div>
+  <div class="zone" id="non"><h2>Pas du harcèlement</h2></div>
+</div>
+<script>
+// Mêmes situations que les cartes papier (.claude/outils/photocopies/emc_harcelement.py)
+var SITUATIONS = [
+  ["Pendant un match, Arsène pousse Olympe pour avoir le ballon. Ils se disputent. Le lendemain, ils rejouent ensemble.", false],
+  ["Depuis la rentrée, tous les matins, quelques élèves imitent la façon de marcher de Gaspard et rient quand il passe.", true],
+  ["Suzanne et Aimé sont amis. Ils se donnent des surnoms rigolos, et ça les fait rire tous les deux.", false],
+  ["Chaque soir, dans un groupe de messages, plusieurs élèves de la classe envoient des photos de Romy avec des moqueries.", true],
+  ["Aujourd'hui, Achille a dit à Capucine que son dessin était raté. Capucine est triste.", false],
+  ["Tous les jours, Marius cache la trousse de Constance « pour rire ». Constance, elle, ne rit pas.", true]
+];
+var pioche = document.getElementById("pioche");
+var zones = { oui: document.getElementById("oui"), non: document.getElementById("non") };
+var choisie = null;
+
+function effacerVerdicts() {
+  document.querySelectorAll(".verdict").forEach(function (v) { v.remove(); });
+}
+function majBoutons() {
+  document.getElementById("verifier").hidden = pioche.children.length > 0;
+}
+function choisir(carte) {
+  if (choisie) choisie.classList.remove("choisie");
+  choisie = (choisie === carte) ? null : carte;
+  if (choisie) choisie.classList.add("choisie");
+}
+function poser(zone) {
+  if (!choisie) return;
+  choisie.classList.remove("choisie");
+  zone.appendChild(choisie);
+  choisie = null;
+  effacerVerdicts();
+  majBoutons();
+}
+function construire() {
+  choisie = null;
+  pioche.innerHTML = "";
+  document.querySelectorAll(".zone .carte").forEach(function (c) { c.remove(); });
+  SITUATIONS.forEach(function (s, i) {
+    var c = document.createElement("div");
+    c.className = "carte";
+    c.dataset.harcelement = s[1] ? "oui" : "non";
+    c.innerHTML = "<b>" + (i + 1) + "</b>" + s[0];
+    c.addEventListener("pointerup", function (e) {
+      e.stopPropagation();
+      // toucher une carte déjà posée la renvoie dans la pioche
+      if (c.parentNode !== pioche && !choisie) { pioche.appendChild(c); effacerVerdicts(); majBoutons(); return; }
+      if (c.parentNode !== pioche && choisie) { poser(c.parentNode); return; }
+      choisir(c);
+    });
+    pioche.appendChild(c);
+  });
+  document.getElementById("cle").classList.remove("visible");
+  effacerVerdicts();
+  majBoutons();
+}
+Object.keys(zones).forEach(function (k) {
+  zones[k].addEventListener("pointerup", function () { poser(zones[k]); });
+});
+document.getElementById("verifier").addEventListener("pointerup", function () {
+  effacerVerdicts();
+  document.querySelectorAll(".zone .carte").forEach(function (c) {
+    var v = document.createElement("span");
+    v.className = "verdict";
+    v.textContent = (c.dataset.harcelement === c.parentNode.id) ? "✅" : "🤪";
+    c.appendChild(v);
+  });
+});
+document.getElementById("bouton-cle").addEventListener("pointerup", function () {
+  document.getElementById("cle").classList.toggle("visible");
+});
+document.getElementById("recommencer").addEventListener("pointerup", construire);
+construire();
+</script>
+<!-- DEUX GESTES -->
+<script>
+/* ==== DEUX GESTES (GTH) : chaque jeu se joue en glissant OU en touchant (demande de Karim du 01/10) ====
+   REGLES  : jeu au glisser-déposer → on peut aussi toucher l'objet (il s'entoure), puis toucher sa place ; s'il n'a qu'une place
+             possible (une case réponse), un seul toucher le pose (10/10) :
+             le module rejoue exactement le même glisser-déposer, le jeu garde ses règles.
+   INVERSE : jeu au toucher (toucher la carte, puis la zone) → on peut aussi glisser la carte sur la zone.
+   Installé par .claude/outils/deux-gestes/injecter.py ; ne pas modifier dans le jeu, mais dans ce fichier. */
+(function () {
+  var REGLES = [], INVERSE = [{"source": ".carte", "cible": ".zone, #pioche"}];
+  // setPointerCapture refuse les pointeurs rejoués : on ignore l'erreur
+  ["setPointerCapture", "releasePointerCapture"].forEach(function (m) {
+    var o = Element.prototype[m]; if (!o) return;
+    Element.prototype[m] = function (id) { try { return o.call(this, id); } catch (e) { return undefined; } };
+  });
+  var st = document.createElement("style");
+  st.textContent = ".dg-choisi{outline:7px solid #1f7a8c !important; outline-offset:4px !important;}" +
+    ".dg-vol{position:fixed !important; z-index:9999; pointer-events:none; opacity:.92; transform:scale(1.05) rotate(-2deg); margin:0 !important;}";
+  document.head.appendChild(st);
+
+  var choix = null, bas = null, rejeu = false, avalerClic = 0;
+  function sous(x, y) { return document.elementFromPoint(x, y); }
+  function trouver(el, liste, cle) {
+    if (!el || !el.closest) return null;
+    for (var i = 0; i < liste.length; i++) { var e = el.closest(liste[i][cle]); if (e) return { regle: liste[i], el: e }; }
+    return null;
+  }
+  function oublier() { if (choix) choix.el.classList.remove("dg-choisi"); choix = null; }
+  function evt(type, cible, x, y) {
+    var e = new PointerEvent(type, { bubbles: true, cancelable: true, composed: true, clientX: x, clientY: y, pointerId: 777,
+      pointerType: "touch", isPrimary: true, button: 0, buttons: type === "pointerup" ? 0 : 1 });
+    (cible && cible.isConnected ? cible : document).dispatchEvent(e);
+  }
+  // Rejoue le glisser-déposer du jeu : de l'objet jusqu'au point touché
+  function rejouer(src, x, y) {
+    if (!src.isConnected) return;
+    var r = src.getBoundingClientRect(), x0 = r.left + r.width / 2, y0 = r.top + r.height / 2;
+    var depart = sous(x0, y0); if (!depart || !src.contains(depart)) depart = src;
+    rejeu = true;
+    try {
+      evt("pointerdown", depart, x0, y0);
+      for (var k = 1; k <= 12; k++) evt("pointermove", depart, x0 + (x - x0) * k / 12, y0 + (y - y0) * k / 12);
+      evt("pointerup", depart, x, y);
+    } finally { rejeu = false; }
+  }
+
+  // ---------- REGLES : toucher l'objet, puis sa place ----------
+  document.addEventListener("pointerdown", function (e) {
+    if (rejeu || !e.isTrusted || !REGLES.length) return;
+    if (choix && !choix.el.isConnected) oublier();
+    // l'objet touché est repéré dès que le doigt se pose : ensuite, le jeu le cache pour le faire glisser
+    bas = { x: e.clientX, y: e.clientY, cible: null, src: trouver(e.target, REGLES, "source") };
+    if (choix) {
+      var c = e.target.closest && e.target.closest(choix.regle.cible);
+      if (c && !(e.target.closest(choix.regle.source))) { bas.cible = c; e.stopImmediatePropagation(); e.preventDefault(); }
+    }
+  }, true);
+  document.addEventListener("pointerup", function (e) {
+    if (rejeu || !e.isTrusted || !bas || !REGLES.length) return;
+    var b = bas; bas = null;
+    var tap = Math.hypot(e.clientX - b.x, e.clientY - b.y) < 12;
+    if (b.cible) {   // le toucher sur la place : le jeu ne le voit pas, on rejoue le glisser à cet endroit
+      e.stopImmediatePropagation(); e.preventDefault(); avalerClic = Date.now();
+      if (tap && choix) { var s = choix.el; oublier(); var x = e.clientX, y = e.clientY; setTimeout(function () { rejouer(s, x, y); }, 0); }
+      return;
+    }
+    if (!tap) { oublier(); return; }   // un vrai glisser : le jeu s'en occupe
+    var src = b.src;
+    setTimeout(function () {   // après le jeu : l'objet touché est choisi (ou ne l'est plus)
+      if (!src || !src.el.isConnected) { return; }
+      // une seule place où le poser (une case réponse) : un toucher suffit, la réponse part dans la case (Karim, 10/10)
+      var places = Array.prototype.filter.call(document.querySelectorAll(src.regle.cible), function (c) {
+        var r = c.getBoundingClientRect(); return r.width > 0 && r.height > 0 && !src.el.contains(c) && getComputedStyle(c).visibility !== "hidden"; });
+      if (places.length === 1) { oublier(); var r = places[0].getBoundingClientRect(); rejouer(src.el, r.left + r.width / 2, r.top + r.height / 2); return; }
+      if (choix && choix.el === src.el) { oublier(); return; }
+      oublier(); choix = src; src.el.classList.add("dg-choisi");
+    }, 0);
+  }, true);
+  document.addEventListener("click", function (e) {
+    if (Date.now() - avalerClic < 500 && e.isTrusted) { e.stopImmediatePropagation(); e.preventDefault(); }
+  }, true);
+
+  // ---------- INVERSE : glisser la carte sur la zone = la toucher, puis toucher la zone ----------
+  var g = null;
+  document.addEventListener("pointerdown", function (e) {
+    if (rejeu || !e.isTrusted || !INVERSE.length) return;
+    var src = trouver(e.target, INVERSE, "source"); if (!src) return;
+    g = { src: src, x: e.clientX, y: e.clientY, vol: null };
+  }, true);
+  document.addEventListener("pointermove", function (e) {
+    if (!g || rejeu) return;
+    if (!g.vol && Math.hypot(e.clientX - g.x, e.clientY - g.y) < 12) return;
+    if (!g.vol) {
+      var r = g.src.el.getBoundingClientRect();
+      g.vol = g.src.el.cloneNode(true); g.vol.classList.add("dg-vol"); g.vol.style.width = r.width + "px";
+      g.dx = g.x - r.left; g.dy = g.y - r.top; document.body.appendChild(g.vol);
+    }
+    g.vol.style.left = (e.clientX - g.dx) + "px"; g.vol.style.top = (e.clientY - g.dy) + "px";
+  }, true);
+  document.addEventListener("pointerup", function (e) {
+    if (!g || rejeu || !e.isTrusted) return;
+    var d = g; g = null;
+    if (!d.vol) return;   // simple toucher : le jeu s'en occupe
+    d.vol.remove(); e.stopImmediatePropagation(); e.preventDefault(); avalerClic = Date.now();
+    var dessous = sous(e.clientX, e.clientY), zone = dessous && dessous.closest ? dessous.closest(d.src.regle.cible) : null;
+    if (!zone) return;
+    rejeu = true;
+    try { evt("pointerup", d.src.el, e.clientX, e.clientY); evt("pointerup", zone, e.clientX, e.clientY); }
+    finally { rejeu = false; }
+  }, true);
+})();
+</script>
+<!-- /DEUX GESTES -->
+<!-- MENU -->
+<script>
+/* ==== LE MENU ☰ (GTH, 10/10) : interface épurée — à l'écran, seulement le titre, le score, la consigne et l'activité ====
+   Tout le reste (niveaux, onglets de méthode, ✏️, 🔊, 🖨️, aide…) part dans un menu ☰, ouvert d'un toucher.
+   Réglage par outil (CONF, posé par l'injecteur) : ancre = où mettre le bouton ☰ (sinon en haut à droite de l'écran) ;
+   cacher = ce qui part dans le menu (sinon : tout ce qui, dans « .barre .droite », n'est pas un score).
+   Installé par .claude/outils/menu-outil/injecter.py ; ne pas modifier dans l'outil, mais dans ce fichier. */
+(function () {
+  var CONF = {"ancre": "header", "cacher": ["#bouton-cle", "#recommencer"]};
+  var st = document.createElement("style");
+  st.textContent =
+    ".menu-btn{width:58px; height:58px; border-radius:16px; border:2px solid rgba(0,0,0,.15); background:#fff; color:#1f2a33; font-size:2rem; line-height:1; cursor:pointer; flex:none; padding:0;}" +
+    ".menu-btn.fixe{position:fixed; top:10px; right:12px; z-index:150; box-shadow:0 4px 14px rgba(0,0,0,.15);}" +
+    ".menu-btn.ouvert{background:#1f2a33; color:#fff;}" +
+    ".menu-panneau{position:fixed; top:76px; right:16px; z-index:200; background:#fff; color:#1f2a33; border-radius:18px; box-shadow:0 18px 50px rgba(0,0,0,.28); padding:16px 18px;" +
+    "  display:flex; flex-direction:column; align-items:flex-start; gap:12px; max-width:min(620px, 92vw); max-height:80vh; overflow:auto;}" +
+    ".menu-panneau[hidden]{display:none !important;}" +
+    ".menu-panneau h4{margin:0; font-family:sans-serif; font-size:.85rem; text-transform:uppercase; letter-spacing:.6px; color:#6d7a85;}" +
+    ".menu-panneau > *{position:static !important; margin:0 !important;}" +
+    ".menu-panneau > div,.menu-panneau > nav{display:flex; flex-wrap:wrap; gap:8px;}";
+  document.head.appendChild(st);
+  function installer() {
+    var autres = [];
+    if (CONF.cacher) CONF.cacher.forEach(function (s) { document.querySelectorAll(s).forEach(function (e) { if (autres.indexOf(e) === -1) autres.push(e); }); });
+    else { var d = document.querySelector(".barre .droite"); if (d) autres = Array.prototype.filter.call(d.children, function (e) { return !e.classList.contains("score"); }); }
+    if (!autres.length) return;
+    var btn = document.createElement("button"); btn.type = "button"; btn.className = "menu-btn"; btn.title = "Niveaux et réglages"; btn.textContent = "☰";
+    var pan = document.createElement("div"); pan.className = "menu-panneau"; pan.hidden = true;
+    var t = document.createElement("h4"); t.textContent = "Niveaux et réglages"; pan.appendChild(t);
+    autres.forEach(function (e) { pan.appendChild(e); });
+    var ancre = document.querySelector(CONF.ancre || ".barre .droite");
+    if (ancre) ancre.appendChild(btn); else { btn.classList.add("fixe"); document.body.appendChild(btn); }
+    document.body.appendChild(pan);
+    function ouvrir(o) { pan.hidden = !o; btn.classList.toggle("ouvert", o); }
+    btn.addEventListener("click", function (e) { e.stopPropagation(); ouvrir(pan.hidden); });
+    // un niveau choisi, ou une fenêtre ouverte (✏️, 🖨️) : le menu se referme ; on garde le menu ouvert pour choisir un type de jeu
+    pan.addEventListener("click", function (e) { var b = e.target.closest("button"); if (b && !b.closest(CONF.garderOuvert || ".types")) setTimeout(function () { ouvrir(false); }, 120); });
+    document.addEventListener("pointerdown", function (e) { if (!pan.hidden && !pan.contains(e.target) && e.target !== btn) ouvrir(false); });
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", installer); else installer();
+})();
+</script>
+<!-- /MENU -->
+</body>
+</html>

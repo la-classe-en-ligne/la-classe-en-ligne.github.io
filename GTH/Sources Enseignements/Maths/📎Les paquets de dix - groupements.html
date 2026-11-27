@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Les paquets de dix</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700&family=Quicksand:wght@500;600;700&display=swap">
+<style>
+  :root{ --bg-deep:#0a1f2e; --bg-panel:#123246; --panel-border:#2d6079; --ink:#eaf6ff; --moon:#ffe9a8;
+    --good:#5be08a; --bad:#ff77bb; --tile:#173b52; --tile-border:#2d6079; }
+  *{box-sizing:border-box;}
+  body{margin:0; min-height:100vh; color:var(--ink); font-family:"Quicksand",ui-sans-serif,system-ui,sans-serif;
+    background:radial-gradient(circle at 88% 6%, rgba(255,233,168,0.25), transparent 42%), var(--bg-deep);
+    padding:18px 16px; display:flex; justify-content:center; user-select:none; -webkit-user-select:none; touch-action:none;}
+  .page{width:100%; max-width:1200px; background:var(--bg-panel); border:2px solid var(--panel-border); border-radius:22px; padding:18px 24px 24px; box-shadow:0 14px 40px rgba(0,0,0,.45);}
+  h1{font-family:"Baloo 2",cursive; font-size:clamp(1.6rem,4vw,2.3rem); margin:0;}
+  .barre-haut{display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;}
+  .droite{display:flex; align-items:center; gap:12px;}
+  .etoiles{font-family:"Baloo 2",cursive; font-size:1.5rem; color:var(--moon);}
+  .btn,.niveaux button{font:inherit; font-weight:700; border-radius:999px; border:2px solid var(--tile-border); background:var(--tile); color:var(--ink); padding:8px 16px; cursor:pointer; font-size:1rem;}
+  .niveaux{display:flex; gap:8px; margin-top:6px;} .niveaux button.actif{background:#4fd1c5; color:#0a1f2e; border-color:#4fd1c5;}
+  .btn.principal{background:var(--moon); color:#0a1f2e; border-color:var(--moon); font-size:1.4rem; padding:8px 26px;}
+  .btn[hidden]{display:none;}
+
+  /* Table de jeu, comme le tableau de numération : les paquets de 10 (dizaines) et les boîtes de 100 se rangent à gauche,
+     les trombones seuls (unités) restent à droite (demande du 30/09). */
+  .table{position:relative; height:470px; margin:14px 0 8px; border-radius:18px; background:#e9dfc3;
+    background-image:repeating-linear-gradient(90deg, rgba(120,90,40,.07) 0 3px, transparent 3px 60px); border:6px solid #7a5a2a; overflow:hidden; touch-action:none;}
+  .rangement{position:absolute; top:0; left:0; bottom:0; width:40%; border-right:4px dashed rgba(122,90,42,.45);}
+  .zone-nom{position:absolute; bottom:6px; font-family:"Baloo 2",cursive; font-size:1.3rem; color:rgba(122,90,42,.75); pointer-events:none;}
+  .objet{position:absolute; pointer-events:none; transition:left .6s ease, top .6s ease, transform .6s ease, opacity .6s ease;}
+  .objet.choisi{filter:drop-shadow(0 0 4px #fff) drop-shadow(0 0 6px #ff3d7f) drop-shadow(0 0 2px #ff3d7f);}
+  .selection{position:absolute; left:14px; top:10px; z-index:5; font-family:"Baloo 2",cursive; font-size:2.6rem; line-height:1; color:#8a2d1a;
+    background:rgba(255,255,255,.9); border:3px solid #ff3d7f; border-radius:16px; padding:4px 16px; pointer-events:none;}
+  .selection[hidden]{display:none;} .selection.trop{color:#fff; background:#e0344f; border-color:#e0344f;}
+  svg.lasso{position:absolute; inset:0; width:100%; height:100%; pointer-events:none;}
+  .compte{position:absolute; font-family:"Baloo 2",cursive; font-size:3rem; color:#8a2d1a; background:rgba(255,255,255,.85); border-radius:16px; padding:0 18px;
+    pointer-events:none; transform:translate(-50%,-50%);}
+
+  .ecriture{display:flex; justify-content:center; align-items:flex-end; gap:16px; margin:6px 0;}
+  .ecriture[hidden]{display:none;}
+  .colonne-ecrite{display:flex; flex-direction:column; align-items:center; gap:4px; font-weight:700;}
+  .ecriture{flex-direction:column; align-items:center;}
+  .ligne-ecrite{display:flex; align-items:center; gap:14px; justify-content:center; flex-wrap:wrap;}
+  .ligne-ecrite[hidden]{display:none;}
+  .groupe-case{display:flex; align-items:center; gap:10px;}
+  .unite-nom{font-family:"Baloo 2",cursive; font-size:1.8rem;}
+  .colonne-ecrite small{opacity:.75; font-size:.9rem;}
+  .signe{font-family:"Baloo 2",cursive; font-size:2.4rem; margin-bottom:22px;}
+  .question{font-family:"Baloo 2",cursive; font-size:2rem;}
+  .case.petite{width:60px; height:72px; font-size:2.6rem;}
+  .case{width:74px; height:84px; border:4px dashed var(--moon); border-radius:14px; display:flex; align-items:center; justify-content:center; font-family:"Baloo 2",cursive; font-size:3.2rem;}
+  .case.remplie{border-style:solid; border-color:#4fd1c5;} .case.faux{border-color:var(--bad); animation:secoue .4s ease 2;}
+  @keyframes secoue{0%,100%{transform:translateX(0)}25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
+  .chiffres{display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin-top:10px;}
+  .chiffres[hidden]{display:none;}
+  .chiffre{font-family:"Baloo 2",cursive; font-size:2.2rem; width:60px; height:60px; border-radius:14px; background:var(--tile); border:3px solid var(--tile-border);
+    display:flex; align-items:center; justify-content:center; cursor:pointer;}
+  /* Les réponses à choisir : dizaines en bleu, unités en jaune foncé, centaines en vert : les couleurs du 🔨 marteau (14/11) */
+  .question-choix{font-family:"Baloo 2",cursive; font-size:2rem; text-align:center; margin:4px 0 8px;}
+  .reponses{display:flex; gap:16px; justify-content:center; flex-wrap:wrap;}
+  .reponse{font-family:"Baloo 2",cursive; font-size:1.7rem; padding:8px 20px; border-radius:16px; background:#fff; color:#1f2a44; border:3px solid #d7dcea;
+    cursor:grab; touch-action:none; box-shadow:0 5px 0 rgba(0,0,0,.25);}
+  .reponse .c{color:#2e8b45; font-weight:800;} .reponse .d{color:#3a86d4; font-weight:800;} .reponse .u{color:#c99a12; font-weight:800;}
+  .reponse.rayee{opacity:.35; text-decoration:line-through; cursor:default;}
+  .reponse.faux{animation:secoue .4s ease 2; border-color:var(--bad);}
+  .boite-reponse{margin:14px auto 0; width:min(640px,90%); min-height:84px; border:4px dashed var(--moon); border-radius:18px; display:flex; align-items:center; justify-content:center;
+    font-family:"Baloo 2",cursive; font-size:1.4rem; color:var(--moon);}
+  .boite-reponse.survol{background:rgba(255,233,168,.12);}
+  .boite-reponse.juste{border-style:solid; border-color:var(--good);}
+  .bilan{text-align:center; font-family:"Baloo 2",cursive; font-size:clamp(1.6rem,4vw,2.4rem); color:var(--good); min-height:1.3em;}
+  .message{min-height:1.4em; text-align:center; font-size:2rem;}
+  .bas{display:flex; justify-content:center; gap:12px;}
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="barre-haut">
+    <h1>📎 Les paquets de dix</h1>
+    <div class="droite"><span class="etoiles" id="etoiles">⭐ 0</span><button class="btn" id="btnSon" type="button">🔊</button></div>
+  </div>
+  <div class="niveaux" id="niveaux">
+    <button type="button" data-niveau="decouverte" class="actif">Découverte</button>
+    <button type="button" data-niveau="defi">Défi</button>
+  </div>
+  <div class="table" id="table"><div class="rangement"></div><span class="zone-nom" id="nomGauche" style="left:14px">paquets de 10 · dizaines</span><span class="zone-nom" style="right:14px">trombones seuls · unités</span><svg class="lasso" id="lasso"></svg><div class="selection" id="selection" hidden></div></div>
+  <div class="ecriture" id="ecriture" hidden></div>
+  <div class="chiffres" id="chiffres" hidden></div>
+  <div class="bilan" id="bilan"></div>
+  <div class="message" id="message"></div>
+  <div class="bas">
+    <button class="btn" id="btnReset" type="button" title="Recommencer">↺</button>
+    <button class="btn principal" id="btnSuivant" type="button" hidden>➜</button>
+  </div>
+</div>
+<script>
+(function () {
+  // On ENTOURE au doigt 10 trombones : ils deviennent un paquet de 10 (avec un élastique).
+  // Défi : on entoure 10 paquets, ils deviennent une boîte de 100.
+  // Quand on ne peut plus faire de groupes, on écrit le nombre : boîtes | paquets | trombones seuls.
+  var ITEMS = { decouverte: [23, 36, 47, 19, 52, 60, 28, 41, 55, 34, 64, 45], defi: [104, 123, 131, 112, 145, 108, 139, 150, 117, 126] };
+  var COULEURS = ["#d9534f", "#2b7bd6", "#2f9e44", "#f0a202", "#8e44ad"];
+  var el = function (id) { return document.getElementById(id); };
+  var niveau = "decouverte", index = 0, etoiles = 0, sonActif = true, rate = false;
+  var objets = [], ecrit = [];   // objets : { type: "trombone"|"paquet"|"boite", x, y, el }
+  var table = el("table"), lasso = el("lasso");
+
+  var ctx = null;
+  function son(type) {
+    if (!sonActif) return;
+    try {
+      ctx = ctx || new (window.AudioContext || window.webkitAudioContext)();
+      var o = ctx.createOscillator(), g = ctx.createGain(), t = ctx.currentTime;
+      o.connect(g); g.connect(ctx.destination);
+      if (type === "bien") { o.type = "triangle"; o.frequency.setValueAtTime(660, t); o.frequency.setValueAtTime(990, t + .12); }
+      else if (type === "paquet") { o.type = "square"; o.frequency.setValueAtTime(400, t); o.frequency.exponentialRampToValueAtTime(800, t + .2); }
+      else { o.type = "sine"; o.frequency.setValueAtTime(400, t); o.frequency.exponentialRampToValueAtTime(90, t + .4); }
+      g.gain.setValueAtTime(.13, t); g.gain.exponentialRampToValueAtTime(.001, t + .4); o.start(t); o.stop(t + .45);
+    } catch (e) { /* pas de son */ }
+  }
+  function message(t) { el("message").textContent = t; }
+
+  // ---- Dessins ----
+  function svgTrombone(couleur) {
+    return '<svg width="22" height="46" viewBox="0 0 22 46"><path d="M15,12 L15,36 A5,5 0 0 1 5,36 L5,8 A7,7 0 0 1 19,8 L19,38 A8,8 0 0 1 3,38 L3,16" fill="none" stroke="' + couleur + '" stroke-width="2.6" stroke-linecap="round"/></svg>';
+  }
+  function svgPaquet() {
+    var s = '<svg width="58" height="54" viewBox="0 0 58 54">';
+    for (var i = 0; i < 10; i++) {
+      var x = 4 + i * 5, c = COULEURS[i % COULEURS.length];
+      s += '<path transform="translate(' + x + ',4) scale(.9)" d="M15,12 L15,36 A5,5 0 0 1 5,36 L5,8 A7,7 0 0 1 19,8 L19,38 A8,8 0 0 1 3,38 L3,16" fill="none" stroke="' + c + '" stroke-width="2.6" stroke-linecap="round"/>';
+    }
+    return s + '<rect x="1" y="22" width="56" height="8" rx="4" fill="#e0344f"/></svg>';
+  }
+  function svgBoite() {
+    var s = '<svg width="92" height="74" viewBox="0 0 92 74"><path d="M6,20 L86,20 L80,72 L12,72 Z" fill="#c8964f" stroke="#6b4a1e" stroke-width="3"/>';
+    for (var i = 0; i < 10; i++) s += '<rect x="' + (14 + i * 6.6) + '" y="10" width="5" height="24" rx="2" fill="' + COULEURS[i % COULEURS.length] + '"/>';
+    return s + '<path d="M2,20 L90,20" stroke="#6b4a1e" stroke-width="5"/><text x="46" y="58" text-anchor="middle" font-family="Baloo 2" font-size="20" font-weight="700" fill="#3a2508">100</text></svg>';
+  }
+  var TAILLES = { trombone: [22, 46], paquet: [58, 54], boite: [92, 74] };
+
+  function creerObjet(type, x, y, couleur) {
+    var e = document.createElement("div"); e.className = "objet";
+    e.innerHTML = type === "trombone" ? svgTrombone(couleur) : (type === "paquet" ? svgPaquet() : svgBoite());
+    e.style.left = x + "px"; e.style.top = y + "px";
+    if (type === "trombone") e.style.transform = "rotate(" + (Math.random() * 70 - 35) + "deg)";
+    table.appendChild(e);
+    var o = { type: type, x: x, y: y, el: e };
+    objets.push(o);
+    return o;
+  }
+  function centre(o) { var t = TAILLES[o.type]; return { x: o.x + t[0] / 2, y: o.y + t[1] / 2 }; }
+
+  // Place de rangement à gauche (côté dizaines) : boîtes en haut, paquets en dessous.
+  function rangerADroite() {
+    var W = table.clientWidth * 0.4, x0 = 16;
+    var boites = objets.filter(function (o) { return o.type === "boite"; }), paquets = objets.filter(function (o) { return o.type === "paquet"; });
+    boites.forEach(function (o, i) { o.x = x0 + (i % 4) * 98; o.y = 10 + Math.floor(i / 4) * 80; poser(o); });
+    var haut = boites.length ? 10 + Math.ceil(boites.length / 4) * 80 + 6 : 10;
+    var parLigne = Math.max(1, Math.floor((W - x0 - 10) / 62));
+    paquets.forEach(function (o, i) { o.x = x0 + (i % parLigne) * 62; o.y = haut + Math.floor(i / parLigne) * 58; poser(o); });
+  }
+  function poser(o) { o.el.style.left = o.x + "px"; o.el.style.top = o.y + "px"; }
+
+  function afficher() {
+    rate = false; ecrit = []; etape = 0;
+    Array.prototype.forEach.call(table.querySelectorAll(".objet, .compte"), function (e) { e.remove(); });
+    objets = []; lasso.innerHTML = ""; selection = []; el("selection").hidden = true;
+    el("ecriture").hidden = true; el("chiffres").hidden = true; el("bilan").textContent = ""; message(""); el("btnSuivant").hidden = true;
+    el("nomGauche").textContent = niveau === "defi" ? "boîtes de 100 · paquets de 10" : "paquets de 10 · dizaines";
+    var n = ITEMS[niveau][index];
+    var W = table.clientWidth * 0.6 - 70, H = table.clientHeight - 90, xr = table.clientWidth * 0.4 + 30;   // les trombones à droite de la zone de rangement
+    // trombones en vrac, répartis sans trop se chevaucher
+    var cols = Math.ceil(Math.sqrt(n * W / H)), rows = Math.ceil(n / cols), dx = W / cols, dy = H / rows;
+    var places = [];
+    for (var r = 0; r < rows; r++) for (var c = 0; c < cols; c++) places.push([c, r]);
+    places.sort(function () { return Math.random() - .5; });
+    for (var k = 0; k < n; k++) {
+      var pl = places[k];
+      creerObjet("trombone", xr + pl[0] * dx + Math.random() * Math.max(0, dx - 26), 10 + pl[1] * dy + Math.random() * Math.max(0, dy - 48), COULEURS[k % COULEURS.length]);
+    }
+  }
+
+  // ---- Le lasso : on entoure au doigt ----
+  function pointDans(poly, x, y) {
+    var dedans = false;
+    for (var i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+      var xi = poly[i][0], yi = poly[i][1], xj = poly[j][0], yj = poly[j][1];
+      if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) dedans = !dedans;
+    }
+    return dedans;
+  }
+  table.addEventListener("pointerdown", function (ev) {
+    if (!el("ecriture").hidden) return;
+    ev.preventDefault();
+    // repère intérieur de la table (sans son bord), le même que celui des objets posés dedans
+    var b0 = table.getBoundingClientRect(), r = { left: b0.left + table.clientLeft, top: b0.top + table.clientTop };
+    var pts = [[ev.clientX - r.left, ev.clientY - r.top]];
+    function trace() { lasso.innerHTML = '<polyline points="' + pts.map(function (p) { return p.join(","); }).join(" ") + '" fill="rgba(255,233,168,.25)" stroke="#8a2d1a" stroke-width="4" stroke-dasharray="10 7" stroke-linejoin="round"/>'; }
+    function bouge(e) { pts.push([e.clientX - r.left, e.clientY - r.top]); trace(); }
+    function lache() {
+      document.removeEventListener("pointermove", bouge); document.removeEventListener("pointerup", lache);
+      if (pts.length > 5) entourer(pts); else toucher(pts[0][0], pts[0][1]);
+      setTimeout(function () { lasso.innerHTML = ""; }, 350);
+    }
+    document.addEventListener("pointermove", bouge); document.addEventListener("pointerup", lache);
+  });
+
+  // La sélection reste allumée : on peut entourer 8 trombones, puis encore 2, jusqu'à 10.
+  // Dès qu'elle contient exactement 10 trombones (ou 10 paquets en Défi), le paquet (ou la boîte) se forme.
+  // Un toucher sur un objet allumé l'éteint (pour corriger si on en a pris trop).
+  var selection = [];
+  function majSelection() {
+    objets.forEach(function (o) { o.el.classList.toggle("choisi", selection.indexOf(o) !== -1); });
+    var badge = el("selection");
+    badge.hidden = !selection.length;
+    badge.textContent = selection.length + (selection.length && selection[0].type === "paquet" ? " 📦" : "");
+    badge.classList.toggle("trop", selection.length > 10);
+    var type = selection.length ? selection[0].type : null;
+    if (selection.length === 10 && (type === "trombone" || (type === "paquet" && niveau === "defi"))) {
+      var pris = selection.slice();
+      selection = [];
+      badge.hidden = true;
+      regrouper(pris, type === "trombone" ? "paquet" : "boite");
+    }
+  }
+  function ajouter(liste) {
+    if (!liste.length) return;
+    var type = selection.length ? selection[0].type : liste[0].type;
+    var memeType = liste.filter(function (o) { return o.type === type && o.type !== "boite"; });
+    if (memeType.length < liste.length) son("non");   // on ne mélange pas trombones et paquets
+    memeType.forEach(function (o) { if (selection.indexOf(o) === -1) selection.push(o); });
+    if (memeType.length) son("paquet");
+    majSelection();
+  }
+  function entourer(poly) {
+    ajouter(objets.filter(function (o) { var c = centre(o); return pointDans(poly, c.x, c.y); }));
+  }
+  function toucher(x, y) {
+    var proche = null, dmin = 30;
+    objets.forEach(function (o) { var c = centre(o), dd = Math.hypot(c.x - x, c.y - y); if (dd < dmin) { dmin = dd; proche = o; } });
+    if (!proche) { selection = []; majSelection(); return; }   // toucher un endroit vide : on efface la sélection
+    var i = selection.indexOf(proche);
+    if (i !== -1) { selection.splice(i, 1); majSelection(); }
+    else ajouter([proche]);
+  }
+
+  function regrouper(pris, nouveauType) {
+    son("paquet");
+    var cx = 0, cy = 0;
+    pris.forEach(function (o) { var c = centre(o); cx += c.x; cy += c.y; });
+    cx /= pris.length; cy /= pris.length;
+    pris.forEach(function (o) { o.el.style.left = (cx - 11) + "px"; o.el.style.top = (cy - 23) + "px"; o.el.style.transform = "rotate(0deg) scale(.7)"; });
+    setTimeout(function () {
+      pris.forEach(function (o) { o.el.remove(); objets.splice(objets.indexOf(o), 1); });
+      var t = TAILLES[nouveauType];
+      var neuf = creerObjet(nouveauType, cx - t[0] / 2, cy - t[1] / 2);
+      setTimeout(function () { rangerADroite(); verifierFin(); }, 60);
+      void neuf;
+    }, 650);
+  }
+
+  // ---- Écrire le nombre ----
+  function compter() {
+    return {
+      c: objets.filter(function (o) { return o.type === "boite"; }).length,
+      d: objets.filter(function (o) { return o.type === "paquet"; }).length,
+      u: objets.filter(function (o) { return o.type === "trombone"; }).length
+    };
+  }
+  // Quand on ne peut plus faire de groupes : 1) combien de dizaines (paquets de 10) et d'unités (trombones seuls) ?
+  // 2) ça fait combien de trombones ? On écrit le nombre, chiffre par chiffre. Puis le bilan : 23 = 2 dizaines + 3 unités.
+  var etape = 0;
+  // Quand on ne peut plus faire de groupes : combien y a-t-il de trombones ? On choisit la bonne réponse parmi quatre,
+  // chacune séparant les dizaines et les unités (et les centaines au Défi). On la glisse dans « Ma réponse ».
+  function texteReponse(r) {
+    var pl = function (n, mot) { return n + " " + mot + (n > 1 ? "s" : ""); };
+    var parts = [];
+    if (niveau === "defi") parts.push('<span class="c">' + pl(r.c, "centaine") + "</span>");
+    parts.push('<span class="d">' + pl(r.d, "dizaine") + "</span>", '<span class="u">' + pl(r.u, "unité") + "</span>");
+    return parts.join(" + ") + " = " + (r.c * 100 + r.d * 10 + r.u);
+  }
+  function verifierFin() {
+    var n = compter();
+    if (n.u >= 10 || (niveau === "defi" && n.d >= 10)) return;
+    etape = 1;
+    var juste = { c: niveau === "defi" ? n.c : 0, d: n.d, u: n.u };
+    // les pièges : dizaines et unités inversées, une dizaine de trop ou de moins, une unité de trop ou de moins
+    var pieges = [{ c: juste.c, d: juste.u, u: juste.d }, { c: juste.c, d: juste.d + 1, u: juste.u }, { c: juste.c, d: Math.max(0, juste.d - 1), u: juste.u },
+      { c: juste.c, d: juste.d, u: (juste.u + 1) % 10 }, { c: juste.c, d: juste.d, u: juste.u ? juste.u - 1 : 2 }];
+    var cle = function (r) { return r.c + "-" + r.d + "-" + r.u; }, vues = {}, liste = [juste];
+    vues[cle(juste)] = true;
+    pieges.forEach(function (r) { if (liste.length < 4 && !vues[cle(r)] && r.d < 10) { vues[cle(r)] = true; liste.push(r); } });
+    liste.sort(function () { return Math.random() - .5; });
+    var zone = el("ecriture"); zone.innerHTML = ""; zone.hidden = false;
+    zone.innerHTML = '<p class="question-choix">Combien y a-t-il de trombones ? Glisse la bonne réponse dans la boîte.</p><div class="reponses" id="reponses"></div><div class="boite-reponse" id="boiteReponse">Ma réponse</div>';
+    el("chiffres").hidden = true;
+    liste.forEach(function (r) {
+      var carte = document.createElement("div"); carte.className = "reponse"; carte.innerHTML = texteReponse(r);
+      el("reponses").appendChild(carte);
+      glisserVers(carte, function (x, y) {
+        var l = document.elementsFromPoint(x, y);
+        for (var k = 0; k < l.length; k++) if (l[k].id === "boiteReponse") return l[k];
+        return null;
+      }, function () {
+        if (!etape || carte.classList.contains("rayee")) return;
+        if (cle(r) === cle(juste)) {
+          son("bien"); etape = 0;
+          if (!rate) { etoiles++; el("etoiles").textContent = "⭐ " + etoiles; }
+          el("boiteReponse").innerHTML = texteReponse(r); el("boiteReponse").classList.add("juste");
+          carte.remove(); message("✅");
+          var total = ITEMS[niveau][index];
+          el("bilan").textContent = total + " = " + (niveau === "defi" ? n.c + " centaine" + (n.c > 1 ? "s" : "") + " + " : "") + n.d + " dizaine" + (n.d > 1 ? "s" : "") + " + " + n.u + " unité" + (n.u > 1 ? "s" : "");
+          el("btnSuivant").hidden = false;
+        } else {
+          rate = true; son("non"); message("🤪");
+          carte.classList.remove("faux"); void carte.offsetWidth; carte.classList.add("faux");
+          setTimeout(function () { carte.classList.add("rayee"); message(""); }, 800);
+        }
+      });
+    });
+  }
+
+  // Glisser (doigt, souris, stylet) : un clone suit le doigt, le dépôt sur la cible vaut réponse.
+  function glisserVers(objet, trouverCible, auDepot) {
+    objet.style.touchAction = "none"; objet.style.cursor = "grab";
+    objet.addEventListener("pointerdown", function (ev) {
+      ev.preventDefault();
+      var clone = objet.cloneNode(true); clone.style.position = "fixed"; clone.style.zIndex = 50; clone.style.pointerEvents = "none"; clone.style.transform = "scale(1.1)";
+      document.body.appendChild(clone);
+      function place(x, y) { clone.style.left = (x - clone.offsetWidth / 2) + "px"; clone.style.top = (y - clone.offsetHeight / 2) + "px"; }
+      place(ev.clientX, ev.clientY);
+      var survol = null;
+      function bouge(e) { place(e.clientX, e.clientY); var c = trouverCible(e.clientX, e.clientY); if (survol && survol !== c && survol.classList) survol.classList.remove("survol"); if (c && c.classList) c.classList.add("survol"); survol = c; }
+      function lache(e) {
+        document.removeEventListener("pointermove", bouge); document.removeEventListener("pointerup", lache);
+        clone.remove(); if (survol && survol.classList) survol.classList.remove("survol");
+        var c = trouverCible(e.clientX, e.clientY); if (c) auDepot(c);
+      }
+      document.addEventListener("pointermove", bouge); document.addEventListener("pointerup", lache);
+    });
+  }
+  el("btnReset").addEventListener("click", afficher);
+  el("btnSuivant").addEventListener("click", function () { index = (index + 1) % ITEMS[niveau].length; afficher(); });
+  el("btnSon").addEventListener("click", function () { sonActif = !sonActif; el("btnSon").textContent = sonActif ? "🔊" : "🔇"; });
+  function choisirNiveau(n) {
+    var b = document.querySelector('#niveaux button[data-niveau="' + n + '"]'); if (!b) return false;
+    niveau = n; index = 0;
+    Array.prototype.forEach.call(document.querySelectorAll("#niveaux button"), function (x) { x.classList.toggle("actif", x === b); });
+    afficher(); return true;
+  }
+  Array.prototype.forEach.call(document.querySelectorAll("#niveaux button"), function (b) {
+    b.addEventListener("click", function () { choisirNiveau(b.dataset.niveau); });
+  });
+  // Class Flow ouvre le jeu sur un niveau : …html#defi
+  if (!(location.hash && choisirNiveau(location.hash.slice(1)))) afficher();
+})();
+</script>
+<!-- DEUX GESTES -->
+<script>
+/* ==== DEUX GESTES (GTH) : chaque jeu se joue en glissant OU en touchant (demande de Karim du 01/10) ====
+   REGLES  : jeu au glisser-déposer → on peut aussi toucher l'objet (il s'entoure), puis toucher sa place ; s'il n'a qu'une place
+             possible (une case réponse), un seul toucher le pose (10/10) :
+             le module rejoue exactement le même glisser-déposer, le jeu garde ses règles.
+   INVERSE : jeu au toucher (toucher la carte, puis la zone) → on peut aussi glisser la carte sur la zone.
+   Installé par .claude/outils/deux-gestes/injecter.py ; ne pas modifier dans le jeu, mais dans ce fichier. */
+(function () {
+  var REGLES = [{"source": ".reponse", "cible": "#boiteReponse"}], INVERSE = [];
+  // setPointerCapture refuse les pointeurs rejoués : on ignore l'erreur
+  ["setPointerCapture", "releasePointerCapture"].forEach(function (m) {
+    var o = Element.prototype[m]; if (!o) return;
+    Element.prototype[m] = function (id) { try { return o.call(this, id); } catch (e) { return undefined; } };
+  });
+  var st = document.createElement("style");
+  st.textContent = ".dg-choisi{outline:7px solid #1f7a8c !important; outline-offset:4px !important;}" +
+    ".dg-vol{position:fixed !important; z-index:9999; pointer-events:none; opacity:.92; transform:scale(1.05) rotate(-2deg); margin:0 !important;}";
+  document.head.appendChild(st);
+
+  var choix = null, bas = null, rejeu = false, avalerClic = 0;
+  function sous(x, y) { return document.elementFromPoint(x, y); }
+  function trouver(el, liste, cle) {
+    if (!el || !el.closest) return null;
+    for (var i = 0; i < liste.length; i++) { var e = el.closest(liste[i][cle]); if (e) return { regle: liste[i], el: e }; }
+    return null;
+  }
+  function oublier() { if (choix) choix.el.classList.remove("dg-choisi"); choix = null; }
+  function evt(type, cible, x, y) {
+    var e = new PointerEvent(type, { bubbles: true, cancelable: true, composed: true, clientX: x, clientY: y, pointerId: 777,
+      pointerType: "touch", isPrimary: true, button: 0, buttons: type === "pointerup" ? 0 : 1 });
+    (cible && cible.isConnected ? cible : document).dispatchEvent(e);
+  }
+  // Rejoue le glisser-déposer du jeu : de l'objet jusqu'au point touché
+  function rejouer(src, x, y) {
+    if (!src.isConnected) return;
+    var r = src.getBoundingClientRect(), x0 = r.left + r.width / 2, y0 = r.top + r.height / 2;
+    var depart = sous(x0, y0); if (!depart || !src.contains(depart)) depart = src;
+    rejeu = true;
+    try {
+      evt("pointerdown", depart, x0, y0);
+      for (var k = 1; k <= 12; k++) evt("pointermove", depart, x0 + (x - x0) * k / 12, y0 + (y - y0) * k / 12);
+      evt("pointerup", depart, x, y);
+    } finally { rejeu = false; }
+  }
+
+  // ---------- REGLES : toucher l'objet, puis sa place ----------
+  document.addEventListener("pointerdown", function (e) {
+    if (rejeu || !e.isTrusted || !REGLES.length) return;
+    if (choix && !choix.el.isConnected) oublier();
+    // l'objet touché est repéré dès que le doigt se pose : ensuite, le jeu le cache pour le faire glisser
+    bas = { x: e.clientX, y: e.clientY, cible: null, src: trouver(e.target, REGLES, "source") };
+    if (choix) {
+      var c = e.target.closest && e.target.closest(choix.regle.cible);
+      if (c && !(e.target.closest(choix.regle.source))) { bas.cible = c; e.stopImmediatePropagation(); e.preventDefault(); }
+    }
+  }, true);
+  document.addEventListener("pointerup", function (e) {
+    if (rejeu || !e.isTrusted || !bas || !REGLES.length) return;
+    var b = bas; bas = null;
+    var tap = Math.hypot(e.clientX - b.x, e.clientY - b.y) < 12;
+    if (b.cible) {   // le toucher sur la place : le jeu ne le voit pas, on rejoue le glisser à cet endroit
+      e.stopImmediatePropagation(); e.preventDefault(); avalerClic = Date.now();
+      if (tap && choix) { var s = choix.el; oublier(); var x = e.clientX, y = e.clientY; setTimeout(function () { rejouer(s, x, y); }, 0); }
+      return;
+    }
+    if (!tap) { oublier(); return; }   // un vrai glisser : le jeu s'en occupe
+    var src = b.src;
+    setTimeout(function () {   // après le jeu : l'objet touché est choisi (ou ne l'est plus)
+      if (!src || !src.el.isConnected) { return; }
+      // une seule place où le poser (une case réponse) : un toucher suffit, la réponse part dans la case (Karim, 10/10)
+      var places = Array.prototype.filter.call(document.querySelectorAll(src.regle.cible), function (c) {
+        var r = c.getBoundingClientRect(); return r.width > 0 && r.height > 0 && !src.el.contains(c) && getComputedStyle(c).visibility !== "hidden"; });
+      if (places.length === 1) { oublier(); var r = places[0].getBoundingClientRect(); rejouer(src.el, r.left + r.width / 2, r.top + r.height / 2); return; }
+      if (choix && choix.el === src.el) { oublier(); return; }
+      oublier(); choix = src; src.el.classList.add("dg-choisi");
+    }, 0);
+  }, true);
+  document.addEventListener("click", function (e) {
+    if (Date.now() - avalerClic < 500 && e.isTrusted) { e.stopImmediatePropagation(); e.preventDefault(); }
+  }, true);
+
+  // ---------- INVERSE : glisser la carte sur la zone = la toucher, puis toucher la zone ----------
+  var g = null;
+  document.addEventListener("pointerdown", function (e) {
+    if (rejeu || !e.isTrusted || !INVERSE.length) return;
+    var src = trouver(e.target, INVERSE, "source"); if (!src) return;
+    g = { src: src, x: e.clientX, y: e.clientY, vol: null };
+  }, true);
+  document.addEventListener("pointermove", function (e) {
+    if (!g || rejeu) return;
+    if (!g.vol && Math.hypot(e.clientX - g.x, e.clientY - g.y) < 12) return;
+    if (!g.vol) {
+      var r = g.src.el.getBoundingClientRect();
+      g.vol = g.src.el.cloneNode(true); g.vol.classList.add("dg-vol"); g.vol.style.width = r.width + "px";
+      g.dx = g.x - r.left; g.dy = g.y - r.top; document.body.appendChild(g.vol);
+    }
+    g.vol.style.left = (e.clientX - g.dx) + "px"; g.vol.style.top = (e.clientY - g.dy) + "px";
+  }, true);
+  document.addEventListener("pointerup", function (e) {
+    if (!g || rejeu || !e.isTrusted) return;
+    var d = g; g = null;
+    if (!d.vol) return;   // simple toucher : le jeu s'en occupe
+    d.vol.remove(); e.stopImmediatePropagation(); e.preventDefault(); avalerClic = Date.now();
+    var dessous = sous(e.clientX, e.clientY), zone = dessous && dessous.closest ? dessous.closest(d.src.regle.cible) : null;
+    if (!zone) return;
+    rejeu = true;
+    try { evt("pointerup", d.src.el, e.clientX, e.clientY); evt("pointerup", zone, e.clientX, e.clientY); }
+    finally { rejeu = false; }
+  }, true);
+})();
+</script>
+<!-- /DEUX GESTES -->
+<!-- MENU -->
+<script>
+/* ==== LE MENU ☰ (GTH, 10/10) : interface épurée — à l'écran, seulement le titre, le score, la consigne et l'activité ====
+   Tout le reste (niveaux, onglets de méthode, ✏️, 🔊, 🖨️, aide…) part dans un menu ☰, ouvert d'un toucher.
+   Réglage par outil (CONF, posé par l'injecteur) : ancre = où mettre le bouton ☰ (sinon en haut à droite de l'écran) ;
+   cacher = ce qui part dans le menu (sinon : tout ce qui, dans « .barre .droite », n'est pas un score).
+   Installé par .claude/outils/menu-outil/injecter.py ; ne pas modifier dans l'outil, mais dans ce fichier. */
+(function () {
+  var CONF = {"ancre": ".barre-haut .droite", "cacher": ["#niveaux", "#btnSon"]};
+  var st = document.createElement("style");
+  st.textContent =
+    ".menu-btn{width:58px; height:58px; border-radius:16px; border:2px solid rgba(0,0,0,.15); background:#fff; color:#1f2a33; font-size:2rem; line-height:1; cursor:pointer; flex:none; padding:0;}" +
+    ".menu-btn.fixe{position:fixed; top:10px; right:12px; z-index:150; box-shadow:0 4px 14px rgba(0,0,0,.15);}" +
+    ".menu-btn.ouvert{background:#1f2a33; color:#fff;}" +
+    ".menu-panneau{position:fixed; top:76px; right:16px; z-index:200; background:#fff; color:#1f2a33; border-radius:18px; box-shadow:0 18px 50px rgba(0,0,0,.28); padding:16px 18px;" +
+    "  display:flex; flex-direction:column; align-items:flex-start; gap:12px; max-width:min(620px, 92vw); max-height:80vh; overflow:auto;}" +
+    ".menu-panneau[hidden]{display:none !important;}" +
+    ".menu-panneau h4{margin:0; font-family:sans-serif; font-size:.85rem; text-transform:uppercase; letter-spacing:.6px; color:#6d7a85;}" +
+    ".menu-panneau > *{position:static !important; margin:0 !important;}" +
+    ".menu-panneau > div,.menu-panneau > nav{display:flex; flex-wrap:wrap; gap:8px;}";
+  document.head.appendChild(st);
+  function installer() {
+    var autres = [];
+    if (CONF.cacher) CONF.cacher.forEach(function (s) { document.querySelectorAll(s).forEach(function (e) { if (autres.indexOf(e) === -1) autres.push(e); }); });
+    else { var d = document.querySelector(".barre .droite"); if (d) autres = Array.prototype.filter.call(d.children, function (e) { return !e.classList.contains("score"); }); }
+    if (!autres.length) return;
+    var btn = document.createElement("button"); btn.type = "button"; btn.className = "menu-btn"; btn.title = "Niveaux et réglages"; btn.textContent = "☰";
+    var pan = document.createElement("div"); pan.className = "menu-panneau"; pan.hidden = true;
+    var t = document.createElement("h4"); t.textContent = "Niveaux et réglages"; pan.appendChild(t);
+    autres.forEach(function (e) { pan.appendChild(e); });
+    var ancre = document.querySelector(CONF.ancre || ".barre .droite");
+    if (ancre) ancre.appendChild(btn); else { btn.classList.add("fixe"); document.body.appendChild(btn); }
+    document.body.appendChild(pan);
+    function ouvrir(o) { pan.hidden = !o; btn.classList.toggle("ouvert", o); }
+    btn.addEventListener("click", function (e) { e.stopPropagation(); ouvrir(pan.hidden); });
+    // un niveau choisi, ou une fenêtre ouverte (✏️, 🖨️) : le menu se referme ; on garde le menu ouvert pour choisir un type de jeu
+    pan.addEventListener("click", function (e) { var b = e.target.closest("button"); if (b && !b.closest(CONF.garderOuvert || ".types")) setTimeout(function () { ouvrir(false); }, 120); });
+    document.addEventListener("pointerdown", function (e) { if (!pan.hidden && !pan.contains(e.target) && e.target !== btn) ouvrir(false); });
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", installer); else installer();
+})();
+</script>
+<!-- /MENU -->
+</body>
+</html>

@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Le partage</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath d='M16 26h32l4 30H12z' fill='%23c8a165' stroke='%236d4c41' stroke-width='3'/%3E%3Cpath d='M22 26c0-10 20-10 20 0' stroke='%236d4c41' stroke-width='4' fill='none'/%3E%3Ccircle cx='32' cy='42' r='7' fill='%23ffca28'/%3E%3C/svg%3E">
+<!--
+  🍬 Le partage : le butin des pirates — la fraction d'une quantité, P2 📅 6 mardi (GTH v2 : donnees/seances/maths/ma-s6-nombres.js).
+  Maquette validée par Karim le 28/10 (Rapports/Jeux de la P2 — ce qui existe, ce qui manque.md, C n° 5). Méthode de la séance et du mémo NUM 11 :
+  le dénominateur dit en combien de parts égales on partage ; on trouve une part (en distribuant, ou avec la table : 12 = 3 × 4) ;
+  (CM2) le numérateur dit combien de parts on prend ; on le dit en une phrase (recommandations Eduscol fractions 2025, p. 9).
+  Univers : le pont d'un bateau pirate. Le capitaine partage le butin de la cale dans des sacs tous pareils ; pour « deux tiers », il prend 2 sacs.
+  Gestes (glisser, ou toucher puis toucher) : poser des sacs sur le pont (toucher la pile en pose un ; toucher un sac vide le reprend) ;
+  Je distribue : glisser les objets dans les sacs (ou toucher un sac : un objet de la cale y tombe ; toucher un objet d'un sac le remet dans la cale) ;
+  la table : poser l'étiquette d'une part sur un sac (les sacs se remplissent tous pareils) ; plusieurs parts : glisser des sacs dans le coffre du
+  capitaine ; puis l'étiquette du total. Le jeu ne donne jamais le nombre : il vérifie que les parts sont égales et que tout le butin est partagé.
+  Onglets : Je distribue (#distribue), La table (#table), Plusieurs parts (#parts), Défi (#defi : on connaît une part, on cherche le butin).
+  Contenu : fichier ressources P2 p. 22-25 (les enveloppes CM1 et CM2), mémo NUM 11, séance 📅 6, recommandations Eduscol ; les autres
+  sont de moi (marqués « de moi »). Hors ligne (ENI, Chromebook). Sans son.
+-->
+<style>
+:root{--bois:#a1887f;--bois2:#795548;--mer:#4fc3f7;--encre:#2b1d14;--vert:#2e7d32;--rouge:#c62828;--talbot:#1f7a8c;--or:#ffca28}
+html,body{margin:0;height:100%;background:#1a237e;overflow:hidden;font-family:Arial,Helvetica,sans-serif;color:var(--encre)}
+#scene{position:absolute;left:0;top:0;width:1920px;height:1080px;transform-origin:0 0;background:#d7b48a;
+  background-image:repeating-linear-gradient(90deg,#d7b48a 0 118px,#c49a6c 118px 122px)}
+#decor{position:absolute;left:0;top:0;width:1920px;height:1080px;z-index:-1;pointer-events:none}
+
+#barre{height:84px;display:flex;align-items:center;gap:20px;padding:0 28px;background:#3e2723;color:#fff}
+#barre h1{margin:0;font-size:32px;display:flex;align-items:center;gap:12px;white-space:nowrap}
+#barre h1 svg{width:52px;height:52px}
+.onglets{display:flex;gap:8px;margin-left:16px}
+.onglets button{font:inherit;font-size:23px;padding:10px 18px;border-radius:10px;border:2px solid #8d6e63;background:#5d4037;color:#fff;cursor:pointer}
+.onglets button.on{background:#fff;color:var(--encre);font-weight:700;border-color:#fff}
+#coin{margin-left:auto;font-size:22px;white-space:nowrap}
+#coin b{font-size:28px;color:var(--or)}
+#consigne{height:96px;display:flex;align-items:center;justify-content:center;font-size:44px;font-weight:700;text-align:center;padding:0 130px}
+#consigne .q{color:#b23a00}
+#carte{position:absolute;left:40px;top:196px;width:420px;padding:16px 22px;background:#fff8e1;border:4px solid #8d6e63;border-radius:16px;font-size:38px;font-weight:700;text-align:center;box-shadow:0 6px 0 #6d4c41}
+#carte small{display:block;font-size:22px;color:#6d4c41;font-weight:400;margin-top:6px}
+#cale{position:absolute;left:40px;top:420px;width:420px;height:420px;background:#4e342e;background-image:repeating-linear-gradient(90deg,#5d4037 0 66px,#3e2723 66px 70px);border-radius:12px;border:10px solid #263238;box-shadow:inset 0 0 0 4px #546e7a;display:flex;flex-wrap:wrap;align-content:flex-start;gap:6px;padding:16px;box-sizing:border-box}
+#cale h3{width:100%;margin:0 0 4px;color:#ffe0b2;font-size:26px;text-align:center}
+.objet{width:52px;height:52px;font-size:40px;line-height:52px;text-align:center;cursor:grab;touch-action:none;user-select:none}
+.gros{width:100%;flex:1;display:flex;align-items:center;justify-content:center;font-size:40px;font-weight:700;color:#fff;text-align:center;border:4px dashed #ffe0b2;border-radius:16px}
+#pont{position:absolute;left:500px;right:330px;top:390px;height:420px;display:flex;flex-wrap:wrap;gap:16px;justify-content:center;align-content:center;border:5px dashed rgba(62,39,35,.35);border-radius:22px}
+.sac{width:150px;height:180px;position:relative;cursor:pointer;touch-action:none;user-select:none}
+.sac svg{position:absolute;inset:0;width:100%;height:100%}
+.sac .dedans{position:absolute;left:18px;right:18px;top:62px;bottom:16px;display:flex;flex-wrap:wrap;gap:2px;justify-content:center;align-content:center;font-size:24px}
+.sac .dedans span{width:26px;height:26px;line-height:26px;font-size:24px;text-align:center;cursor:grab}
+.sac .etiquette{position:absolute;left:50%;top:92px;transform:translateX(-50%);background:#fff;border:3px solid #6d4c41;border-radius:10px;padding:4px 10px;font-size:28px;font-weight:700;white-space:nowrap}
+.sac.choisi,.outil.choisi,.objet.choisi{outline:6px solid var(--talbot);outline-offset:3px;border-radius:12px}
+.sac.ko{animation:secoue .45s 2}
+#coffre{position:absolute;right:40px;top:400px;width:260px;height:410px;border-radius:8px 8px 16px 16px;background:#7a4a2e;background-image:linear-gradient(90deg,transparent 21%,#d4a017 21% 28%,transparent 28% 72%,#d4a017 72% 79%,transparent 79%),repeating-linear-gradient(#8a5a36 0 46px,#6d4428 46px 50px);border:8px solid #d4a017;box-shadow:inset 0 0 0 3px #7a5200,0 10px 0 #3e2723;display:none;flex-direction:column;align-items:center;padding:10px;box-sizing:border-box;gap:8px}
+#coffre h3{margin:0;color:var(--or);font-size:24px;text-align:center;background:#3e2723;border-radius:10px;padding:4px 10px}
+#coffre::after{content:"";position:absolute;left:50%;bottom:10px;width:44px;height:54px;margin-left:-22px;border-radius:8px;background:radial-gradient(circle at 50% 38%,#3e2723 0 7px,transparent 8px),linear-gradient(#3e2723,#3e2723) 50% 72%/6px 16px no-repeat,#ffca28;border:3px solid #7a5200;pointer-events:none}
+#couvercle{position:absolute;right:20px;top:300px;width:300px;height:110px;display:none;pointer-events:none}
+#joyaux{position:absolute;right:0;top:780px;width:340px;height:90px;display:none;pointer-events:none}
+#coffre .sac{width:110px;height:130px} #coffre .sac .dedans{top:44px} #coffre .sac .etiquette{top:62px;font-size:22px}
+#plateau{position:absolute;left:500px;right:40px;top:840px;height:110px;display:flex;gap:22px;justify-content:center;align-items:center}
+.outil{min-width:110px;height:92px;padding:0 18px;display:flex;align-items:center;justify-content:center;gap:10px;font-size:40px;font-weight:700;background:#fff8e1;border:4px solid #8d6e63;border-radius:16px;cursor:grab;touch-action:none;user-select:none;box-shadow:0 5px 0 #6d4c41}
+.outil.pile{background:#efebe9}
+.outil.pile svg{width:70px;height:80px}
+.outil.ko{animation:secoue .45s 2;border-color:var(--rouge)}
+.vole{position:fixed;z-index:60;pointer-events:none;opacity:.92;transform-origin:0 0}
+@keyframes secoue{0%,100%{transform:translateX(0)}25%{transform:translateX(-10px)}75%{transform:translateX(10px)}}
+#bas{position:absolute;left:0;right:0;bottom:0;height:120px;display:flex;align-items:center;justify-content:center}
+#verdict{font-size:34px;font-weight:700;text-align:center;max-width:1800px}
+#verdict.ok{color:var(--vert)} #verdict.ko{color:var(--rouge)}
+#indice{position:absolute;right:26px;top:94px;width:82px;height:82px;padding:0;border-radius:50%;font-size:44px;line-height:1;z-index:20;border:2px solid #d4b106;background:#fff8c4;cursor:pointer}
+#bulle{position:absolute;right:124px;top:98px;max-width:660px;background:#fff8c4;border:2px solid #d4b106;border-radius:18px;padding:16px 26px;font-size:28px;display:none;box-shadow:0 6px 18px rgba(0,0,0,.25);z-index:20}
+</style>
+</head>
+<body>
+<div id="scene">
+  <svg id="decor" viewBox="0 0 1920 1080" aria-hidden="true"><defs><linearGradient id="ciel" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#81d4fa"/><stop offset="1" stop-color="#e1f5fe"/></linearGradient><linearGradient id="eau" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#29b6f6"/><stop offset="1" stop-color="#0277bd"/></linearGradient></defs><rect x="0" y="84" width="1920" height="140" fill="url(#ciel)"/><circle cx="1470" cy="150" r="38" fill="#fff59d"/><circle cx="1470" cy="150" r="54" fill="#fff59d" opacity=".35"/><g transform="translate(470 0)"><path d="M1180 226q70 -40 150 0z" fill="#ffe082"/><path d="M1255 214q6 -40 -10 -70" stroke="#795548" stroke-width="7" fill="none"/><path d="M1245 146q-30 -10 -52 8M1245 146q-8 -30 -36 -36M1245 146q22 -24 52 -18M1245 146q34 0 50 22M1245 146q-20 14 -26 40" stroke="#43a047" stroke-width="9" fill="none" stroke-linecap="round"/></g><rect x="0" y="222" width="1920" height="80" fill="url(#eau)"/><path d="M-40 250q30 -14 60 0t60 0" stroke="#e1f5fe" stroke-width="4" fill="none" opacity=".8"/><path d="M220 250q30 -14 60 0t60 0" stroke="#e1f5fe" stroke-width="4" fill="none" opacity=".8"/><path d="M480 250q30 -14 60 0t60 0" stroke="#e1f5fe" stroke-width="4" fill="none" opacity=".8"/><path d="M740 250q30 -14 60 0t60 0" stroke="#e1f5fe" stroke-width="4" fill="none" opacity=".8"/><path d="M1000 250q30 -14 60 0t60 0" stroke="#e1f5fe" stroke-width="4" fill="none" opacity=".8"/><path d="M1260 250q30 -14 60 0t60 0" stroke="#e1f5fe" stroke-width="4" fill="none" opacity=".8"/><path d="M1520 250q30 -14 60 0t60 0" stroke="#e1f5fe" stroke-width="4" fill="none" opacity=".8"/><path d="M1780 250q30 -14 60 0t60 0" stroke="#e1f5fe" stroke-width="4" fill="none" opacity=".8"/><path d="M90 276q30 -12 60 0t60 0" stroke="#b3e5fc" stroke-width="4" fill="none" opacity=".7"/><path d="M390 276q30 -12 60 0t60 0" stroke="#b3e5fc" stroke-width="4" fill="none" opacity=".7"/><path d="M690 276q30 -12 60 0t60 0" stroke="#b3e5fc" stroke-width="4" fill="none" opacity=".7"/><path d="M990 276q30 -12 60 0t60 0" stroke="#b3e5fc" stroke-width="4" fill="none" opacity=".7"/><path d="M1290 276q30 -12 60 0t60 0" stroke="#b3e5fc" stroke-width="4" fill="none" opacity=".7"/><path d="M1590 276q30 -12 60 0t60 0" stroke="#b3e5fc" stroke-width="4" fill="none" opacity=".7"/><path d="M1890 276q30 -12 60 0t60 0" stroke="#b3e5fc" stroke-width="4" fill="none" opacity=".7"/><rect x="20" y="300" width="14" height="44" rx="4" fill="#6d4c41" opacity=".55"/><rect x="90" y="300" width="14" height="44" rx="4" fill="#6d4c41" opacity=".55"/><rect x="160" y="300" width="14" height="44" rx="4" fill="#6d4c41" opacity=".55"/><rect x="230" y="300" width="14" height="44" rx="4" fill="#6d4c41" opacity=".55"/><rect x="300" y="300" width="14" height="44" rx="4" fill="#6d4c41" opacity=".55"/><rect x="370" y="300" width="14" height="44" rx="4" fill="#6d4c41" opacity=".55"/><rect x="440" y="300" width="14" height="44" rx="4" fill="#6d4c41" opacity=".55"/><rect x="510" y="300" width="14" height="44" rx="4" fill="#6d4c41" opacity=".55"/><rect x="580" y="300" width="14" height="44" rx="4" fill="#6d4c41" opacity=".55"/><rect x="650" y="300" width="14" height="44" rx="4" fill="#6d4c41" opacity=".55"/><rect x="720" y="300" width="14" height="44" rx="4" fill="#6d4c41" opacity=".55"/><rect x="790" y="300" width="14" height="44" rx="4" fill="#6d4c41" opacity=".55"/><rect x="860" y="300" width="14" height="44" rx="4" fill="#6d4c41" opacity=".55"/><rect x="930" y="300" width="14" height="44" rx="4" fill="#6d4c41" opacity=".55"/><rect x="1000" y="300" width="14" height="44" rx="4" fill="#6d4c41" opacity=".55"/><rect x="1070" y="300" width="14" height="44" rx="4" fill="#6d4c41" opacity=".55"/><rect x="1140" y="300" width="14" height="44" rx="4" fill="#6d4c41" opacity=".55"/><rect x="1210" y="300" width="14" height="44" rx="4" fill="#6d4c41" opacity=".55"/><rect x="1280" y="300" width="14" height="44" rx="4" fill="#6d4c41" opacity=".55"/><rect x="1350" y="300" width="14" height="44" rx="4" fill="#6d4c41" opacity=".55"/><rect x="1420" y="300" width="14" height="44" rx="4" fill="#6d4c41" opacity=".55"/><rect x="1490" y="300" width="14" height="44" rx="4" fill="#6d4c41" opacity=".55"/><rect x="1560" y="300" width="14" height="44" rx="4" fill="#6d4c41" opacity=".55"/><rect x="1630" y="300" width="14" height="44" rx="4" fill="#6d4c41" opacity=".55"/><rect x="1700" y="300" width="14" height="44" rx="4" fill="#6d4c41" opacity=".55"/><rect x="1770" y="300" width="14" height="44" rx="4" fill="#6d4c41" opacity=".55"/><rect x="1840" y="300" width="14" height="44" rx="4" fill="#6d4c41" opacity=".55"/><rect x="1910" y="300" width="14" height="44" rx="4" fill="#6d4c41" opacity=".55"/><rect x="0" y="288" width="1920" height="16" fill="#4e342e"/><rect x="0" y="288" width="1920" height="5" fill="#8d6e63"/></svg>
+  <div id="barre">
+    <h1><svg viewBox="0 0 64 64"><path d="M16 26h32l4 30H12z" fill="#c8a165" stroke="#fff" stroke-width="3"/><path d="M22 26c0-10 20-10 20 0" stroke="#fff" stroke-width="4" fill="none"/><circle cx="32" cy="42" r="7" fill="#ffca28"/></svg>Le partage</h1>
+    <div class="onglets"><button data-o="distribue">Je distribue</button><button data-o="table">La table</button><button data-o="parts">Plusieurs parts</button><button data-o="defi">Défi</button></div>
+    <div id="coin">Butins partagés : <b id="score">0</b> · 🏆 Record : <b id="record">0</b></div>
+  </div>
+  <div id="consigne"></div>
+  <div id="carte"></div>
+  <div id="cale"></div>
+  <div id="pont"></div>
+  <svg id="couvercle" viewBox="0 0 300 110" aria-hidden="true"><path d="M18 110 L34 34 Q150 -6 266 34 L282 110z" fill="#5d4037" stroke="#3e2723" stroke-width="4"/><path d="M38 104 L50 44 Q150 12 250 44 L262 104z" fill="#b71c1c"/><path d="M38 104 L50 44 Q150 12 250 44 L262 104z" fill="none" stroke="#d4a017" stroke-width="5"/><path d="M96 30 L84 104M204 30 L216 104" stroke="#d4a017" stroke-width="12"/><circle cx="150" cy="22" r="7" fill="#ffd54f" stroke="#7a5200" stroke-width="2"/><g stroke="#7a5200" stroke-width="2"><ellipse cx="70" cy="106" rx="18" ry="7" fill="#ffca28"/><ellipse cx="112" cy="104" rx="18" ry="7" fill="#ffd54f"/><ellipse cx="190" cy="105" rx="18" ry="7" fill="#ffca28"/><ellipse cx="232" cy="106" rx="18" ry="7" fill="#ffd54f"/></g><path d="M140 108l10 -16 10 16z" fill="#e53935" stroke="#7f0000" stroke-width="2"/><path d="M160 108l8 -12 8 12z" fill="#43a047" stroke="#1b5e20" stroke-width="2"/></svg>
+  <div id="coffre"><h3>Le coffre du capitaine</h3></div>
+  <svg id="joyaux" viewBox="0 0 340 90" aria-hidden="true"><g transform="translate(30 70)"><ellipse rx="17" ry="8" fill="#ffca28" stroke="#7a5200" stroke-width="2"/><ellipse rx="10" ry="4" fill="none" stroke="#ffe082" stroke-width="2"/></g><g transform="translate(62 78)"><ellipse rx="17" ry="8" fill="#ffca28" stroke="#7a5200" stroke-width="2"/><ellipse rx="10" ry="4" fill="none" stroke="#ffe082" stroke-width="2"/></g><g transform="translate(96 66)"><ellipse rx="17" ry="8" fill="#ffca28" stroke="#7a5200" stroke-width="2"/><ellipse rx="10" ry="4" fill="none" stroke="#ffe082" stroke-width="2"/></g><g transform="translate(250 74)"><ellipse rx="17" ry="8" fill="#ffca28" stroke="#7a5200" stroke-width="2"/><ellipse rx="10" ry="4" fill="none" stroke="#ffe082" stroke-width="2"/></g><g transform="translate(286 64)"><ellipse rx="17" ry="8" fill="#ffca28" stroke="#7a5200" stroke-width="2"/><ellipse rx="10" ry="4" fill="none" stroke="#ffe082" stroke-width="2"/></g><g transform="translate(318 78)"><ellipse rx="17" ry="8" fill="#ffca28" stroke="#7a5200" stroke-width="2"/><ellipse rx="10" ry="4" fill="none" stroke="#ffe082" stroke-width="2"/></g><g transform="translate(150 82)"><ellipse rx="17" ry="8" fill="#ffca28" stroke="#7a5200" stroke-width="2"/><ellipse rx="10" ry="4" fill="none" stroke="#ffe082" stroke-width="2"/></g><g transform="translate(200 80)"><ellipse rx="17" ry="8" fill="#ffca28" stroke="#7a5200" stroke-width="2"/><ellipse rx="10" ry="4" fill="none" stroke="#ffe082" stroke-width="2"/></g><g transform="translate(48 52) scale(1)"><path d="M-16 -6 L-8 -16 L8 -16 L16 -6 L0 16z" fill="#e53935" stroke="#7f0000" stroke-width="2.5"/><path d="M-16 -6 H16 M-8 -16 L-4 -6 L0 16 M8 -16 L4 -6" stroke="#7f0000" stroke-width="1.5" fill="none" opacity=".7"/><path d="M-6 -13 L-2 -8" stroke="#fff" stroke-width="3" stroke-linecap="round"/></g><g transform="translate(126 70) scale(0.9)"><path d="M-16 -6 L-8 -16 L8 -16 L16 -6 L0 16z" fill="#1e88e5" stroke="#0d47a1" stroke-width="2.5"/><path d="M-16 -6 H16 M-8 -16 L-4 -6 L0 16 M8 -16 L4 -6" stroke="#0d47a1" stroke-width="1.5" fill="none" opacity=".7"/><path d="M-6 -13 L-2 -8" stroke="#fff" stroke-width="3" stroke-linecap="round"/></g><g transform="translate(226 56) scale(1)"><path d="M-16 -6 L-8 -16 L8 -16 L16 -6 L0 16z" fill="#43a047" stroke="#1b5e20" stroke-width="2.5"/><path d="M-16 -6 H16 M-8 -16 L-4 -6 L0 16 M8 -16 L4 -6" stroke="#1b5e20" stroke-width="1.5" fill="none" opacity=".7"/><path d="M-6 -13 L-2 -8" stroke="#fff" stroke-width="3" stroke-linecap="round"/></g><g transform="translate(300 46) scale(0.9)"><path d="M-16 -6 L-8 -16 L8 -16 L16 -6 L0 16z" fill="#8e24aa" stroke="#4a148c" stroke-width="2.5"/><path d="M-16 -6 H16 M-8 -16 L-4 -6 L0 16 M8 -16 L4 -6" stroke="#4a148c" stroke-width="1.5" fill="none" opacity=".7"/><path d="M-6 -13 L-2 -8" stroke="#fff" stroke-width="3" stroke-linecap="round"/></g><g transform="translate(176 66) scale(0.7)"><path d="M-16 -6 L-8 -16 L8 -16 L16 -6 L0 16z" fill="#e53935" stroke="#7f0000" stroke-width="2.5"/><path d="M-16 -6 H16 M-8 -16 L-4 -6 L0 16 M8 -16 L4 -6" stroke="#7f0000" stroke-width="1.5" fill="none" opacity=".7"/><path d="M-6 -13 L-2 -8" stroke="#fff" stroke-width="3" stroke-linecap="round"/></g></svg>
+  <div id="plateau"></div>
+  <div id="bulle"></div>
+  <button id="indice" title="Indice">💡</button>
+  <div id="bas"><div id="verdict"></div></div>
+</div>
+<script>
+"use strict";
+// ---------- les butins : [numérateur, dénominateur, quantité, « ce qu'on partage », unité d'une part, objet dessiné, source] ----------
+const L = {
+  distribue: [
+    [1, 3, 12, "12 œufs", "œufs", "🥚", "fichier ressources P2 p. 22 (enveloppe 1) ; mémo NUM 11"], [1, 4, 20, "20 billes", "billes", "🔵", "séance 📅 6 (Je vérifie)"],
+    [1, 2, 14, "14 pièces d'or", "pièces", "🟡", "de moi"], [1, 3, 15, "15 perles", "perles", "⚪", "de moi"], [1, 5, 20, "20 bonbons", "bonbons", "🍬", "de moi"],
+    [1, 6, 18, "18 pommes", "pommes", "🍎", "de moi"], [1, 4, 24, "24 coquillages", "coquillages", "🐚", "de moi"], [1, 2, 16, "16 rubis", "rubis", "🔴", "de moi"],
+    [1, 3, 21, "21 billes", "billes", "🔵", "de moi"], [1, 5, 25, "25 pièces d'or", "pièces", "🟡", "de moi"]
+  ],
+  table: [
+    [1, 10, 500, "500 g de farine", "g", "", "fichier ressources P2 p. 22 (enveloppe 2) ; mémo NUM 11"], [1, 5, 60, "60 kg de sable", "kg", "", "fichier ressources P2 p. 23 (enveloppe 3)"],
+    [1, 4, 10, "10 m de corde", "m", "", "fichier ressources P2 p. 23 (enveloppe 4) ; Eduscol p. 9"], [1, 5, 40, "40 €", "€", "", "séance 📅 6 (Je vérifie)"],
+    [1, 10, 30, "30 cm de ruban", "cm", "", "séance 📅 6 (Je vérifie, CM1)"], [1, 6, 48, "48 €", "€", "", "de moi"], [1, 8, 64, "64 billes", "billes", "", "de moi"],
+    [1, 7, 56, "56 km de voyage", "km", "", "de moi"], [1, 9, 90, "90 L d'eau", "L", "", "de moi"], [1, 3, 300, "300 g de sucre", "g", "", "de moi"], [1, 4, 100, "100 pièces d'or", "pièces", "", "de moi"]
+  ],
+  parts: [
+    [2, 3, 12, "12 pommes", "pommes", "", "fichier ressources P2 p. 24 (enveloppe 1, CM2)"], [3, 10, 500, "500 g de sucre", "g", "", "fichier ressources P2 p. 24 (enveloppe 2, CM2) ; mémo NUM 11"],
+    [4, 5, 60, "60 kg de café", "kg", "", "fichier ressources P2 p. 25 (enveloppe 3, CM2)"], [3, 4, 10, "10 m de corde", "m", "", "fichier ressources P2 p. 25 (enveloppe 4, CM2)"],
+    [3, 4, 20, "20 billes", "billes", "", "séance 📅 6 (Je vérifie, CM2)"], [2, 5, 60, "60 kg de sable", "kg", "", "Eduscol fractions 2025, p. 11-12"],
+    [2, 3, 30, "30 €", "€", "", "de moi"], [5, 6, 36, "36 perles", "perles", "", "de moi"], [3, 8, 40, "40 pièces d'or", "pièces", "", "de moi"], [3, 5, 25, "25 bonbons", "bonbons", "", "de moi"]
+  ],
+  // Défi : on connaît une part, on cherche tout le butin
+  defi: [
+    [1, 4, 88, "le nombre de Théa", "", "", "exercices différenciés P2 CM2 p. 11 (« Le quart du nombre choisi par Théa est 22 »)"],
+    [1, 3, 24, "le trésor", "pièces", "", "de moi"], [1, 5, 35, "les perles du coffre", "perles", "", "de moi"], [1, 2, 18, "les rubis", "rubis", "", "de moi"],
+    [1, 6, 42, "la réserve d'eau", "L", "", "de moi"], [1, 10, 200, "la farine", "g", "", "de moi"], [1, 4, 36, "les billes", "billes", "", "de moi"],
+    [1, 8, 80, "le voyage", "km", "", "de moi"], [1, 3, 27, "les pommes", "pommes", "", "de moi"], [1, 5, 50, "la corde", "m", "", "de moi"]
+  ]
+};
+const DEN = { 2: ["demi", "demis"], 3: ["tiers", "tiers"], 4: ["quart", "quarts"], 5: ["cinquième", "cinquièmes"], 6: ["sixième", "sixièmes"], 7: ["septième", "septièmes"], 8: ["huitième", "huitièmes"], 9: ["neuvième", "neuvièmes"], 10: ["dixième", "dixièmes"] };
+const NUMW = ["", "un", "deux", "trois", "quatre", "cinq", "six"];
+const nomFraction = (a, b, maj) => { const t = (a === 1 && b === 2 ? "la moitié" : (a === 1 ? (b === 3 ? "un " : "un ") : NUMW[a] + " ") + DEN[b][a > 1 ? 1 : 0]); return maj ? t.charAt(0).toUpperCase() + t.slice(1) : t; };
+const nb = x => String(x).replace(".", ",");
+const SAC = '<svg viewBox="0 0 150 180"><path d="M28 60h94l18 110H10z" fill="#c8a165" stroke="#6d4c41" stroke-width="5"/><path d="M45 60c0-40 60-40 60 0" stroke="#6d4c41" stroke-width="7" fill="none"/><path d="M28 60h94" stroke="#6d4c41" stroke-width="9"/></svg>';
+
+const etat = { o: "distribue", i: 0, score: 0, sacs: [], cale: 0, coffre: [], part: null, phase: "", fini: false };
+window.PARTAGE = etat;
+const $ = id => document.getElementById(id);
+const mem = { lire(k) { try { return +localStorage.getItem(k) || 0; } catch (e) { return 0; } }, ecrire(k, v) { try { localStorage.setItem(k, v); } catch (e) {} } };
+const cleRecord = () => "partage-record-" + etat.o;
+function afficheScore() { $("score").textContent = etat.score; $("record").textContent = mem.lire(cleRecord()); }
+function marque() { etat.score++; if (etat.score > mem.lire(cleRecord())) mem.ecrire(cleRecord(), etat.score); afficheScore(); }
+function verdict(t, cls) { const v = $("verdict"); v.textContent = t; v.className = cls || ""; }
+function consigne(h) { $("consigne").innerHTML = "<span>" + h + "</span>"; }
+function bulle(t) { const b = $("bulle"); b.textContent = t; b.style.display = "block"; clearTimeout(bulle.t); bulle.t = setTimeout(() => b.style.display = "none", 8000); }
+let minuteur = 0; const plusTard = (f, ms) => { clearTimeout(minuteur); minuteur = setTimeout(f, ms || 2400); };
+const ex = () => L[etat.o][etat.i % L[etat.o].length];
+const unePart = () => { const [, b, q] = ex(); return Math.round(q / b * 100) / 100; };
+
+// ---------- un butin ----------
+function nouvel() {
+  clearTimeout(minuteur); verdict(""); etat.fini = false; etat.sacs = []; etat.coffre = []; etat.part = null; etat.phase = "sacs";
+  if (etat.o !== "distribue") etat.phase = "part";   // les sacs et les étiquettes ensemble ; le nombre de sacs est vérifié quand on pose l'étiquette
+  const [a, b, q, quoi, u, obj] = ex();
+  etat.cale = etat.o === "distribue" ? q : 0;
+  $("carte").innerHTML = etat.o === "defi" ? nomFraction(a, b, true) + " de " + quoi + ", c'est " + nb(unePart()) + (u ? " " + u : "") + ".<small>Combien en tout ?</small>"
+    : nomFraction(a, b, true) + " de " + quoi + "<small>" + a + "/" + b + " de " + quoi + "</small>";
+  $("coffre").style.display = etat.o === "parts" ? "flex" : "none";
+  $("couvercle").style.display = $("joyaux").style.display = etat.o === "parts" ? "block" : "none";
+  consigne(etat.o === "distribue" ? nomFraction(a, b, true) + " : pose autant de <span class=\"q\">sacs</span> que de parts égales"
+    : etat.o === "defi" ? "Pose les <span class=\"q\">sacs</span>, puis l'étiquette de tout le butin dans la cale" : "Pose les <span class=\"q\">sacs</span>, puis l'étiquette d'un sac");
+  dessiner();
+}
+function tuiles(bonne) {   // l'étiquette juste et des erreurs fréquentes (le dénominateur pris pour la part, la quantité moins ou plus…)
+  const [, b, q] = ex(), c = [bonne, bonne * 2, bonne + b, Math.abs(q - b), q, bonne + 1].map(x => Math.round(x * 100) / 100).filter((x, k, T) => x > 0 && T.indexOf(x) === k);
+  const t = [c[0]].concat(c.slice(1).sort(() => Math.random() - .5).slice(0, 3));
+  return t.sort((x, y) => x - y);
+}
+const pileOuverte = () => etat.phase === "sacs" || (etat.o === "distribue" && etat.phase === "distribuer") || (etat.o !== "distribue" && etat.phase === "part" && etat.part == null);
+function dessiner() {
+  const [a, b, q, quoi, u, obj] = ex();
+  // la cale
+  if (etat.o === "distribue") $("cale").innerHTML = "<h3>La cale</h3>" + Array.from({ length: etat.cale }, (_, k) => '<div class="objet" data-k="obj">' + obj + '</div>').join("");
+  else $("cale").innerHTML = "<h3>La cale</h3><div class=\"gros\">" + (etat.o === "defi" ? (etat.fini ? nb(q) + (u ? " " + u : "") : "?") : (etat.part != null ? "" : quoi)) + "</div>";
+  // les sacs du pont et du coffre
+  const sacHtml = (s, k, ou) => '<div class="sac" data-s="' + k + '" data-ou="' + ou + '">' + SAC + (s.lab != null ? '<div class="etiquette">' + nb(s.lab) + (u ? " " + u : "") + '</div>' : '<div class="dedans">' + Array.from({ length: s.n }, () => '<span class="objet" data-de="' + k + '">' + obj + '</span>').join("") + '</div>') + '</div>';
+  $("pont").innerHTML = etat.sacs.map((s, k) => etat.coffre.includes(k) ? "" : sacHtml(s, k, "pont")).join("");
+  $("coffre").innerHTML = "<h3>Le coffre du capitaine</h3>" + etat.coffre.map(k => sacHtml(etat.sacs[k], k, "coffre")).join("");
+  // le plateau : la pile de sacs, puis les étiquettes
+  let p = "";
+  if (pileOuverte()) p += '<div class="outil pile" data-k="sac">' + SAC.replace('viewBox="0 0 150 180"', 'viewBox="0 0 150 180" width="70" height="80"') + '<span style="font-size:24px">Un sac</span></div>';
+  if (etat.phase === "part" && etat.o !== "distribue" && etat.part == null) p += tuiles(etat.o === "defi" ? q : unePart()).map(v => '<div class="outil" data-k="part:' + v + '">' + nb(v) + '</div>').join("");
+  if (etat.phase === "compte") p += tuiles(unePart()).map(v => '<div class="outil" data-k="part:' + v + '">' + nb(v) + '</div>').join("");
+  if (etat.phase === "total") p += tuiles(a * unePart()).map(v => '<div class="outil" data-k="total:' + v + '">' + nb(v) + '</div>').join("");
+  $("plateau").innerHTML = etat.fini ? "" : p;   // le butin partagé : plus d'étiquettes
+}
+// ---------- les gestes ----------
+let tient = null, choix = null;
+const source = el => el && el.closest && el.closest(".outil, .objet, .sac");   // .objet avant .sac : un objet dans un sac se prend seul
+function choisir(e) { if (choix) choix.classList.remove("choisi"); choix = e; if (e) e.classList.add("choisi"); }
+document.addEventListener("pointerdown", ev => { const s = source(ev.target); if (!s || etat.fini) return; ev.preventDefault(); tient = { el: s, x: ev.clientX, y: ev.clientY, vole: null, sous: ev.target }; });
+document.addEventListener("pointermove", ev => {
+  if (!tient) return;
+  if (!tient.vole && Math.hypot(ev.clientX - tient.x, ev.clientY - tient.y) > 12) {
+    const r = tient.el.getBoundingClientRect(), v = tient.el.cloneNode(true); v.classList.add("vole"); v.classList.remove("choisi");
+    v.style.width = tient.el.offsetWidth + "px"; v.style.height = tient.el.offsetHeight + "px"; v.style.transform = "scale(" + (r.width / tient.el.offsetWidth) + ")"; document.body.appendChild(v); tient.vole = v; tient.dx = ev.clientX - r.left; tient.dy = ev.clientY - r.top; choisir(null);
+  }
+  if (tient.vole) { tient.vole.style.left = (ev.clientX - tient.dx) + "px"; tient.vole.style.top = (ev.clientY - tient.dy) + "px"; }
+});
+document.addEventListener("pointerup", ev => {
+  const t = tient; tient = null;
+  if (t && t.vole) { t.vole.remove(); return deposer(t.el, document.elementFromPoint(ev.clientX, ev.clientY)); }
+  if (t) return toucher(t.el, t.sous);
+  if (choix) { const c = choix; choisir(null); deposer(c, ev.target); }
+});
+// un toucher : sur la pile, un sac de plus ; sur un sac du pont (rien de choisi) : distribuer un objet, ou reprendre un sac vide, ou le mettre au coffre
+function toucher(el, sous) {
+  if (choix && choix !== el) { const c = choix; choisir(null); return deposer(c, el); }
+  // un objet dans un sac : tant que la cale n'est pas vide, le toucher vaut un toucher sur le sac (on distribue) ; ensuite on le choisit pour le déplacer
+  if (el.classList.contains("objet") && el.dataset.de != null && etat.cale > 0) el = el.closest(".sac");
+  if (el.dataset.k === "sac" && pileOuverte()) return ajouteSac();
+  if (el.classList.contains("sac") && !choix) {
+    const k = +el.dataset.s, s = etat.sacs[k];
+    if (etat.o !== "distribue" && etat.phase === "part" && etat.part == null) return enleveSac(k);
+    if (etat.o === "distribue" && (etat.phase === "sacs" || etat.phase === "distribuer")) {
+      return distribuer(k);
+    }
+    if (etat.o === "parts" && etat.phase === "prendre") return auCoffre(k, el.dataset.ou);
+  }
+  choisir(choix === el ? null : el);
+}
+function deposer(src, cible) {
+  if (!cible || etat.fini) return;
+  const k = src.dataset.k || "", sac = cible.closest && cible.closest(".sac");
+  if (k === "sac") { if (cible.closest("#pont") && pileOuverte()) ajouteSac(); return; }
+  if (src.classList.contains("objet") && src.dataset.de != null) {   // un objet repris d'un sac : vers la cale ou vers un autre sac
+    const de = +src.dataset.de; if (!etat.sacs[de] || etat.sacs[de].n === 0) return;
+    if (cible.closest("#cale")) { etat.sacs[de].n--; etat.cale++; etat.phase = "distribuer"; verdict(""); dessiner(); return; }
+    if (sac && +sac.dataset.s !== de) { etat.sacs[de].n--; etat.sacs[+sac.dataset.s].n++; verdict(""); dessiner(); return verifFin(); }
+    return;
+  }
+  if (src.classList.contains("objet")) { if (sac) distribuer(+sac.dataset.s); return; }
+  if (src.classList.contains("sac") && etat.o === "parts" && etat.phase === "prendre") { if (cible.closest("#coffre") || cible.closest("#pont")) auCoffre(+src.dataset.s, cible.closest("#coffre") ? "pont" : "coffre"); return; }
+  // un sac glissé sur la pile (en bas) est repris, s'il est vide
+  if (src.classList.contains("sac") && pileOuverte() && cible.closest("#plateau") && etat.sacs[+src.dataset.s].n === 0) return enleveSac(+src.dataset.s);
+  if (k.startsWith("part:")) { if (sac || cible.closest("#pont") || cible.closest("#cale")) poserPart(+k.slice(5), src); return; }
+  if (k.startsWith("total:")) { if (cible.closest("#coffre") || cible.closest("#cale") || sac) poserTotal(+k.slice(6), src); return; }
+}
+// ---------- les actions ----------
+function ajouteSac() { if (etat.sacs.length >= 10) return verdict("🤪 Pas plus de 10 sacs sur le pont.", "ko"); etat.sacs.push({ n: 0, lab: etat.o === "defi" ? unePart() : null }); verdict(""); afterSacs(); }
+function enleveSac(k) { etat.sacs.splice(k, 1); verdict(""); afterSacs(); }
+function afterSacs() {
+  const [a, b] = ex();
+  if (etat.o === "distribue") consigne(etat.sacs.length ? "Partage le butin : toutes les parts <span class=\"q\">pareilles</span>" : nomFraction(a, b, true) + " : pose autant de <span class=\"q\">sacs</span> que de parts égales");
+  dessiner();
+}
+function verifSacs() {   // le nombre de sacs = le dénominateur
+  const [a, b] = ex();
+  if (etat.sacs.length !== b) { verdict("🤪 " + nomFraction(1, b, true) + " : il faut " + b + " parts égales, donc " + b + " sacs.", "ko"); return false; }
+  return true;
+}
+function distribuer(k) {
+  if (etat.cale === 0) return;
+  if (!verifSacs()) return;
+  etat.phase = "distribuer"; etat.sacs[k].n++; etat.cale--; verdict(""); dessiner(); verifFin();
+}
+function verifFin() {
+  if (etat.cale === 0 && etat.o === "distribue" && etat.phase !== "compte") {
+    const n0 = etat.sacs[0].n;
+    if (etat.sacs.some(s => s.n !== n0)) return verdict("🤪 Les parts ne sont pas pareilles : glisse un objet d'un sac vers un autre.", "ko");
+    etat.phase = "compte"; consigne("Combien dans <span class=\"q\">un sac</span> ? Pose l'étiquette"); dessiner();
+  }
+}
+function poserPart(v, el) {
+  const [a, b, q, quoi, u] = ex();
+  if (etat.o === "defi") return poserTotal(v, el);
+  if (!verifSacs()) return;
+  const bonne = unePart();
+  if (Math.abs(v - bonne) > 1e-9) { el.classList.add("ko"); setTimeout(() => el.classList.remove("ko"), 900); return verdict("🤪 " + b + " sacs de " + nb(v) + ", ça ne fait pas " + nb(q) + " : cherche dans la table de " + b + ".", "ko"); }
+  etat.part = bonne; etat.sacs.forEach(s => { s.lab = bonne; s.n = 0; }); verdict("");
+  if (etat.o === "parts") { etat.phase = "prendre"; consigne(nomFraction(a, b, true) + " : mets <span class=\"q\">" + a + " sacs</span> dans le coffre"); dessiner(); return; }
+  return fini(nomFraction(a, b, true) + " de " + quoi + ", c'est " + nb(bonne) + " " + u + " : je partage en " + b + " parts égales ; " + nb(q) + " = " + b + " × " + nb(bonne) + ".");
+}
+function auCoffre(k, ou) {
+  const [a] = ex();
+  if (ou === "coffre") etat.coffre = etat.coffre.filter(x => x !== k); else if (!etat.coffre.includes(k)) etat.coffre.push(k);
+  verdict(""); dessiner();
+  if (etat.coffre.length === a) { etat.phase = "total"; consigne("Combien dans le <span class=\"q\">coffre</span> ? Pose l'étiquette"); dessiner(); }
+  else if (etat.coffre.length > a) verdict("🤪 Le numérateur dit combien de parts on prend : " + a + " sacs.", "ko");
+}
+function poserTotal(v, el) {
+  const [a, b, q, quoi, u] = ex(), bon = etat.o === "defi" ? q : Math.round(a * unePart() * 100) / 100;
+  if (etat.o === "defi" && !verifSacs()) return;
+  if (Math.abs(v - bon) > 1e-9) { el.classList.add("ko"); setTimeout(() => el.classList.remove("ko"), 900); return verdict(etat.o === "defi" ? "🤪 " + b + " parts de " + nb(unePart()) + " : combien en tout ?" : "🤪 " + a + " sacs de " + nb(unePart()) + " : combien en tout ?", "ko"); }
+  if (etat.o === "defi") return fini(nomFraction(1, b, true) + " de " + quoi + ", c'est " + nb(unePart()) + (u ? " " + u : "") + " : tout, c'est " + b + " parts ; " + b + " × " + nb(unePart()) + " = " + nb(q) + ".");
+  return fini(nomFraction(a, b, true) + " de " + quoi + ", c'est " + nb(bon) + " " + u + " : une part = " + nb(unePart()) + " ; " + a + " × " + nb(unePart()) + " = " + nb(bon) + ".");
+}
+function compter(v, el) {   // Je distribue : combien dans un sac ?
+  const [a, b, q, quoi, u] = ex(), bonne = unePart();
+  if (v !== bonne) { el.classList.add("ko"); setTimeout(() => el.classList.remove("ko"), 900); return verdict("🤪 Compte les objets d'un sac.", "ko"); }
+  fini(nomFraction(a, b, true) + " de " + quoi + ", c'est " + bonne + " " + u + " : je partage en " + b + " parts égales ; " + q + " = " + b + " × " + bonne + ".");
+}
+function fini(phrase) { etat.fini = true; marque(); verdict("✅ " + phrase, "ok"); consigne("Le butin est partagé !"); dessiner(); plusTard(() => { etat.i++; nouvel(); }, 3200); }
+// Je distribue : l'étiquette « combien dans un sac » passe par poserPart sauf pour ce niveau
+const poserPart0 = poserPart; poserPart = function (v, el) { if (etat.o === "distribue") return compter(v, el); return poserPart0(v, el); };
+// l'indice donne la méthode de la classe, jamais le nombre
+$("indice").onclick = () => {
+  const [a, b] = ex();
+  if (etat.phase === "sacs") bulle("Le dénominateur dit en combien de parts égales je partage : " + nomFraction(1, b) + ", c'est " + b + " parts.");
+  else if (etat.o === "distribue") bulle("Je donne un objet à chaque sac, chacun son tour, jusqu'à ce que la cale soit vide. Puis je compte un sac.");
+  else if (etat.o === "defi") bulle("Une part, c'est " + nomFraction(1, b) + " : tout le butin, c'est " + b + " parts pareilles. Je multiplie.");
+  else if (etat.phase === "part") bulle("Je cherche dans la table de " + b + " : " + b + " fois combien font la quantité ?");
+  else bulle("Le numérateur dit combien de parts je prends : " + a + " parts, c'est " + a + " fois une part.");
+};
+// ---------- démarrer ----------
+function ouvre(o) {
+  etat.o = o; etat.i = 0; etat.score = 0; choisir(null);
+  document.querySelectorAll(".onglets button").forEach(b => b.classList.toggle("on", b.dataset.o === o));
+  history.replaceState(null, "", "#" + o);
+  afficheScore(); $("bulle").style.display = "none"; nouvel();
+}
+document.querySelectorAll(".onglets button").forEach(b => b.onclick = () => ouvre(b.dataset.o));
+function ajuste() {
+  const e = Math.min(innerWidth / 1920, innerHeight / 1080), s = $("scene");
+  s.style.transform = "scale(" + e + ")"; s.style.left = ((innerWidth - 1920 * e) / 2) + "px"; s.style.top = ((innerHeight - 1080 * e) / 2) + "px"; s.dataset.ech = e;
+}
+addEventListener("resize", ajuste); ajuste();
+function depuisLien() { const m = location.hash.slice(1); ouvre(L[m] ? m : "distribue"); }
+addEventListener("hashchange", depuisLien);
+depuisLien();
+window.PARTAGE_API = { L, ex, unePart };
+</script>
+</body>
+</html>

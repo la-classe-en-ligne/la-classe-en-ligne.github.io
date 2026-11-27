@@ -1,0 +1,1101 @@
+<title>Rubis ou Fantôme ?!</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700&family=Quicksand:wght@500;600;700&display=swap">
+<style>
+  :root{
+    --bg-deep:#0a1f2e;
+    --bg-panel:#123246;
+    --panel-border:#2d6079;
+    --ink:#eaf6ff;
+    --ink-soft:#a9c7d6;
+    --accent:#4fd1c5;
+    --accent-soft:#1c3f52;
+    --moon:#ffe9a8;
+    --good:#5be08a;
+    --good-bg:#1e3a2c;
+    --good-border:#3f8a5f;
+    --bad:#ff77bb;
+    --bad-bg:#3d2145;
+    --bad-border:#9a4d84;
+    --tile-bg:#173b52;
+    --tile-border:#2d6079;
+  }
+
+  *{box-sizing:border-box;}
+  body{
+    background:
+      radial-gradient(circle at 88% 6%, rgba(255,233,168,0.28), transparent 42%),
+      radial-gradient(1.6px 1.6px at 12% 22%, rgba(255,255,255,0.7), transparent),
+      radial-gradient(1.2px 1.2px at 40% 12%, rgba(255,255,255,0.5), transparent),
+      radial-gradient(1.6px 1.6px at 70% 34%, rgba(255,255,255,0.6), transparent),
+      radial-gradient(1.2px 1.2px at 92% 60%, rgba(255,255,255,0.45), transparent),
+      radial-gradient(1.6px 1.6px at 25% 70%, rgba(255,255,255,0.55), transparent),
+      radial-gradient(1.2px 1.2px at 55% 85%, rgba(255,255,255,0.4), transparent),
+      var(--bg-deep);
+    background-repeat: repeat;
+    background-size: auto, 220px 200px, 220px 200px, 220px 200px, 220px 200px, 220px 200px, 220px 200px, auto;
+    color:var(--ink);
+    font-family:"Quicksand", ui-sans-serif, system-ui, sans-serif;
+    padding-inline:16px;
+    padding-block:22px;
+    display:flex;
+    justify-content:center;
+  }
+
+  .page{
+    position:relative;
+    width:100%;
+    max-width:900px;
+    background:var(--bg-panel);
+    border:2px solid var(--panel-border);
+    border-radius:20px;
+    box-shadow: 0 0 0 4px rgba(183,156,240,0.08), 0 14px 40px rgba(0,0,0,0.45);
+    padding: 26px 22px 30px 22px;
+  }
+
+  h1{
+    font-family:"Baloo 2", "Comic Sans MS", cursive;
+    font-weight:700;
+    font-size:clamp(1.9rem, 5.5vw, 2.6rem);
+    margin:0 0 8px 0;
+    line-height:1.1;
+    text-wrap:balance;
+    color:var(--ink);
+    text-shadow: 0 2px 0 rgba(0,0,0,0.3);
+  }
+
+  .instruction{
+    font-size:1.05rem;
+    color:var(--ink-soft);
+    margin:0 0 6px 0;
+    text-wrap:balance;
+  }
+  .instruction strong{ color:var(--ink); }
+
+  .hint{
+    font-size:0.9rem;
+    color:var(--ink-soft);
+    margin:0 0 18px 0;
+  }
+
+  .scoreboard{
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+    margin-bottom:18px;
+  }
+  .badge{
+    font-weight:700;
+    font-size:0.92rem;
+    background:var(--tile-bg);
+    border:1.5px solid var(--panel-border);
+    border-radius:10px;
+    padding:8px 14px;
+    display:flex;
+    align-items:center;
+    gap:8px;
+    font-variant-numeric: tabular-nums;
+  }
+  .badge .dot{ width:10px; height:10px; border-radius:50%; flex:none; }
+  .badge.found .dot{ background:var(--good); box-shadow:0 0 6px var(--good); }
+
+  .vies{ display:flex; gap:5px; }
+  .vie{
+    width:26px; height:26px;
+    border-radius:7px;
+    display:flex; align-items:center; justify-content:center;
+    font-size:0.95rem;
+    background:var(--accent-soft);
+    border:1.5px solid var(--panel-border);
+    opacity:0.4;
+    filter:grayscale(1);
+    flex:none;
+    transition: opacity 0.2s ease, filter 0.2s ease, background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+  }
+  .vie.perdue{
+    opacity:1;
+    filter:none;
+    background:var(--bad-bg);
+    border-color:var(--bad-border);
+    transform:scale(1.08);
+  }
+
+  .progress-track{
+    height:10px;
+    border-radius:999px;
+    background:var(--accent-soft);
+    overflow:hidden;
+    margin-bottom:22px;
+    border:1px solid var(--panel-border);
+  }
+  .progress-fill{
+    height:100%;
+    width:0%;
+    background:linear-gradient(90deg, var(--accent), var(--good));
+    border-radius:999px;
+    transition: width 0.35s ease;
+  }
+
+  .grid{
+    display:grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap:12px;
+    margin-bottom:22px;
+  }
+
+  .tile{
+    position:relative;
+    font-family:"Quicksand", sans-serif;
+    font-weight:600;
+    font-size:0.98rem;
+    color:var(--ink);
+    background:var(--tile-bg);
+    border:2px solid var(--tile-border);
+    border-radius:14px;
+    padding:14px 8px 12px;
+    cursor:pointer;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:8px;
+    box-shadow: 0 3px 0 rgba(0,0,0,0.25);
+    transition: transform 0.12s ease, background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .tile:hover:not(:disabled){
+    transform: translateY(-3px);
+    border-color:var(--accent);
+  }
+  .tile:focus-visible{
+    outline:3px solid var(--accent);
+    outline-offset:2px;
+  }
+  .tile:active:not(:disabled){ transform: translateY(0) scale(0.97); }
+
+  /* Coffre au trésor par défaut → se transforme en rubis (bonne conjugaison, case verte)
+     ou en fantôme pirate (mauvaise conjugaison, case rose, temporaire). */
+  .chest{
+    width:36px;
+    height:28px;
+    background: linear-gradient(180deg, #b9843f 0%, #8a5a2a 100%);
+    border: 2px solid #5c3a18;
+    border-radius: 5px;
+    position:relative;
+    box-shadow: inset 0 -4px 6px rgba(0,0,0,0.3);
+    flex:none;
+    margin-top:8px;
+    transition: transform 0.15s ease, filter 0.15s ease, background 0.15s ease, border-radius 0.15s ease;
+  }
+  .chest::before{
+    content:"";
+    position:absolute;
+    top:-9px; left:-2px; right:-2px;
+    height:11px;
+    background: linear-gradient(180deg, #d9a35a, #b9843f);
+    border: 2px solid #5c3a18;
+    border-radius: 5px 5px 0 0;
+  }
+  .chest::after{
+    content:"";
+    position:absolute;
+    top:6px; left:50%; transform:translateX(-50%);
+    width:6px; height:6px;
+    background:#ffd43b;
+    border-radius:50%;
+    box-shadow: inset 0 0 0 1px #a9711f;
+  }
+
+  /* Bonne réponse : le coffre devient un rubis étincelant (facette claire + léger pouls lumineux). */
+  .tile.found .chest{
+    width:28px; height:28px;
+    margin-top:2px;
+    background: linear-gradient(135deg, #ff9ec4 0%, #e91e63 30%, #8f0f3e 55%, #e91e63 80%, #ff9ec4 100%);
+    border: none;
+    border-radius: 4px;
+    clip-path: polygon(20% 0%, 80% 0%, 100% 38%, 50% 100%, 0% 38%);
+    box-shadow: 0 0 10px rgba(255,60,120,.7);
+    transform: none;
+    animation: rubyPulseSmall 2.2s ease-in-out infinite;
+  }
+  .tile.found .chest::before{
+    content:"";
+    position:absolute;
+    top:8%; left:38%; width:14%; height:42%;
+    background: rgba(255,255,255,0.65);
+    clip-path: polygon(50% 0%, 100% 100%, 0% 100%);
+  }
+  .tile.found .chest::after{ content:none; }
+  @keyframes rubyPulseSmall{
+    0%, 100%{ filter:brightness(1) saturate(1); }
+    50%{ filter:brightness(1.3) saturate(1.35); }
+  }
+
+  /* Mauvaise réponse : le coffre se transforme pour de bon en fantôme pirate — .wrong ne
+     déclenche que la secousse (0.4s) puis est retiré, .trapped reste posé pour de bon. */
+  .tile.wrong .chest, .tile.trapped .chest{
+    width:34px; height:32px;
+    margin-top:0;
+    background: radial-gradient(circle at 35% 30%, #f4f1ff, #cfc9e8 75%);
+    border:none;
+    border-radius: 50% 50% 42% 42%;
+    box-shadow: inset 0 -4px 6px rgba(60,40,90,0.25), 0 0 10px rgba(120,100,200,.55);
+    transform: scale(1.1);
+  }
+  .tile.wrong .chest::before, .tile.trapped .chest::before{
+    content:"";
+    position:absolute;
+    top:9px; left:5px; width:13px; height:9px;
+    background:#241a3d;
+    border-radius:3px;
+    border:none;
+  }
+  .tile.wrong .chest::after, .tile.trapped .chest::after{
+    content:"";
+    position:absolute;
+    top:10px; left:auto; right:8px; transform:none;
+    width:6px; height:6px;
+    background:#241a3d;
+    border-radius:50%;
+    box-shadow:none;
+  }
+  .tile.trapped{
+    background:var(--bad-bg);
+    border-color:var(--bad-border);
+    color:var(--bad);
+    cursor:default;
+  }
+
+  .badge-check{
+    position:absolute;
+    top:6px; right:8px;
+    font-size:0.85rem;
+    color:var(--good);
+    opacity:0;
+    transition: opacity 0.15s ease;
+  }
+  .tile.found .badge-check{ opacity:1; }
+
+  .tile.found{
+    background:var(--good-bg);
+    border-color:var(--good-border);
+    color:var(--good);
+    cursor:default;
+    box-shadow:none;
+  }
+  .tile.wrong{
+    background:var(--bad-bg);
+    border-color:var(--bad-border);
+    color:var(--bad);
+    animation: shake 0.4s ease;
+  }
+  @keyframes shake{
+    10%,90%{ transform: translateX(-4px) rotate(-1.5deg); }
+    30%,70%{ transform: translateX(4px) rotate(1.5deg); }
+    50%{ transform: translateX(-5px); }
+  }
+  @media (prefers-reduced-motion: reduce){
+    .tile{ transition:none; }
+    .tile.wrong{ animation:none; }
+  }
+
+  .feedback{
+    min-height:1.4em;
+    font-size:0.95rem;
+    font-weight:600;
+    margin-bottom:14px;
+  }
+  .feedback.good{ color:var(--good); }
+  .feedback.bad{ color:var(--bad); }
+
+  .legend{
+    display:flex;
+    flex-wrap:wrap;
+    gap:16px;
+    font-size:0.85rem;
+    color:var(--ink-soft);
+    border-top:1px dashed var(--panel-border);
+    padding-top:14px;
+    margin-bottom:14px;
+  }
+  .legend span{ display:inline-flex; align-items:center; gap:6px; }
+  .legend .swatch{ width:14px; height:14px; border-radius:4px; display:inline-block; }
+  .legend .swatch.good{ background:var(--good-bg); border:1.5px solid var(--good-border); }
+  .legend .swatch.bad{ background:var(--bad-bg); border:1.5px solid var(--bad-border); }
+
+  .reminder{
+    font-family:"Baloo 2", "Comic Sans MS", cursive;
+    font-weight:600;
+    font-size:1.1rem;
+    line-height:1.35;
+    color:#241a3d;
+    background:var(--moon);
+    border:2px solid #d9b45a;
+    border-radius:14px;
+    padding:14px 18px;
+    margin-bottom:22px;
+    box-shadow: 0 3px 0 rgba(0,0,0,0.25);
+  }
+  .reminder-intro{ margin:0 0 10px 0; }
+  .reminder-grid{
+    display:grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap:10px;
+  }
+  .reminder-case{
+    display:flex;
+    align-items:flex-start;
+    gap:8px;
+    background:var(--bad-bg);
+    border:1.5px solid var(--bad-border);
+    color:var(--bad);
+    border-radius:10px;
+    padding:9px 11px;
+    font-size:0.92rem;
+    line-height:1.32;
+  }
+  .reminder-case strong{ color:#fff; }
+  .reminder-icone{ flex:none; font-size:1.1rem; line-height:1.2; }
+
+  .controls{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+  }
+  button.action{
+    font-family:"Baloo 2", sans-serif;
+    font-weight:600;
+    font-size:0.95rem;
+    color:#221a3d;
+    background:var(--moon);
+    border:none;
+    border-radius:10px;
+    padding:10px 18px;
+    cursor:pointer;
+    box-shadow: 0 3px 0 rgba(0,0,0,0.3);
+  }
+  button.action:hover{ filter:brightness(1.05); }
+  button.action:active{ transform:translateY(2px); box-shadow:none; }
+  button.action.ghost{
+    background:transparent;
+    color:var(--moon);
+    border:1.5px solid var(--moon);
+    box-shadow:none;
+  }
+
+  .record{ font-size:0.85rem; color:var(--ink-soft); margin-top:2px; }
+
+  /* Fin de partie (victoire ou 4 fantômes réveillés) : personnage énorme plein écran,
+     construit en unités vmin (indépendant de la taille des tuiles). */
+  .end-overlay{
+    position:fixed; inset:0; z-index:50;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    padding:24px;
+    text-align:center;
+  }
+  .end-overlay[hidden]{ display:none; }
+  .end-overlay.lose{ background:rgba(5,10,16,0.93); }
+  .end-overlay.win{ background:rgba(4,14,14,0.93); }
+
+  .big-chest{
+    width:50vmin; height:50vmin;
+    position:relative;
+    margin-bottom:26px;
+  }
+  .end-overlay.win .big-chest{
+    background: linear-gradient(135deg, #ff9ec4 0%, #e91e63 30%, #8f0f3e 55%, #e91e63 80%, #ff9ec4 100%);
+    clip-path: polygon(20% 0%, 80% 0%, 100% 38%, 50% 100%, 0% 38%);
+    box-shadow: 0 0 12vmin rgba(255,60,120,.75);
+    animation: rubyPulseBig 2s ease-in-out infinite;
+  }
+  .end-overlay.win .big-chest::before{
+    content:"";
+    position:absolute;
+    top:6%; left:38%; width:10%; height:44%;
+    background: rgba(255,255,255,0.7);
+    clip-path: polygon(50% 0%, 100% 100%, 0% 100%);
+    animation: rubyGlintSweep 2s ease-in-out infinite;
+  }
+  .end-overlay.win .big-chest::after{
+    content:"✦";
+    position:absolute;
+    top:-4%; right:6%;
+    font-size:7vmin;
+    color:#fff;
+    text-shadow:0 0 1.4vmin #fff, 0 0 3vmin #ff9ec4;
+    animation: rubyTwinkle 1.3s ease-in-out infinite;
+  }
+  .end-overlay.win .big-chest .sparkle2{
+    position:absolute;
+    bottom:6%; left:2%;
+    font-size:4vmin;
+    color:#fff;
+    text-shadow:0 0 1vmin #fff, 0 0 2vmin #ff9ec4;
+    animation: rubyTwinkle 1.3s ease-in-out infinite 0.5s;
+  }
+
+  .tresor-scene{ position:relative; width:56vmin; height:52vmin; margin-bottom:26px; }
+  .tresor-scene .big-chest{ position:absolute; left:50%; bottom:6vmin; transform:translateX(-50%); margin-bottom:0; width:38vmin; height:38vmin; z-index:3; }
+  .piece-or{
+    position:absolute;
+    width:6vmin; height:6vmin;
+    border-radius:50%;
+    background: radial-gradient(circle at 35% 30%, #fff8dd, #ffd35c 50%, #b8860b 90%);
+    border: 0.35vmin solid #8a6416;
+    box-shadow: 0 0.3vmin 0 rgba(0,0,0,0.3), 0 0 1.6vmin rgba(255,211,92,0.65);
+    animation: pieceScintille 2.4s ease-in-out infinite;
+  }
+  .piece-or::after{
+    content:"★";
+    position:absolute; inset:0;
+    display:flex; align-items:center; justify-content:center;
+    font-size:2.4vmin; color:#8a6416;
+  }
+  .piece-or.p1{ left:6%;  bottom:2%;  animation-delay:0s; }
+  .piece-or.p2{ left:16%; bottom:9%;  width:5vmin; height:5vmin; animation-delay:0.3s; }
+  .piece-or.p3{ left:78%; bottom:3%;  animation-delay:0.6s; }
+  .piece-or.p4{ left:68%; bottom:10%; width:4.6vmin; height:4.6vmin; animation-delay:0.9s; }
+  .piece-or.p5{ left:44%; bottom:0%;  width:5.4vmin; height:5.4vmin; animation-delay:0.45s; }
+  @keyframes pieceScintille{
+    0%, 100%{ filter:brightness(1); }
+    50%{ filter:brightness(1.4); }
+  }
+  .gemme-tresor{
+    position:absolute;
+    width:4.4vmin; height:4.4vmin;
+    clip-path: polygon(20% 0%, 80% 0%, 100% 38%, 50% 100%, 0% 38%);
+    box-shadow: 0 0 1.4vmin rgba(255,255,255,0.5);
+  }
+  .gemme-tresor.g1{ left:26%; bottom:6%; background: linear-gradient(135deg,#8be9fd,#2c8fae); }
+  .gemme-tresor.g2{ left:58%; bottom:1%; background: linear-gradient(135deg,#5be08a,#2f9e58); }
+  .gemme-tresor.g3{ left:88%; bottom:11%; width:3.6vmin; height:3.6vmin; background: linear-gradient(135deg,#c9a6ff,#8a5fd6); }
+  @keyframes rubyPulseBig{
+    0%, 100%{ filter:brightness(1) saturate(1); }
+    50%{ filter:brightness(1.3) saturate(1.35); }
+  }
+  @keyframes rubyGlintSweep{
+    0%, 100%{ opacity:0.25; }
+    50%{ opacity:0.95; }
+  }
+  @keyframes rubyTwinkle{
+    0%, 100%{ opacity:0.25; transform:scale(0.75) rotate(0deg); }
+    50%{ opacity:1; transform:scale(1.2) rotate(25deg); }
+  }
+  .end-overlay.lose .big-chest{
+    background: radial-gradient(circle at 35% 30%, #f4f1ff, #cfc9e8 75%);
+    border-radius: 50% 50% 42% 42%;
+    box-shadow: 0 0 12vmin rgba(120,100,200,.7);
+    animation: bigshake 0.5s ease infinite alternate;
+  }
+  .end-overlay.lose .big-chest::before{
+    content:"";
+    position:absolute;
+    top:26%; left:14%; width:34%; height:22%;
+    background:#241a3d;
+    border-radius:8%;
+  }
+  .end-overlay.lose .big-chest::after{
+    content:"";
+    position:absolute;
+    top:29%; right:18%;
+    width:15%; height:15%;
+    background:#241a3d;
+    border-radius:50%;
+  }
+  .big-chest .mouth{
+    position:absolute;
+    bottom:12%; left:24%; width:52%; height:18%;
+    background:#241a3d;
+    border-radius:2vmin;
+    overflow:hidden;
+  }
+  .big-chest .mouth::before, .big-chest .mouth::after{
+    content:"";
+    position:absolute;
+    left:0; right:0;
+    height:58%;
+    background:#fff;
+  }
+  .big-chest .mouth::before{
+    top:0;
+    clip-path: polygon(0% 0%,8.33% 100%,16.66% 0%,25% 100%,33.33% 0%,41.66% 100%,50% 0%,58.33% 100%,66.66% 0%,75% 100%,83.33% 0%,91.66% 100%,100% 0%);
+  }
+  .big-chest .mouth::after{
+    bottom:0;
+    clip-path: polygon(0% 100%,8.33% 0%,16.66% 100%,25% 0%,33.33% 100%,41.66% 0%,50% 100%,58.33% 0%,66.66% 100%,75% 0%,83.33% 100%,91.66% 0%,100% 100%);
+  }
+  @keyframes bigshake{
+    0%{ transform:rotate(-3deg); }
+    100%{ transform:rotate(3deg); }
+  }
+  .end-overlay h2{
+    font-family:"Baloo 2", cursive;
+    font-weight:700;
+    font-size:clamp(1.6rem, 5vw, 2.4rem);
+    margin:0 0 8px 0;
+  }
+  .end-overlay.lose h2{ color:var(--bad); }
+  .end-overlay.win h2{ color:var(--good); }
+  .end-overlay p{ margin:0 0 8px 0; color:var(--ink); font-size:1.05rem; max-width:560px; }
+  .end-overlay .record{ margin-bottom:18px; }
+
+  .levels{ display:flex; flex-wrap:wrap; gap:8px; margin:6px 0 14px; }
+  .levels button{
+    font-family:"Baloo 2", sans-serif;
+    font-weight:600;
+    font-size:0.95rem;
+    color:var(--moon);
+    background:transparent;
+    border:1.5px solid var(--moon);
+    border-radius:999px;
+    padding:6px 16px;
+    cursor:pointer;
+  }
+  .levels button[aria-pressed="true"]{ background:var(--moon); color:#0a1f2e; }
+  .levels button:focus-visible{ outline:3px solid var(--accent); outline-offset:2px; }
+
+  /* Écrans larges (vidéoprojecteur, grand moniteur) : utiliser l'espace disponible sur les côtés
+     au lieu de rester centré dans une bande étroite. Placé en fin de feuille pour l'emporter sur
+     les règles de base (.page/.grid) définies plus haut, à spécificité égale. */
+  @media (min-width: 1200px){
+    .page{ max-width: 1500px; padding: 32px 40px 36px; }
+    .grid{ grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap:16px; }
+  }
+  @media (min-width: 1700px){
+    .page{ max-width: 1900px; }
+    .grid{ grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap:18px; }
+  }
+  /* On attrape le mot et on le jette dans la cage : plus de clic. Consignes données à l'oral. */
+  .instruction, .hint, .legend { display: none !important; }
+  .tile { touch-action: none; cursor: grab; }
+  .page { margin-bottom: 190px; }
+  .tile.en-vol-cache { visibility: hidden; }
+  .vol-tuile { position: fixed; z-index: 80; pointer-events: none; transform: scale(1.08) rotate(-3deg); box-shadow: 0 12px 28px rgba(0,0,0,.45); }
+  .cage { position: fixed; right: 22px; bottom: 22px; z-index: 70; width: 150px; height: 150px; border-radius: 28px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+    background: rgba(10,31,46,.92); border: 4px dashed #ffe9a8; color: #ffe9a8; font-size: 4.2rem; line-height: 1;
+    box-shadow: 0 10px 30px rgba(0,0,0,.45); transition: transform .12s, background .12s; }
+  .cage.survol { transform: scale(1.12); background: rgba(91,224,138,.25); border-style: solid; }
+  .cage .compte { font-size: 1.1rem; font-weight: 800; }
+  .cage.secoue { animation: secoueCage .4s ease; }
+  @keyframes secoueCage { 25% { transform: rotate(-8deg); } 75% { transform: rotate(8deg); } }
+</style>
+
+<div class="page">
+  <h1>Rubis ou Fantôme ?!</h1>
+  <div class="levels" id="levels" role="group" aria-label="Choisir le niveau"></div>
+  <p class="instruction">Clique seulement sur les formes <strong>correctement conjuguées</strong> au présent — chaque&nbsp;coffre se change en rubis, mais gare aux fantômes pirates cachés dans les fautes !</p>
+  <p class="hint">Une bonne forme devient <strong style="color:var(--good)">verte</strong> et le coffre se change en rubis. Une forme fautive passe en <strong style="color:var(--bad)">rose</strong> et le fantôme pirate reste affiché pour de bon sur cette case — repère-le pour ne plus tomber dedans ! Au bout de 4 fantômes, la chasse s'arrête et repart de zéro.</p>
+  <div class="reminder">
+    <p class="reminder-intro" id="reminderIntro"></p>
+    <div class="reminder-grid" id="reminderGrid"></div>
+  </div>
+
+  <div class="scoreboard">
+    <div class="badge found"><span class="dot"></span><span id="foundCount">0</span>/<span id="totalCount">22</span> rubis trouvés</div>
+    <div class="badge errors">
+      <span class="vies" id="vies">
+        <span class="vie">⚠️</span><span class="vie">⚠️</span><span class="vie">⚠️</span><span class="vie">⚠️</span>
+      </span>
+      <span id="errorCount">0</span> fantôme(s) réveillé(s)
+    </div>
+  </div>
+
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+
+  <div class="feedback" id="feedback" role="status" aria-live="polite"></div>
+
+  <div class="grid" id="grid"></div>
+  <div class="cage" id="cage" aria-label="La cage">💎<span class="compte" id="compteCage"></span></div>
+
+  <div class="legend">
+    <span><span class="swatch good"></span> forme correctement conjuguée → rubis</span>
+    <span><span class="swatch bad"></span> piège (forme mal conjuguée) → fantôme pirate</span>
+  </div>
+
+  <div class="controls">
+    <button class="action" id="shuffleBtn" type="button">Explorer une autre partie du trésor</button>
+    <button class="action ghost" id="resetBtn" type="button">Nouvelle chasse</button>
+  </div>
+</div>
+
+<div class="end-overlay lose" id="gameoverOverlay" hidden role="alertdialog" aria-live="assertive">
+  <div class="big-chest"><span class="mouth"></span></div>
+  <h2>Trop de fantômes !</h2>
+  <p>4 fantômes pirates réveillés — le trésor se referme, on recommence la chasse.</p>
+  <button class="action" id="btnGameoverRestart" type="button">Recommencer</button>
+</div>
+
+<div class="end-overlay win" id="winOverlay" hidden role="status" aria-live="polite">
+  <div class="tresor-scene">
+    <div class="piece-or p1"></div>
+    <div class="piece-or p2"></div>
+    <div class="piece-or p3"></div>
+    <div class="piece-or p4"></div>
+    <div class="piece-or p5"></div>
+    <div class="gemme-tresor g1"></div>
+    <div class="gemme-tresor g2"></div>
+    <div class="gemme-tresor g3"></div>
+    <div class="big-chest"><span class="sparkle2">✦</span></div>
+  </div>
+  <h2>Trésor complet !</h2>
+  <p id="winText"></p>
+  <div class="record" id="winRecordText"></div>
+  <button class="action" id="btnWinRestart" type="button">Nouvelle chasse</button>
+</div>
+
+<script>
+(function(){
+  // Trois niveaux aux verbes tous DIFFÉRENTS — pour chaque forme, [texte affiché, correcte ?].
+  // Niveau 1 : 1er groupe régulier, pièges sur les terminaisons (-s de tu, -ons, -ez, -ent).
+  // Niveau 2 : 1er groupe, cas particuliers des chantiers 2-CM1 et 3-CM2 de la méthode Tamalette
+  //   (-s manquant/en trop, cédille -cer, e muet -ger, -ier/-ouer/-uer, doublement -eter/-eler).
+  // Niveau 3 : être, avoir, aller, faire, dire, venir, prendre, pouvoir, vouloir et 2e groupe.
+  var LEVELS = [
+    { label: 'Niveau 1',
+      rappel: {
+        intro: 'Rappel — verbes du 1<sup>er</sup> groupe (-er) au présent : -e, -es, -e, -ons, -ez, -ent.',
+        cases: [
+          'Avec <strong>tu</strong> : toujours un -s (<em>tu danses</em>).',
+          'Avec <strong>nous</strong> : -ons, jamais -ont (<em>nous donnons</em>).',
+          'Avec <strong>vous</strong> : -ez (<em>vous sautez</em>).',
+          'Avec <strong>ils/elles</strong> : -ent, qui ne s’entend pas (<em>ils arrivent</em>).'
+        ] },
+      words: [
+        ["je parle", true], ["je parles", false],
+        ["tu danses", true], ["tu danse", false],
+        ["il marche", true], ["il marches", false],
+        ["elle aime", true], ["elle aimes", false],
+        ["on écoute", true], ["on écoutes", false],
+        ["nous donnons", true], ["nous donnon", false],
+        ["nous portons", true], ["nous portont", false],
+        ["vous sautez", true], ["vous sautes", false],
+        ["vous tombez", true], ["vous tombé", false],
+        ["ils arrivent", true], ["ils arrive", false],
+        ["elles travaillent", true], ["elles travailles", false],
+        ["je lave", true], ["je laves", false],
+        ["tu habites", true], ["tu habite", false],
+        ["il colle", true], ["il colles", false],
+        ["nous gardons", true], ["nous gardont", false],
+        ["vous montez", true], ["vous montes", false],
+        ["ils cherchent", true], ["ils cherches", false],
+        ["tu penses", true], ["tu pense", false]
+      ] },
+    { label: 'Niveau 2',
+      rappel: {
+        intro: 'Rappel — verbes du 1<sup>er</sup> groupe (-er) au présent : -e, -es, -e, -ons, -ez, -ent.',
+        cases: [
+          'Verbes en <strong>-cer</strong> : cédille avec nous (<em>nous lançons</em>).',
+          'Verbes en <strong>-ger</strong> : un e après le g avec nous (<em>nous mangeons</em>).',
+          'Verbes en <strong>-ier/-ouer/-uer</strong> : ne pas oublier le -s à tu, ni le e final (<em>tu pries</em>, <em>il remue</em>).',
+          'Verbes en <strong>-eter/-eler</strong> : la consonne double avec je/tu/il/ils (<em>j’appelle</em>) mais pas avec nous/vous (<em>nous appelons</em>).'
+        ] },
+      words: [
+        ["je forme", true], ["je formes", false],
+        ["tu observes", true], ["tu observe", false],
+        ["il regarde", true], ["il regardes", false],
+        ["nous chantons", true], ["nous chanton", false],
+        ["vous acceptez", true], ["vous acceptes", false],
+        ["elles existent", true], ["elles existes", false],
+        ["j’explique", true], ["j’expliques", false],
+        ["tu fermes", true], ["tu ferme", false],
+        ["on rencontre", true], ["on rencontres", false],
+        ["nous rentrons", true], ["nous rentront", false],
+        ["vous répétez", true], ["vous répètez", false],
+        ["ils aident", true], ["ils aidents", false],
+        ["nous lançons", true], ["nous lancons", false],
+        ["nous mangeons", true], ["nous mangons", false],
+        ["tu pries", true], ["tu prie", false],
+        ["tu joues", true], ["tu joue", false],
+        ["il remue", true], ["il remu", false],
+        ["je crie", true], ["je cris", false],
+        ["nous jetons", true], ["nous jettons", false],
+        ["j’appelle", true], ["j’appele", false],
+        ["nous appelons", true], ["nous appellons", false],
+        ["ils jettent", true], ["ils jetent", false]
+      ] },
+    { label: 'Niveau 3',
+      rappel: {
+        intro: 'Rappel — les verbes irréguliers s’apprennent par cœur. 2<sup>e</sup> groupe (-ir, <em>nous finissons</em>) : -is, -is, -it, -issons, -issez, -issent.',
+        cases: [
+          '<strong>être</strong> : je suis, tu es, il est, nous sommes, vous êtes, ils sont.',
+          '<strong>avoir</strong> : j’ai, tu as, il a, nous avons, vous avez, ils ont.',
+          '<strong>aller</strong> : je vais, tu vas, il va, nous allons, vous allez, ils vont.',
+          '<strong>faire, dire</strong> : vous faites, vous dites (jamais « faisez »). <strong>pouvoir, vouloir</strong> : je peux, tu veux (avec un -x).'
+        ] },
+      words: [
+        ["je suis", true], ["je sui", false],
+        ["tu es", true], ["tu est", false],
+        ["nous sommes", true], ["nous somme", false],
+        ["vous êtes", true], ["vous étes", false],
+        ["j’ai", true], ["j’ais", false],
+        ["tu as", true], ["tu a", false],
+        ["ils ont", true], ["ils ons", false],
+        ["je vais", true], ["je vait", false],
+        ["nous allons", true], ["nous allont", false],
+        ["ils vont", true], ["ils allent", false],
+        ["vous faites", true], ["vous faisez", false],
+        ["ils font", true], ["ils faisent", false],
+        ["vous dites", true], ["vous disez", false],
+        ["je viens", true], ["je vien", false],
+        ["ils prennent", true], ["ils prenent", false],
+        ["je peux", true], ["je peut", false],
+        ["tu veux", true], ["tu veut", false],
+        ["nous finissons", true], ["nous finisons", false],
+        ["ils grandissent", true], ["ils grandisent", false],
+        ["il choisit", true], ["il choisi", false]
+      ] }
+  ];
+  var levelIdx = 0;
+  var words = LEVELS[0].words;
+  var totalInv = words.filter(function(w){ return w[1]; }).length;
+  var grid = document.getElementById('grid');
+  var foundCountEl = document.getElementById('foundCount');
+  var totalCountEl = document.getElementById('totalCount');
+  var errorCountEl = document.getElementById('errorCount');
+  var progressFill = document.getElementById('progressFill');
+  var feedback = document.getElementById('feedback');
+  var winOverlay = document.getElementById('winOverlay');
+  var winText = document.getElementById('winText');
+  var winRecordText = document.getElementById('winRecordText');
+  var vieEls = Array.prototype.slice.call(document.querySelectorAll('#vies .vie'));
+  var order = words.slice();
+  var found = 0;
+  var errors = 0;
+
+  totalCountEl.textContent = totalInv;
+
+  function shuffle(arr){
+    for (var i = arr.length - 1; i > 0; i--){
+      var j = Math.floor(Math.random() * (i + 1));
+      var tmp = arr[i]; arr[i] = arr[j]; arr[j] = tmp;
+    }
+    return arr;
+  }
+
+  function recordKey(){ return 'conjugaison-chasse-record-n' + (levelIdx + 1); }
+  function getRecord(){
+    try {
+      var v = localStorage.getItem(recordKey());
+      return v === null ? null : parseInt(v, 10);
+    } catch (e) { return null; }
+  }
+  function setRecord(v){
+    try { localStorage.setItem(recordKey(), String(v)); } catch (e) {}
+  }
+
+  function render(){
+    grid.innerHTML = '';
+    order.forEach(function(pair){
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'tile';
+
+      var chest = document.createElement('span');
+      chest.className = 'chest';
+
+      var label = document.createElement('span');
+      label.textContent = pair[0];
+
+      var check = document.createElement('span');
+      check.className = 'badge-check';
+      check.textContent = '✓';
+      check.setAttribute('aria-hidden', 'true');
+
+      btn.appendChild(chest);
+      btn.appendChild(label);
+      btn.appendChild(check);
+      attraper(btn, function(){ handleClick(pair, btn); });
+      grid.appendChild(btn);
+    });
+  }
+
+  // ---- Attraper et jeter dans la cage (doigt, souris, stylet) ----
+  var cageEl = document.getElementById('cage');
+  function attraper(btn, auDepot){
+    btn.addEventListener('pointerdown', function(e){
+      if (gameOver || btn.disabled) return;
+      e.preventDefault();
+      var r = btn.getBoundingClientRect(), dx = e.clientX - r.left, dy = e.clientY - r.top;
+      var vol = btn.cloneNode(true); vol.classList.add('vol-tuile');
+      vol.style.left = r.left + 'px'; vol.style.top = r.top + 'px'; vol.style.width = r.width + 'px'; vol.style.height = r.height + 'px';
+      document.body.appendChild(vol); btn.classList.add('en-vol-cache');
+      function dansCage(x, y){ var c = cageEl.getBoundingClientRect(); return x >= c.left - 20 && x <= c.right + 20 && y >= c.top - 20 && y <= c.bottom + 20; }
+      function bouge(ev){ vol.style.left = (ev.clientX - dx) + 'px'; vol.style.top = (ev.clientY - dy) + 'px'; cageEl.classList.toggle('survol', dansCage(ev.clientX, ev.clientY)); }
+      function lache(ev){
+        document.removeEventListener('pointermove', bouge); document.removeEventListener('pointerup', lache);
+        vol.remove(); btn.classList.remove('en-vol-cache'); cageEl.classList.remove('survol');
+        if (dansCage(ev.clientX, ev.clientY)) { cageEl.classList.remove('secoue'); void cageEl.offsetWidth; cageEl.classList.add('secoue'); auDepot(); }
+      }
+      document.addEventListener('pointermove', bouge); document.addEventListener('pointerup', lache);
+    });
+  }
+
+  function updateScoreboard(){
+    foundCountEl.textContent = found;
+    errorCountEl.textContent = errors;
+    progressFill.style.width = Math.round((found / totalInv) * 100) + '%';
+    document.getElementById('compteCage').textContent = found + ' / ' + totalInv;
+  }
+
+  var ERREURS_MAX = 4;
+  var gameOver = false;
+  var gameoverOverlay = document.getElementById('gameoverOverlay');
+
+  function handleClick(pair, btn){
+    if (gameOver) return;
+    if (btn.classList.contains('found') || btn.classList.contains('trapped')) return;
+    if (pair[1]){
+      btn.classList.add('found');
+      btn.disabled = true;
+      found++;
+      feedback.textContent = 'Bien vu ! « ' + pair[0] + ' » est correctement conjugué. Le coffre devient un rubis !';
+      feedback.className = 'feedback good';
+      updateScoreboard();
+      if (found === totalInv){
+        finish();
+      }
+    } else {
+      errors++;
+      btn.classList.add('wrong');
+      feedback.textContent = 'Piège ! « ' + pair[0] + ' » est mal conjugué — un fantôme pirate surgit du coffre !';
+      feedback.className = 'feedback bad';
+      updateScoreboard();
+      if (vieEls[errors - 1]) vieEls[errors - 1].classList.add('perdue');
+      setTimeout(function(){
+        btn.classList.remove('wrong');
+        btn.classList.add('trapped');
+        btn.disabled = true;
+      }, 400);
+      if (errors >= ERREURS_MAX){
+        setTimeout(showGameOver, 500);
+      }
+    }
+  }
+
+  function showGameOver(){
+    gameOver = true;
+    gameoverOverlay.hidden = false;
+  }
+
+  function finish(){
+    var record = getRecord();
+    var isNewRecord = record === null || errors < record;
+    if (isNewRecord) setRecord(errors);
+
+    winOverlay.hidden = false;
+    if (errors === 0){
+      winText.textContent = 'Chasse parfaite ! Les ' + totalInv + ' rubis sont trouvés, sans réveiller un seul fantôme.';
+    } else {
+      winText.textContent = 'Les ' + totalInv + ' rubis sont trouvés, avec ' + errors + ' fantôme(s) réveillé(s).';
+    }
+    winRecordText.textContent = isNewRecord
+      ? 'Nouveau record sur cet appareil : ' + errors + ' fantôme(s) !'
+      : 'Meilleure chasse sur cet appareil : ' + record + ' fantôme(s).';
+    feedback.textContent = '';
+  }
+
+  function reset(doShuffle){
+    order = doShuffle ? shuffle(words.slice()) : words.slice();
+    found = 0;
+    errors = 0;
+    gameOver = false;
+    gameoverOverlay.hidden = true;
+    winOverlay.hidden = true;
+    vieEls.forEach(function(v){ v.classList.remove('perdue'); });
+    updateScoreboard();
+    feedback.textContent = '';
+    feedback.className = 'feedback';
+    render();
+  }
+
+  document.getElementById('shuffleBtn').addEventListener('click', function(){ reset(true); });
+  document.getElementById('resetBtn').addEventListener('click', function(){ reset(false); });
+  document.getElementById('btnGameoverRestart').addEventListener('click', function(){ reset(true); });
+  document.getElementById('btnWinRestart').addEventListener('click', function(){ reset(true); });
+
+  var levelsEl = document.getElementById('levels');
+  var reminderIntroEl = document.getElementById('reminderIntro');
+  var reminderGridEl = document.getElementById('reminderGrid');
+  function setLevel(i){
+    levelIdx = i;
+    // Mélangé une fois ici (les paires correcte/fautive se suivent dans la liste) : « Nouvelle
+    // chasse » rejoue ensuite la même disposition, « Explorer » en tire une nouvelle.
+    words = shuffle(LEVELS[i].words.slice());
+    totalInv = words.filter(function(w){ return w[1]; }).length;
+    totalCountEl.textContent = totalInv;
+    reminderIntroEl.innerHTML = LEVELS[i].rappel.intro;
+    reminderGridEl.innerHTML = LEVELS[i].rappel.cases.map(function(c){
+      return '<div class="reminder-case"><span class="reminder-icone">⚠️</span><span>' + c + '</span></div>';
+    }).join('');
+    Array.prototype.forEach.call(levelsEl.children, function(b, j){ b.setAttribute('aria-pressed', j === i ? 'true' : 'false'); });
+    try { localStorage.setItem('conjugaison-chasse-niveau', String(i)); } catch (e) {}
+    reset(true);
+  }
+  LEVELS.forEach(function(lvl, i){
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.textContent = lvl.label;
+    b.addEventListener('click', function(){ setLevel(i); });
+    levelsEl.appendChild(b);
+  });
+  var savedLevel = 0;
+  try { savedLevel = parseInt(localStorage.getItem('conjugaison-chasse-niveau'), 10) || 0; } catch (e) {}
+  if (/^#\d$/.test(location.hash)) savedLevel = parseInt(location.hash.slice(1), 10) - 1;
+  setLevel(savedLevel >= 0 && savedLevel < LEVELS.length ? savedLevel : 0);
+})();
+</script>
+<!-- DEUX GESTES -->
+<script>
+/* ==== DEUX GESTES (GTH) : chaque jeu se joue en glissant OU en touchant (demande de Karim du 01/10) ====
+   REGLES  : jeu au glisser-déposer → on peut aussi toucher l'objet (il s'entoure), puis toucher sa place ; s'il n'a qu'une place
+             possible (une case réponse), un seul toucher le pose (10/10) :
+             le module rejoue exactement le même glisser-déposer, le jeu garde ses règles.
+   INVERSE : jeu au toucher (toucher la carte, puis la zone) → on peut aussi glisser la carte sur la zone.
+   Installé par .claude/outils/deux-gestes/injecter.py ; ne pas modifier dans le jeu, mais dans ce fichier. */
+(function () {
+  var REGLES = [{"source": ".tile:not([disabled])", "cible": "#cage"}], INVERSE = [];
+  // setPointerCapture refuse les pointeurs rejoués : on ignore l'erreur
+  ["setPointerCapture", "releasePointerCapture"].forEach(function (m) {
+    var o = Element.prototype[m]; if (!o) return;
+    Element.prototype[m] = function (id) { try { return o.call(this, id); } catch (e) { return undefined; } };
+  });
+  var st = document.createElement("style");
+  st.textContent = ".dg-choisi{outline:7px solid #1f7a8c !important; outline-offset:4px !important;}" +
+    ".dg-vol{position:fixed !important; z-index:9999; pointer-events:none; opacity:.92; transform:scale(1.05) rotate(-2deg); margin:0 !important;}";
+  document.head.appendChild(st);
+
+  var choix = null, bas = null, rejeu = false, avalerClic = 0;
+  function sous(x, y) { return document.elementFromPoint(x, y); }
+  function trouver(el, liste, cle) {
+    if (!el || !el.closest) return null;
+    for (var i = 0; i < liste.length; i++) { var e = el.closest(liste[i][cle]); if (e) return { regle: liste[i], el: e }; }
+    return null;
+  }
+  function oublier() { if (choix) choix.el.classList.remove("dg-choisi"); choix = null; }
+  function evt(type, cible, x, y) {
+    var e = new PointerEvent(type, { bubbles: true, cancelable: true, composed: true, clientX: x, clientY: y, pointerId: 777,
+      pointerType: "touch", isPrimary: true, button: 0, buttons: type === "pointerup" ? 0 : 1 });
+    (cible && cible.isConnected ? cible : document).dispatchEvent(e);
+  }
+  // Rejoue le glisser-déposer du jeu : de l'objet jusqu'au point touché
+  function rejouer(src, x, y) {
+    if (!src.isConnected) return;
+    var r = src.getBoundingClientRect(), x0 = r.left + r.width / 2, y0 = r.top + r.height / 2;
+    var depart = sous(x0, y0); if (!depart || !src.contains(depart)) depart = src;
+    rejeu = true;
+    try {
+      evt("pointerdown", depart, x0, y0);
+      for (var k = 1; k <= 12; k++) evt("pointermove", depart, x0 + (x - x0) * k / 12, y0 + (y - y0) * k / 12);
+      evt("pointerup", depart, x, y);
+    } finally { rejeu = false; }
+  }
+
+  // ---------- REGLES : toucher l'objet, puis sa place ----------
+  document.addEventListener("pointerdown", function (e) {
+    if (rejeu || !e.isTrusted || !REGLES.length) return;
+    if (choix && !choix.el.isConnected) oublier();
+    // l'objet touché est repéré dès que le doigt se pose : ensuite, le jeu le cache pour le faire glisser
+    bas = { x: e.clientX, y: e.clientY, cible: null, src: trouver(e.target, REGLES, "source") };
+    if (choix) {
+      var c = e.target.closest && e.target.closest(choix.regle.cible);
+      if (c && !(e.target.closest(choix.regle.source))) { bas.cible = c; e.stopImmediatePropagation(); e.preventDefault(); }
+    }
+  }, true);
+  document.addEventListener("pointerup", function (e) {
+    if (rejeu || !e.isTrusted || !bas || !REGLES.length) return;
+    var b = bas; bas = null;
+    var tap = Math.hypot(e.clientX - b.x, e.clientY - b.y) < 12;
+    if (b.cible) {   // le toucher sur la place : le jeu ne le voit pas, on rejoue le glisser à cet endroit
+      e.stopImmediatePropagation(); e.preventDefault(); avalerClic = Date.now();
+      if (tap && choix) { var s = choix.el; oublier(); var x = e.clientX, y = e.clientY; setTimeout(function () { rejouer(s, x, y); }, 0); }
+      return;
+    }
+    if (!tap) { oublier(); return; }   // un vrai glisser : le jeu s'en occupe
+    var src = b.src;
+    setTimeout(function () {   // après le jeu : l'objet touché est choisi (ou ne l'est plus)
+      if (!src || !src.el.isConnected) { return; }
+      // une seule place où le poser (une case réponse) : un toucher suffit, la réponse part dans la case (Karim, 10/10)
+      var places = Array.prototype.filter.call(document.querySelectorAll(src.regle.cible), function (c) {
+        var r = c.getBoundingClientRect(); return r.width > 0 && r.height > 0 && !src.el.contains(c) && getComputedStyle(c).visibility !== "hidden"; });
+      if (places.length === 1) { oublier(); var r = places[0].getBoundingClientRect(); rejouer(src.el, r.left + r.width / 2, r.top + r.height / 2); return; }
+      if (choix && choix.el === src.el) { oublier(); return; }
+      oublier(); choix = src; src.el.classList.add("dg-choisi");
+    }, 0);
+  }, true);
+  document.addEventListener("click", function (e) {
+    if (Date.now() - avalerClic < 500 && e.isTrusted) { e.stopImmediatePropagation(); e.preventDefault(); }
+  }, true);
+
+  // ---------- INVERSE : glisser la carte sur la zone = la toucher, puis toucher la zone ----------
+  var g = null;
+  document.addEventListener("pointerdown", function (e) {
+    if (rejeu || !e.isTrusted || !INVERSE.length) return;
+    var src = trouver(e.target, INVERSE, "source"); if (!src) return;
+    g = { src: src, x: e.clientX, y: e.clientY, vol: null };
+  }, true);
+  document.addEventListener("pointermove", function (e) {
+    if (!g || rejeu) return;
+    if (!g.vol && Math.hypot(e.clientX - g.x, e.clientY - g.y) < 12) return;
+    if (!g.vol) {
+      var r = g.src.el.getBoundingClientRect();
+      g.vol = g.src.el.cloneNode(true); g.vol.classList.add("dg-vol"); g.vol.style.width = r.width + "px";
+      g.dx = g.x - r.left; g.dy = g.y - r.top; document.body.appendChild(g.vol);
+    }
+    g.vol.style.left = (e.clientX - g.dx) + "px"; g.vol.style.top = (e.clientY - g.dy) + "px";
+  }, true);
+  document.addEventListener("pointerup", function (e) {
+    if (!g || rejeu || !e.isTrusted) return;
+    var d = g; g = null;
+    if (!d.vol) return;   // simple toucher : le jeu s'en occupe
+    d.vol.remove(); e.stopImmediatePropagation(); e.preventDefault(); avalerClic = Date.now();
+    var dessous = sous(e.clientX, e.clientY), zone = dessous && dessous.closest ? dessous.closest(d.src.regle.cible) : null;
+    if (!zone) return;
+    rejeu = true;
+    try { evt("pointerup", d.src.el, e.clientX, e.clientY); evt("pointerup", zone, e.clientX, e.clientY); }
+    finally { rejeu = false; }
+  }, true);
+})();
+</script>
+<!-- /DEUX GESTES -->
+<!-- MENU -->
+<script>
+/* ==== LE MENU ☰ (GTH, 10/10) : interface épurée — à l'écran, seulement le titre, le score, la consigne et l'activité ====
+   Tout le reste (niveaux, onglets de méthode, ✏️, 🔊, 🖨️, aide…) part dans un menu ☰, ouvert d'un toucher.
+   Réglage par outil (CONF, posé par l'injecteur) : ancre = où mettre le bouton ☰ (sinon en haut à droite de l'écran) ;
+   cacher = ce qui part dans le menu (sinon : tout ce qui, dans « .barre .droite », n'est pas un score).
+   Installé par .claude/outils/menu-outil/injecter.py ; ne pas modifier dans l'outil, mais dans ce fichier. */
+(function () {
+  var CONF = {"cacher": ["#levels", "#shuffleBtn", "#resetBtn"]};
+  var st = document.createElement("style");
+  st.textContent =
+    ".menu-btn{width:58px; height:58px; border-radius:16px; border:2px solid rgba(0,0,0,.15); background:#fff; color:#1f2a33; font-size:2rem; line-height:1; cursor:pointer; flex:none; padding:0;}" +
+    ".menu-btn.fixe{position:fixed; top:10px; right:12px; z-index:150; box-shadow:0 4px 14px rgba(0,0,0,.15);}" +
+    ".menu-btn.ouvert{background:#1f2a33; color:#fff;}" +
+    ".menu-panneau{position:fixed; top:76px; right:16px; z-index:200; background:#fff; color:#1f2a33; border-radius:18px; box-shadow:0 18px 50px rgba(0,0,0,.28); padding:16px 18px;" +
+    "  display:flex; flex-direction:column; align-items:flex-start; gap:12px; max-width:min(620px, 92vw); max-height:80vh; overflow:auto;}" +
+    ".menu-panneau[hidden]{display:none !important;}" +
+    ".menu-panneau h4{margin:0; font-family:sans-serif; font-size:.85rem; text-transform:uppercase; letter-spacing:.6px; color:#6d7a85;}" +
+    ".menu-panneau > *{position:static !important; margin:0 !important;}" +
+    ".menu-panneau > div,.menu-panneau > nav{display:flex; flex-wrap:wrap; gap:8px;}";
+  document.head.appendChild(st);
+  function installer() {
+    var autres = [];
+    if (CONF.cacher) CONF.cacher.forEach(function (s) { document.querySelectorAll(s).forEach(function (e) { if (autres.indexOf(e) === -1) autres.push(e); }); });
+    else { var d = document.querySelector(".barre .droite"); if (d) autres = Array.prototype.filter.call(d.children, function (e) { return !e.classList.contains("score"); }); }
+    if (!autres.length) return;
+    var btn = document.createElement("button"); btn.type = "button"; btn.className = "menu-btn"; btn.title = "Niveaux et réglages"; btn.textContent = "☰";
+    var pan = document.createElement("div"); pan.className = "menu-panneau"; pan.hidden = true;
+    var t = document.createElement("h4"); t.textContent = "Niveaux et réglages"; pan.appendChild(t);
+    autres.forEach(function (e) { pan.appendChild(e); });
+    var ancre = document.querySelector(CONF.ancre || ".barre .droite");
+    if (ancre) ancre.appendChild(btn); else { btn.classList.add("fixe"); document.body.appendChild(btn); }
+    document.body.appendChild(pan);
+    function ouvrir(o) { pan.hidden = !o; btn.classList.toggle("ouvert", o); }
+    btn.addEventListener("click", function (e) { e.stopPropagation(); ouvrir(pan.hidden); });
+    // un niveau choisi, ou une fenêtre ouverte (✏️, 🖨️) : le menu se referme ; on garde le menu ouvert pour choisir un type de jeu
+    pan.addEventListener("click", function (e) { var b = e.target.closest("button"); if (b && !b.closest(CONF.garderOuvert || ".types")) setTimeout(function () { ouvrir(false); }, 120); });
+    document.addEventListener("pointerdown", function (e) { if (!pan.hidden && !pan.contains(e.target) && e.target !== btn) ouvrir(false); });
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", installer); else installer();
+})();
+</script>
+<!-- /MENU -->

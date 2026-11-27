@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>L'ascenseur du 10</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect x='14' y='4' width='36' height='56' rx='5' fill='%23eef2f6' stroke='%234a5a6a' stroke-width='4'/%3E%3Crect x='20' y='26' width='24' height='16' rx='3' fill='%23f08a24'/%3E%3Cpath d='M32 10 l6 7 h-12 z' fill='%231a8f5c'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Quicksand:wght@600;700&display=swap">
+<style>
+  /* Univers de ce jeu : l'ascenseur d'un immeuble. Pour ajouter, on monte ; on s'arrête toujours à la dizaine (10, 20…),
+     puis on continue. Pour soustraire, on transforme : 15 − 7, c'est 7 + ? = 15 ; on reprend l'ascenseur de 7 à 15,
+     et la réponse est tout le trajet (3 + 5 = 8). */
+  :root{ --encre:#1f2d3a; --gris:#5f7080; --bord:#cdd8e2; --orange:#e8792a; --bien:#1a8f5c; --faux:#d6455d; }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{margin:0; color:var(--encre); font-family:"Quicksand",system-ui,sans-serif; overflow:hidden; height:100vh; display:flex; flex-direction:column;
+    background:linear-gradient(180deg,#f7fafc 0%,#e9f0f6 100%); user-select:none; -webkit-user-select:none; touch-action:none;}
+  .barre{display:grid; grid-template-columns:1fr auto; align-items:center; gap:16px; padding:12px 26px; background:#fff; border-bottom:3px solid var(--bord);}
+  .titre{display:flex; align-items:center; gap:12px;} .titre svg{width:50px; height:50px;}
+  .titre h1{font-family:"Baloo 2",cursive; font-weight:800; font-size:1.9rem; margin:0;}
+  .droite{display:flex; align-items:center; gap:12px;}
+  .score{display:flex; flex-direction:column; align-items:center; padding:2px 14px; border-radius:12px; background:#fff; border:2px solid var(--bord); min-width:130px;}
+  .score small{font-size:.8rem; font-weight:700; color:var(--gris); text-transform:uppercase; letter-spacing:.5px;}
+  .score b{font-family:"Baloo 2",cursive; font-size:1.8rem; line-height:1.05;}
+  .niveaux{display:grid; grid-template-columns:auto auto; gap:4px;}
+  .niveaux button{font:inherit; font-weight:700; font-size:.85rem; padding:2px 12px; border-radius:999px; cursor:pointer; background:#fff; color:var(--gris); border:2px solid var(--bord);}
+  .niveaux button.actif{background:var(--encre); color:#fff; border-color:var(--encre);}
+  .consigne{display:flex; justify-content:center; padding:12px 20px 0;}
+  .consigne p{margin:0; font-family:"Baloo 2",cursive; font-weight:700; font-size:2.1rem; text-align:center; background:#fff; padding:2px 22px; border-radius:16px; border:2px solid var(--bord);}
+
+  .jeu{flex:1; min-height:0; display:grid; grid-template-columns:420px minmax(0,860px); justify-content:center; grid-template-rows:minmax(0,1fr); gap:90px; padding:14px 60px 0;}   /* l'ascenseur rapproché du centre (21/10) */
+  .gauche{min-height:0; height:100%;}
+  .droit{min-height:0; overflow:hidden; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:34px;}
+  .calcul{display:flex; align-items:center; gap:18px; font-family:"Baloo 2",cursive; font-weight:800; font-size:6rem; line-height:1; background:#fff; padding:6px 40px; border-radius:26px; border:3px solid var(--bord);}
+  .case{min-width:170px; height:120px; border:5px dashed var(--encre); border-radius:18px; display:inline-flex; align-items:center; justify-content:center; background:#fff;}
+  .case.survol,.case.choisie{background:#fff6d8; border-style:solid;}
+  .case.pleine{border-style:solid; border-color:var(--bien); color:var(--bien);}
+  .transfo{display:flex; align-items:center; gap:16px; font-family:"Baloo 2",cursive; font-weight:800; font-size:4.6rem; color:#2c6aa0;}
+  .transfo .case{min-width:150px; height:100px; font-size:4.6rem; color:#2c6aa0;}
+  .decomp{font-family:"Baloo 2",cursive; font-weight:800; font-size:3rem; min-height:4.4rem; text-align:left; display:inline-block; line-height:1.25;}
+  .decomp div{animation:ligne .4s ease-out} @keyframes ligne{from{opacity:0; transform:translateY(-12px)}}
+  .decomp .dix{color:#c2541a;} .decomp .vert{color:var(--bien);}
+  .decomp .reste{color:#fff; background:#2c6aa0; border-radius:14px; padding:0 14px;}
+  .btn-perso{font:inherit; font-weight:700; padding:8px 14px; border-radius:12px; cursor:pointer; background:#fff; border:2px solid var(--bord);}
+  .perso{position:fixed; inset:0; background:rgba(31,45,58,.45); display:flex; align-items:center; justify-content:center; z-index:60;}
+  .perso[hidden]{display:none;}
+  .perso-boite{background:#fff; border-radius:24px; padding:20px 34px; display:flex; flex-direction:column; align-items:center; gap:14px; box-shadow:0 20px 50px rgba(0,0,0,.3);}
+  .perso-boite h2{margin:0; font-family:"Baloo 2",cursive; font-size:2rem;}
+  .perso-op{display:flex; align-items:center; gap:14px;}
+  .perso-nb{min-width:190px; height:100px; border:4px dashed var(--bord); border-radius:16px; background:#fff; display:flex; align-items:center; justify-content:flex-end; padding:0 18px;
+    font-family:"Baloo 2",cursive; font-weight:800; font-size:4.4rem; cursor:pointer;}
+  .perso-nb.choisi{border:5px solid #1f7a8c;}
+  .perso-signe{width:100px; height:100px; border-radius:50%; border:4px solid var(--encre); background:#fff; font-family:"Baloo 2",cursive; font-weight:800; font-size:4rem; cursor:pointer;}
+  .perso-touches{display:grid; grid-template-columns:repeat(6, 84px); gap:10px;}
+  .perso-touches button{height:76px; border-radius:14px; border:3px solid var(--encre); background:#fff; font-family:"Baloo 2",cursive; font-weight:800; font-size:2.6rem; cursor:pointer;}
+  .perso-msg{font-weight:700; font-size:1.2rem; color:var(--gris); min-height:1.6rem; text-align:center; max-width:640px;}
+  .perso-msg.faux{color:var(--faux);}
+  .perso-actions{display:flex; gap:16px;}
+  .perso-actions button{font:inherit; font-family:"Baloo 2",cursive; font-weight:800; font-size:1.6rem; padding:6px 26px; border-radius:999px; cursor:pointer; border:3px solid var(--encre); background:#fff;}
+  .perso-actions #pOk{background:var(--encre); color:#fff;}
+  .tuiles{display:flex; gap:22px; min-height:120px;}
+  .tuile{min-width:140px; height:110px; padding:0 20px; border-radius:18px; background:#fff; border:4px solid var(--encre); display:flex; align-items:center; justify-content:center;
+    font-family:"Baloo 2",cursive; font-weight:800; font-size:4rem; cursor:grab; touch-action:none; box-shadow:0 6px 0 rgba(31,45,58,.2);}
+  .tuile.choisi{outline:7px solid #1f7a8c; outline-offset:3px;} .tuile.parti{visibility:hidden;}
+  .en-vol{position:fixed !important; z-index:50; pointer-events:none; transform:scale(1.06) rotate(-3deg); box-shadow:0 18px 30px rgba(0,0,0,.3);}
+  .secoue{animation:secoue .4s ease;} @keyframes secoue{0%,100%{transform:none}25%{transform:translateX(-10px)}75%{transform:translateX(10px)}}
+  [hidden]{display:none !important;}
+
+  .bas{display:flex; flex-direction:column; align-items:center; gap:6px; padding:8px 0 14px;}
+  .btn-indice{font:inherit; font-weight:700; font-size:1.2rem; padding:6px 16px; border-radius:999px; cursor:pointer; background:#fff8dc; border:2px solid #f1d27a; color:#7a5b00;}
+  .verdict{min-height:3rem; font-family:"Baloo 2",cursive; font-size:2.2rem; font-weight:800; text-align:center;}
+  .verdict:not(:empty){background:#fff; padding:0 24px; border-radius:14px;}
+  .verdict.bien{color:var(--bien);} .verdict.faux{color:var(--faux);}
+  .btn-suivant{font:inherit; font-family:"Baloo 2",cursive; font-weight:800; font-size:1.8rem; padding:4px 34px; border-radius:999px; cursor:pointer; background:var(--encre); color:#fff; border:none;}
+</style>
+<!-- CALCULETTE -->
+<script>
+/* 🧮 La calculette (Karim, 21/10) : pour répondre par un nombre, l'élève touche les touches d'une petite calculette posée sur le côté
+   (plus d'étiquettes-réponses à glisser). Ce qu'il tape s'écrit dans la case du jeu ; dès que le nombre ne peut plus devenir la
+   réponse, c'est faux ; dès qu'il est juste, le jeu continue. Installé par injecter.py.
+   Calculette.ouvrir({ cible: élément, bon: 42, format: f, siBon: function () {}, siFaux: function (tapé) {} }) ; Calculette.fermer(). */
+(function () {
+  var st = document.createElement("style");
+  st.textContent =
+    "#calculette{position:fixed; right:110px; bottom:28px; display:none; flex-direction:column; gap:6px; padding:8px; background:#eceff1; border:2px solid #cfd8dc; border-radius:14px; z-index:55; opacity:.9}" +
+    "#calculette .ecr{display:none}" +
+    "#calculette .tou{display:grid; grid-template-columns:repeat(3,46px); gap:5px}" +
+    "#calculette button{height:38px; border:1px solid #cfd8dc; border-radius:8px; background:#fff; color:#607d8b; font:700 19px 'Baloo 2',Arial,sans-serif; cursor:pointer}" +
+    "#calculette button:active{transform:translateY(2px); box-shadow:none}" +
+    "#calculette button.eff{color:#c62828}";
+  document.head.appendChild(st);
+  var box = document.createElement("div"); box.id = "calculette";
+  box.innerHTML = '<div class="ecr"></div><div class="tou"></div>';
+  document.addEventListener("DOMContentLoaded", function () { document.body.appendChild(box); });
+  if (document.body) document.body.appendChild(box);
+  var o = null, tape = "", texteAvant = "";
+  ["7", "8", "9", "4", "5", "6", "1", "2", "3", "", "0", "⌫"].forEach(function (k) {
+    var b = document.createElement("button"); b.type = "button"; b.textContent = k; if (!k) b.style.visibility = "hidden"; if (k === "⌫") b.className = "eff";
+    b.addEventListener("click", function () { touche(k); }); box.querySelector(".tou").appendChild(b);
+  });
+  function montre() {
+    box.querySelector(".ecr").textContent = tape;
+    if (o && o.cible) o.cible.textContent = tape ? (o.format ? o.format(+tape) : tape) : texteAvant;
+  }
+  function touche(k) {
+    if (!o || !k) return;
+    if (k === "⌫") tape = tape.slice(0, -1); else if (tape.length < 7) tape += k;
+    montre();
+    var juste = String(o.bon);
+    if (tape === juste) { var f = o.siBon; o = null; tape = ""; box.style.display = "none"; f(+juste); return; }
+    if (tape && juste.indexOf(tape) !== 0) {
+      var t = tape; if (o.siFaux) o.siFaux(+t);
+      setTimeout(function () { tape = ""; montre(); }, 700);
+    }
+  }
+  document.addEventListener("keydown", function (e) { if (!o) return; if (/^[0-9]$/.test(e.key)) touche(e.key); else if (e.key === "Backspace") touche("⌫"); });
+  // si le jeu passe à autre chose (sa case disparaît), la calculette se range
+  setInterval(function () { if (o && o.cible && !document.body.contains(o.cible)) window.Calculette.fermer(); }, 400);
+  window.Calculette = {
+    ouvrir: function (opt) { o = opt; tape = ""; texteAvant = opt.cible ? opt.cible.textContent : ""; box.style.display = "flex"; montre(); },
+    fermer: function () { o = null; tape = ""; box.style.display = "none"; }
+  };
+})();
+</script>
+<!-- /CALCULETTE -->
+<!-- ASCENSEUR -->
+<script>
+/* ==== L'ASCENSEUR (GTH, 10/10) : module commun de 🔟 L'ascenseur du 10 et de 🧱 La soustraction par compensation ====
+   Une cage d'ascenseur, les étages écrits (les dizaines en gros, en couleur). La cabine, pendue à son câble, part d'un étage ;
+   l'élève la fait monter au doigt (glisser vers le haut) ou touche l'étage où l'envoyer : on la voit alors monter étage par
+   étage. Elle doit s'arrêter à chaque arrêt prévu (d'abord la dizaine, puis l'arrivée) : les portes s'ouvrent, « ding »,
+   et le trajet s'écrit à côté (+2, puis +5). Un arrêt faux : 🤪, la cabine redescend au dernier arrêt.
+   Installé par .claude/outils/ascenseur/injecter.py ; ne pas modifier dans l'outil, mais dans ce fichier.
+   Usage : var a = Ascenseur(boite, { bas: 0, haut: 20, depart: 8, arrets: [10, 15], onArret: function (i, etage, plus) {},
+           onFaux: function (etage, attendu) {}, onFini: function () {} }); a.viser(10, "+ ?"); a.detruire();
+   viser(étage, texte) : l'étage où aller est surligné, une accolade en pointillés montre les étages à monter (avec le texte). */
+(function () {
+  var st = document.createElement("style");
+  st.textContent =
+    ".asc{position:relative; display:flex; gap:14px; height:100%; box-sizing:border-box; padding-bottom:62px; user-select:none; touch-action:none;}" +
+    /* un vrai immeuble (Karim, 21/10 : « ça ne ressemble pas à un building ») : tour de verre et de béton, fenêtres de part et d'autre
+       de la gaine vitrée, toit avec antenne, trottoir ; les numéros d'étage sont dehors, à gauche, comme sur un panneau */
+    ".asc-tour{position:relative; flex:0 0 300px; width:300px; height:100%; margin:46px 0 16px 78px; border:4px solid #90a4ae; background:linear-gradient(115deg,rgba(255,255,255,0) 30%,rgba(255,255,255,.55) 42%,rgba(255,255,255,0) 54%), repeating-linear-gradient(90deg,#b0bec5 0 2px,transparent 2px 54px), linear-gradient(180deg,#eef4f8,#d9e5ec); border-bottom:none; box-sizing:border-box;}" +
+    ".asc-tour::before{content:''; position:absolute; left:-5px; right:-5px; top:-46px; height:41px; pointer-events:none;" +
+    "  background:radial-gradient(circle at 72% 5px,#90a4ae 4px,transparent 5px), linear-gradient(#90a4ae,#90a4ae) 72% 6px / 4px 35px no-repeat," +
+    "  linear-gradient(#cfd8dc,#cfd8dc) 18% 100% / 96px 28px no-repeat, linear-gradient(#90a4ae,#90a4ae) 0 100% / 100% 8px no-repeat;}" +   /* toit : antenne et local technique */
+    ".asc-tour::after{content:''; position:absolute; left:-60px; right:-60px; bottom:-16px; height:16px; background:#cfd8dc; border-radius:3px; pointer-events:none;}" +   /* le trottoir */
+    ".asc-cage{position:absolute; top:0; bottom:0; left:50%; width:78px; transform:translateX(-50%); background:linear-gradient(90deg,#90a4ae 0 3px,rgba(207,226,236,.7) 3px calc(100% - 3px),#90a4ae calc(100% - 3px)); z-index:1;}" +   /* la gaine vitrée, au milieu */
+    ".asc-etage{position:absolute; left:0; right:0; display:flex; align-items:center; cursor:pointer; z-index:2;" +
+    "  border-top:1px solid rgba(120,144,156,.45);}" +   /* un trait gris léger à chaque étage : plus lisible */
+    ".asc-etage.rdc{background:linear-gradient(#90a4ae,#90a4ae) 30px 100% / 50px 80% no-repeat, linear-gradient(#f5f9fb,#f5f9fb) 33px 100% / 44px 74% no-repeat," +
+    "  linear-gradient(#90a4ae,#90a4ae) calc(100% - 30px) 100% / 50px 80% no-repeat, linear-gradient(#f5f9fb,#f5f9fb) calc(100% - 33px) 100% / 44px 74% no-repeat;}" +   /* rez-de-chaussée : les portes d'entrée */
+    ".asc-etage span{position:absolute; left:-83px; width:70px; text-align:right; font-family:'Baloo 2',cursive; font-weight:700; font-size:1.35rem; color:#5f7080;}" +
+    ".asc-etage.dix{border-top:3px solid #e8792a;}" +
+    ".asc-etage.ici span{color:#1f7a8c; font-weight:800; font-size:1.9rem;}" +   /* l'étage où est la cabine */
+    ".asc-etage.dix span{font-size:2.5rem; font-weight:800; color:#c2541a;}" +
+    ".asc-etage.vise{box-shadow:inset 0 0 0 3px #ffca28; background-color:rgba(255,236,179,.5);}" +
+    ".asc-etage.vise span{color:#7a5b00; font-weight:800;}" +
+    ".asc-cable{display:none;}" +   /* pas de câble : l'ascenseur moderne monte tout seul */
+    ".asc-cabine{position:absolute; left:50%; transform:translateX(-50%); border-radius:4px; background:linear-gradient(180deg,#eceff1,#b0bec5); border:3px solid #546e7a; box-shadow:0 2px 8px rgba(0,0,0,.18);" +
+    "  display:flex; align-items:flex-start; justify-content:center; cursor:grab; z-index:4; transition:top .12s linear; overflow:hidden;}" +   /* une cabine debout, plus haute que large */
+    ".asc-porte{position:absolute; top:0; bottom:0; width:50%; background:linear-gradient(90deg,#cfd8dc,#eceff1); transition:transform .35s ease;}" +
+    ".asc-porte.g{left:0; border-right:1px solid #607d8b;} .asc-porte.d{right:0; border-left:1px solid #607d8b;}" +
+    ".asc-cabine.ouvert .asc-porte.g{transform:translateX(-100%);} .asc-cabine.ouvert .asc-porte.d{transform:translateX(100%);}" +
+    ".asc-cabine b{position:relative; z-index:1; background:#546e7a; color:#fff; border-radius:0 0 4px 4px; padding:0 6px; font-family:'Baloo 2',cursive; font-weight:800; line-height:1.15;}" +
+    ".asc-cabine.tire{transition:none; cursor:grabbing;}" +
+    ".asc-cabine.secoue{animation:ascSecoue .4s ease;} @keyframes ascSecoue{0%,100%{transform:translateX(-50%)}25%{transform:translateX(calc(-50% - 9px))}75%{transform:translateX(calc(-50% + 9px))}}" +
+    ".asc-trajet{position:relative; width:120px; height:100%; margin-top:46px;}" +
+    ".asc-saut{position:absolute; left:6px; width:26px; border:5px solid #1a8f5c; border-left:none; border-radius:0 14px 14px 0;}" +
+    ".asc-saut b{position:absolute; left:34px; top:50%; transform:translateY(-50%); font-family:'Baloo 2',cursive; font-weight:800; font-size:2.4rem; color:#1a8f5c; white-space:nowrap;}" +
+    ".asc-saut.direct{border-color:#e8792a;} .asc-saut.direct b{color:#c2541a;}" +
+    ".asc-saut.prevu{border-style:dashed; border-color:#e0a800;} .asc-saut.prevu b{color:#7a5b00; font-size:2rem;}";
+  document.head.appendChild(st);
+
+  var ctx = null;
+  function ding(f) {
+    try { ctx = ctx || new (window.AudioContext || window.webkitAudioContext)();
+      var o = ctx.createOscillator(), g = ctx.createGain(), t = ctx.currentTime; o.type = "sine"; o.frequency.value = f || 880;
+      o.connect(g); g.connect(ctx.destination); g.gain.setValueAtTime(.08, t); g.gain.exponentialRampToValueAtTime(.001, t + .25); o.start(t); o.stop(t + .3);
+    } catch (e) {}
+  }
+
+  window.Ascenseur = function (boite, o) {
+    var n = o.haut - o.bas + 1, actuel = o.depart, dernier = o.depart, i = 0, fini = false, roule = null;
+    boite.innerHTML = "";
+    var racine = document.createElement("div"); racine.className = "asc";
+    var tour = document.createElement("div"); tour.className = "asc-tour";
+    var trajet = document.createElement("div"); trajet.className = "asc-trajet";
+    racine.appendChild(tour); racine.appendChild(trajet); boite.appendChild(racine);
+    var cage = document.createElement("div"); cage.className = "asc-cage"; tour.appendChild(cage);
+    var h = function () { return tour.clientHeight / n; };
+    var yDe = function (etage) { return (o.haut - etage) * h(); };
+    var etages = [];
+    for (var e = o.bas; e <= o.haut; e++) {
+      var d = document.createElement("div"); d.className = "asc-etage" + (e % 10 === 0 ? " dix" : "") + (e === o.bas ? " rdc" : ""); d.dataset.etage = e;
+      d.innerHTML = "<span>" + e + "</span>"; tour.appendChild(d); etages.push(d);
+    }
+    var cable = document.createElement("div"); cable.className = "asc-cable"; tour.appendChild(cable);
+    var cab = document.createElement("div"); cab.className = "asc-cabine";
+    cab.innerHTML = '<div class="asc-porte g"></div><div class="asc-porte d"></div><b></b>'; tour.appendChild(cab);
+    var num = cab.querySelector("b");
+    function montrer(etage) {   // la cabine à un étage (sans rien valider)
+      var top = yDe(etage) + h() * 0.06;   // la cabine occupe exactement la rangée de son étage (Karim, 21/10 : elle reste à son étage)
+      cab.style.top = top + "px"; cable.style.height = top + "px"; num.textContent = etage;
+      etages.forEach(function (d) { d.classList.toggle("ici", +d.dataset.etage === etage); });
+    }
+    function placer() {
+      etages.forEach(function (d) { var e = +d.dataset.etage; d.style.top = yDe(e) + "px"; d.style.height = h() + "px"; });
+      cab.style.height = (h() * 0.88) + "px"; cab.style.width = "70px"; num.style.fontSize = Math.min(1.3, h() / 30) + "rem";
+      montrer(actuel);
+      trajet.querySelectorAll(".asc-saut").forEach(function (s) { var a = +s.dataset.de, b = +s.dataset.a;
+        s.style.top = (yDe(b) + h() / 2) + "px"; s.style.height = ((b - a) * h()) + "px"; });
+    }
+    function viser(etage, texte) {
+      etages.forEach(function (d) { d.classList.toggle("vise", +d.dataset.etage === etage); });
+      trajet.querySelectorAll(".asc-saut.prevu").forEach(function (s) { s.remove(); });
+      if (etage === undefined || etage === null) return;
+      var s = document.createElement("div"); s.className = "asc-saut prevu"; s.dataset.de = dernier; s.dataset.a = etage;
+      s.innerHTML = "<b>" + (texte || "+ ?") + "</b>"; trajet.appendChild(s); placer();
+    }
+    function saut(a, b, direct) {
+      var s = document.createElement("div"); s.className = "asc-saut" + (direct ? " direct" : ""); s.dataset.de = a; s.dataset.a = b;
+      s.innerHTML = "<b>+" + (b - a) + "</b>"; trajet.appendChild(s); placer();
+    }
+    // on voit la cabine monter (ou redescendre) étage par étage
+    function rouler(vers, puis) {
+      clearInterval(roule);
+      if (vers === actuel) { if (puis) puis(); return; }
+      var pas = vers > actuel ? 1 : -1;
+      roule = setInterval(function () {
+        actuel += pas; montrer(actuel); if (actuel % 10 === 0) ding(1175);
+        if (actuel === vers) { clearInterval(roule); roule = null; if (puis) setTimeout(puis, 120); }
+      }, 140);
+    }
+    function valider(etage) {
+      var attendu = o.arrets[i];
+      if (etage === dernier) return;
+      if (etage !== attendu) {
+        cab.classList.remove("secoue"); void cab.offsetWidth; cab.classList.add("secoue"); ding(220);
+        if (o.onFaux) o.onFaux(etage, attendu);
+        setTimeout(function () { rouler(dernier); }, 450);
+        return;
+      }
+      ding(880); cab.classList.add("ouvert"); setTimeout(function () { cab.classList.remove("ouvert"); }, 900);
+      viser(null); saut(dernier, etage, i === 0 && etage % 10 === 0);
+      var plus = etage - dernier; dernier = etage; i++;
+      if (o.onArret) o.onArret(i - 1, etage, plus);
+      if (i >= o.arrets.length) { fini = true; if (o.onFini) o.onFini(); }
+    }
+    function envoyer(etage) { if (fini || roule) return; etage = Math.max(dernier, Math.min(o.haut, etage)); rouler(etage, function () { valider(etage); }); }
+    // glisser la cabine vers le haut : elle suit le doigt, étage par étage
+    cab.addEventListener("pointerdown", function (ev) {
+      if (fini || roule) return; ev.preventDefault(); ev.stopPropagation();
+      var r = tour.getBoundingClientRect(), bouge = false, y0 = ev.clientY;
+      cab.classList.add("tire");
+      function etageDe(y) { return Math.max(dernier, Math.min(o.haut, o.haut - Math.floor((y - r.top) / h()))); }
+      function mv(e) { if (Math.abs(e.clientY - y0) > 6) bouge = true; var et = etageDe(e.clientY);
+        if (et !== actuel) { actuel = et; montrer(et); if (et % 10 === 0) ding(1175); } }
+      function up(e) { document.removeEventListener("pointermove", mv); document.removeEventListener("pointerup", up); cab.classList.remove("tire");
+        if (!bouge) { montrer(actuel); return; } valider(actuel); }
+      document.addEventListener("pointermove", mv); document.addEventListener("pointerup", up);
+    });
+    // ou toucher l'étage où l'envoyer : on la voit monter
+    tour.addEventListener("pointerup", function (ev) {
+      if (fini || ev.target.closest(".asc-cabine")) return;
+      var d = ev.target.closest(".asc-etage"); if (!d) return;
+      var et = +d.dataset.etage; if (et < dernier) return;
+      envoyer(et);
+    });
+    var obs = window.ResizeObserver ? new ResizeObserver(function () { placer(); }) : null; if (obs) obs.observe(tour);
+    window.addEventListener("resize", placer);
+    setTimeout(placer, 0); placer();
+    return { detruire: function () { clearInterval(roule); window.removeEventListener("resize", placer); if (obs) obs.disconnect(); boite.innerHTML = ""; },
+      etat: function () { return { actuel: actuel, dernier: dernier, i: i, fini: fini, roule: !!roule }; }, envoyer: envoyer, viser: viser };
+  };
+})();
+</script>
+<!-- /ASCENSEUR -->
+</head>
+<body>
+<div class="barre">
+  <div class="titre">
+    <svg viewBox="0 0 64 64" aria-hidden="true"><rect x="14" y="4" width="36" height="56" rx="5" fill="#eef2f6" stroke="#4a5a6a" stroke-width="4"/><rect x="20" y="26" width="24" height="16" rx="3" fill="#f08a24"/><path d="M32 10 l6 7 h-12 z" fill="#1a8f5c"/></svg>
+    <h1>L'ascenseur du 10</h1>
+  </div>
+  <div class="droite">
+    <div class="score" title="Calculs réussis du premier coup"><small>Calculs réussis</small><b id="score">0</b></div>
+    <div class="score" title="Le meilleur score à ce niveau, gardé sur cet ordinateur"><small>🏆 Record</small><b id="record">0</b></div>
+    <button class="btn-perso" id="btnPerso" type="button" title="Écrire mon calcul">✏️ Mon calcul</button>
+    <div class="niveaux" id="niveaux">
+      <button type="button" data-niveau="20" class="actif">+ ≤ 20</button>
+      <button type="button" data-niveau="plus20">+ &gt; 20</button>
+      <button type="button" data-niveau="moins">− ≤ 20</button>
+      <button type="button" data-niveau="moins20">− &gt; 20</button>
+    </div>
+  </div>
+</div>
+<div class="consigne"><p id="consigne"></p></div>
+<div class="jeu">
+  <div class="gauche" id="tour"></div>
+  <div class="droit">
+    <div class="calcul" id="calcul"></div>
+    <div class="transfo" id="transfo" hidden><div class="case" data-place="0"></div><span>+ ? =</span><div class="case" data-place="1"></div></div>
+    <div class="decomp" id="decomp"></div>
+    <div class="tuiles" id="tuiles"></div>
+  </div>
+</div>
+<div class="perso" id="perso" hidden>
+  <div class="perso-boite">
+    <h2>✏️ Mon calcul</h2>
+    <div class="perso-op"><div class="perso-nb choisi" id="pA" data-champ="a"></div><button type="button" class="perso-signe" id="pSigne" title="Touche pour changer : + ou −">+</button><div class="perso-nb" id="pB" data-champ="b"></div></div>
+    <div class="perso-touches" id="pTouches"></div>
+    <div class="perso-msg" id="pMsg"></div>
+    <div class="perso-actions"><button type="button" id="pAnnuler">Annuler</button><button type="button" id="pOk">C'est parti ➜</button></div>
+  </div>
+</div>
+<div class="bas">
+  <button class="btn-indice" id="btnIndice" type="button">💡 Indice</button>
+  <div class="verdict" id="verdict"></div>
+  <button class="btn-suivant" id="btnSuivant" type="button" hidden>➜</button>
+</div>
+<script>
+(function () {
+  // Calculs inventés ; méthode de la classe : je m'arrête à la dizaine. Soustraction : je la transforme en addition à trou.
+  var CALCULS = {
+    "20": [[8, 7], [9, 4], [7, 5], [8, 5], [9, 6], [6, 7], [8, 6], [9, 8], [7, 6], [8, 9], [6, 5], [9, 7], [7, 8], [8, 4]],
+    "plus20": [[38, 7], [27, 5], [49, 4], [18, 6], [56, 8], [29, 3], [47, 6], [68, 5], [37, 9], [78, 4], [45, 7], [86, 9]],
+    "moins": [[15, 7], [13, 5], [14, 6], [12, 4], [16, 8], [11, 3], [13, 7], [15, 8], [12, 5], [14, 9], [17, 9], [11, 4]],
+    "moins20": [[42, 37], [53, 46], [61, 58], [34, 27], [72, 65], [45, 38], [83, 76], [51, 44], [64, 59], [92, 85], [26, 19], [75, 68]]
+  };
+  var el = function (id) { return document.getElementById(id); };
+  var niveau = "20", index = 0, score = 0, erreurs = 0, etape = "", a = 0, b = 0, fini = false, asc = null, dix = 0, plus1 = 0;
+  var perso = null;   // { a, b, moins } : le calcul tapé par le maître (✏️ Mon calcul)
+  var moins = function () { return perso ? perso.moins : niveau.indexOf("moins") === 0; };
+
+  function cleRecord() { return "ascenseur-du-10-record-" + niveau; }
+  function majScore() {
+    var r = 0; try { r = parseInt(localStorage.getItem(cleRecord()), 10) || 0; } catch (e) {}
+    if (score > r) { r = score; try { localStorage.setItem(cleRecord(), String(r)); } catch (e) {} }
+    el("score").textContent = score; el("record").textContent = r;
+  }
+  function verdict(t, c) { el("verdict").textContent = t; el("verdict").className = "verdict" + (c ? " " + c : ""); }
+  function secoue(x) { x.classList.remove("secoue"); void x.offsetWidth; x.classList.add("secoue"); }
+  function melanger(t) { for (var i = t.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)), x = t[i]; t[i] = t[j]; t[j] = x; } return t; }
+  function consigne(t) { el("consigne").textContent = t; }
+
+  function afficher() {
+    var C = perso ? [perso.a, perso.b] : CALCULS[niveau][index]; a = C[0]; b = C[1]; erreurs = 0; fini = false; oublier();
+    el("calcul").innerHTML = "<span>" + a + "</span><span>" + (moins() ? "−" : "+") + "</span><span>" + b + "</span><span>=</span><div class='case' id='caseRep'>?</div>";
+    el("decomp").innerHTML = ""; el("tuiles").innerHTML = ""; verdict(""); el("btnSuivant").hidden = true; if (window.Calculette) Calculette.fermer();
+    el("transfo").hidden = true; el("transfo").querySelectorAll(".case").forEach(function (c) { c.textContent = ""; c.className = "case"; });
+    if (asc) asc.detruire(); el("tour").innerHTML = "";
+    if (moins()) {   // d'abord transformer : b + ? = a
+      etape = "transfo"; el("transfo").hidden = false;
+      consigne("Transforme en addition : glisse les nombres dans les cases");
+      tuiles([b, a]);
+    } else lancer(a, a + b);
+    majScore();
+  }
+  // l'ascenseur : du départ jusqu'à l'arrivée, avec un arrêt à la dizaine
+  function lancer(depart, arrivee) {
+    etape = "ascenseur";
+    var bas = Math.floor(depart / 10) * 10; dix = bas + 10;
+    asc = Ascenseur(el("tour"), { bas: bas, haut: bas + 20, depart: depart, arrets: [dix, arrivee],
+      onArret: function (i, etage, plus) {
+        verdict("✅", "bien");
+        if (i === 0) { plus1 = plus;
+          if (moins()) { el("decomp").innerHTML = "<div>" + depart + " + " + plus + " = <span class='dix'>" + dix + "</span></div>"; consigne("Continue jusqu'à " + arrivee); asc.viser(arrivee, "+ ?"); }
+          else { el("decomp").innerHTML = "<div>" + a + " + " + b + "</div><div>= " + a + " + " + plus + " + <span class='reste'>(" + b + " − " + plus + ")</span></div>";
+            consigne("Il reste " + b + " − " + plus + " étages à monter : fais monter l'ascenseur"); asc.viser(arrivee, b + " − " + plus); }
+        } else {
+          if (moins()) el("decomp").insertAdjacentHTML("beforeend", "<div><span class='dix'>" + dix + "</span> + " + plus + " = " + arrivee + "</div>");
+          else el("decomp").insertAdjacentHTML("beforeend", "<div>= <span class='dix'>" + dix + "</span> + " + plus + "</div>");
+          etape = "reponse";
+          consigne(moins() ? "Combien d'étages en tout ? Tape la réponse" : "Où es-tu arrivé ? Tape la réponse");
+          var j = moins() ? a - b : a + b;
+          // 🧮 la calculette (Karim, 21/10) : on tape la réponse, sans glisser d'étiquette
+          Calculette.ouvrir({ cible: el("caseRep"), bon: j, siBon: function () { deposer({ dataset: { v: j }, remove: function () {} }, el("caseRep")); },
+            siFaux: function () { erreurs++; secoue(el("caseRep")); verdict("🤪", "faux"); } });
+        }
+      },
+      onFaux: function (etage, attendu) { erreurs++; verdict(attendu === dix ? "🤪 L'ascenseur s'arrête d'abord à " + dix : "🤪", "faux"); } });
+    consigne((moins() ? "Départ à " + depart + " : " : "") + "Fais monter l'ascenseur jusqu'à " + dix);
+    asc.viser(dix, "+ ?");
+  }
+  function tuiles(vals) {
+    var box = el("tuiles"); box.innerHTML = "";
+    vals.forEach(function (v) { var t = document.createElement("div"); t.className = "tuile"; t.textContent = v; t.dataset.v = v; box.appendChild(t); mobile(t); });
+  }
+
+  // ---------- deux gestes : glisser la tuile, ou la toucher puis toucher la case ----------
+  var choisi = null, enVol = false;
+  function oublier() { document.querySelectorAll(".choisi").forEach(function (x) { x.classList.remove("choisi"); }); choisi = null; }
+  function cibles() { return etape === "transfo" ? "#transfo .case:not(.pleine)" : "#caseRep"; }
+  function mobile(obj) {
+    obj.addEventListener("pointerdown", function (ev) {
+      if (fini) return; ev.preventDefault();
+      var r = obj.getBoundingClientRect(), vol = obj.cloneNode(true); vol.classList.remove("choisi"); vol.classList.add("en-vol");
+      vol.style.width = r.width + "px"; vol.style.height = r.height + "px"; document.body.appendChild(vol); obj.classList.add("parti"); enVol = true;
+      var x0 = ev.clientX, y0 = ev.clientY, dx = x0 - r.left, dy = y0 - r.top, bouge = false, survol = null;
+      function place(x, y) { vol.style.left = (x - dx) + "px"; vol.style.top = (y - dy) + "px"; }
+      place(x0, y0);
+      function sous(x, y) { var t = document.elementFromPoint(x, y); return t && t.closest ? t.closest(cibles()) : null; }
+      function mv(e) { place(e.clientX, e.clientY); if (Math.hypot(e.clientX - x0, e.clientY - y0) > 12) bouge = true;
+        var c = sous(e.clientX, e.clientY); if (survol && survol !== c) survol.classList.remove("survol"); if (c) c.classList.add("survol"); survol = c; }
+      function up(e) {
+        document.removeEventListener("pointermove", mv); document.removeEventListener("pointerup", up);
+        vol.remove(); obj.classList.remove("parti"); setTimeout(function () { enVol = false; }, 0); if (survol) survol.classList.remove("survol");
+        if (!bouge) { var seule = Array.prototype.filter.call(document.querySelectorAll(cibles()), function (c) { var q = c.getBoundingClientRect(); return q.width > 0 && q.height > 0; });
+          if (seule.length === 1) { oublier(); deposer(obj, seule[0]); return; }   // une seule case : un toucher suffit (Karim, 10/10)
+          var deja = choisi === obj; oublier(); if (!deja) { choisi = obj; obj.classList.add("choisi"); } return; }
+        var c = sous(e.clientX, e.clientY); if (c) { oublier(); deposer(obj, c); }
+      }
+      document.addEventListener("pointermove", mv); document.addEventListener("pointerup", up);
+    });
+  }
+  document.addEventListener("pointerup", function (ev) {
+    if (enVol || !choisi || fini) return;
+    var c = ev.target.closest && ev.target.closest(cibles()); if (!c) return;
+    var o = choisi; oublier(); deposer(o, c);
+  });
+  function deposer(t, c) {
+    var v = Number(t.dataset.v);
+    if (etape === "transfo") {
+      var bon = c.dataset.place === "0" ? b : a;
+      if (v !== bon) { erreurs++; secoue(c); verdict(c.dataset.place === "0" ? "🤪 On part du nombre qu'on enlève" : "🤪 On arrive au grand nombre", "faux"); return; }
+      c.textContent = v; c.classList.add("pleine"); t.remove(); verdict("");
+      if (el("transfo").querySelectorAll(".case.pleine").length === 2) { el("tuiles").innerHTML = ""; lancer(b, a); }
+      return;
+    }
+    if (etape === "reponse") {
+      var j = moins() ? a - b : a + b;
+      if (v !== j) { erreurs++; secoue(c); verdict("🤪", "faux"); return; }
+      c.textContent = j; c.classList.add("pleine"); t.remove(); fini = true; etape = "fini";
+      el("decomp").insertAdjacentHTML("beforeend", moins() ? "<div>donc " + a + " − " + b + " = " + plus1 + " + " + (j - plus1) + " = <span class='vert'>" + j + "</span></div>" : "<div>= <span class='vert'>" + j + "</span></div>");
+      if (!erreurs) score++; majScore();
+      verdict(erreurs ? "✅" : "✅ Du premier coup !", "bien"); el("btnSuivant").hidden = false; consigne("Bravo !");
+    }
+  }
+
+  el("btnIndice").addEventListener("click", function () {
+    if (fini) return;
+    if (etape === "transfo") verdict("💡 Je pars de " + b + " : combien faut-il monter pour arriver à " + a + " ?");
+    else if (etape === "ascenseur") verdict("💡 L'ascenseur s'arrête toujours à la dizaine : " + dix);
+    else verdict(moins() ? "💡 Ajoute les deux montées (les nombres verts)" : "💡 Lis l'étage où l'ascenseur est arrivé");
+  });
+  el("btnSuivant").addEventListener("click", function () { if (perso) perso = null; else index = (index + 1) % CALCULS[niveau].length; afficher(); });
+
+  // ---------- ✏️ Mon calcul : le maître tape ses nombres au clavier de l'écran ----------
+  var champ = "a", saisie = { a: "", b: "" }, signe = "+";
+  var AIDE = "Le calcul doit passer la dizaine : 8 + 7, 38 + 7 ; 15 − 7, 42 − 37.";
+  function majPerso() {
+    el("pA").textContent = saisie.a; el("pB").textContent = saisie.b; el("pSigne").textContent = signe;
+    el("pA").classList.toggle("choisi", champ === "a"); el("pB").classList.toggle("choisi", champ === "b");
+  }
+  ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "⌫", "C"].forEach(function (t) {
+    var bt = document.createElement("button"); bt.type = "button"; bt.textContent = t;
+    bt.addEventListener("click", function () {
+      if (t === "⌫") saisie[champ] = saisie[champ].slice(0, -1);
+      else if (t === "C") saisie[champ] = "";
+      else if (saisie[champ].length < 2 && !(t === "0" && saisie[champ] === "")) saisie[champ] += t;
+      el("pMsg").className = "perso-msg"; el("pMsg").textContent = AIDE; majPerso();
+    });
+    el("pTouches").appendChild(bt);
+  });
+  ["pA", "pB"].forEach(function (id) { el(id).addEventListener("click", function () { champ = el(id).dataset.champ; majPerso(); }); });
+  el("pSigne").addEventListener("click", function () { signe = signe === "+" ? "−" : "+"; majPerso(); });
+  el("btnPerso").addEventListener("click", function () { saisie = { a: "", b: "" }; champ = "a"; majPerso(); el("pMsg").className = "perso-msg"; el("pMsg").textContent = AIDE; el("perso").hidden = false; });
+  el("pAnnuler").addEventListener("click", function () { el("perso").hidden = true; });
+  el("pOk").addEventListener("click", function () {
+    var x = parseInt(saisie.a, 10), y = parseInt(saisie.b, 10), m = signe === "−", msg = "";
+    if (!x || !y) msg = "Écris les deux nombres.";
+    else if (!m) { var dz = (Math.floor(x / 10) + 1) * 10;   // l'ascenseur part de x, s'arrête à la dizaine, finit à x + y
+      if (x % 10 === 0 || x + y <= dz) msg = "Il faut passer la dizaine : " + x + " + " + y + " ne la dépasse pas.";
+      else if (x + y > Math.floor(x / 10) * 10 + 20) msg = "Trop haut pour l'ascenseur : le 2e nombre doit être plus petit."; }
+    else { var dz2 = (Math.floor(y / 10) + 1) * 10;          // y + ? = x
+      if (y >= x) msg = "Le premier nombre doit être le plus grand.";
+      else if (y % 10 === 0 || x <= dz2) msg = "Il faut passer la dizaine en montant de " + y + " à " + x + ".";
+      else if (x > Math.floor(y / 10) * 10 + 20) msg = "Trop haut pour l'ascenseur : prends deux nombres plus proches."; }
+    if (msg) { el("pMsg").className = "perso-msg faux"; el("pMsg").textContent = msg; return; }
+    perso = { a: x, b: y, moins: m }; el("perso").hidden = true; score = 0; afficher();
+  });
+  function choisirNiveau(nv) {
+    var bt = document.querySelector('#niveaux button[data-niveau="' + nv + '"]'); if (!bt) return false;
+    niveau = nv; index = 0; score = 0;
+    document.querySelectorAll("#niveaux button").forEach(function (x) { x.classList.toggle("actif", x === bt); });
+    afficher(); return true;
+  }
+  document.querySelectorAll("#niveaux button").forEach(function (bt) { bt.addEventListener("click", function () { choisirNiveau(bt.dataset.niveau); }); });
+  if (!(location.hash && choisirNiveau(decodeURIComponent(location.hash.slice(1))))) afficher();
+  window.__asc10 = { etat: function () { return { niveau: niveau, etape: etape, a: a, b: b, fini: fini, dix: dix, asc: asc && asc.etat() }; }, nb: function () { return CALCULS[niveau].length; } };
+})();
+</script>
+<!-- MENU -->
+<script>
+/* ==== LE MENU ☰ (GTH, 10/10) : interface épurée — à l'écran, seulement le titre, le score, la consigne et l'activité ====
+   Tout le reste (niveaux, onglets de méthode, ✏️, 🔊, 🖨️, aide…) part dans un menu ☰, ouvert d'un toucher.
+   Réglage par outil (CONF, posé par l'injecteur) : ancre = où mettre le bouton ☰ (sinon en haut à droite de l'écran) ;
+   cacher = ce qui part dans le menu (sinon : tout ce qui, dans « .barre .droite », n'est pas un score).
+   Installé par .claude/outils/menu-outil/injecter.py ; ne pas modifier dans l'outil, mais dans ce fichier. */
+(function () {
+  var CONF = {};
+  var st = document.createElement("style");
+  st.textContent =
+    ".menu-btn{width:58px; height:58px; border-radius:16px; border:2px solid rgba(0,0,0,.15); background:#fff; color:#1f2a33; font-size:2rem; line-height:1; cursor:pointer; flex:none; padding:0;}" +
+    ".menu-btn.fixe{position:fixed; top:10px; right:12px; z-index:150; box-shadow:0 4px 14px rgba(0,0,0,.15);}" +
+    ".menu-btn.ouvert{background:#1f2a33; color:#fff;}" +
+    ".menu-panneau{position:fixed; top:76px; right:16px; z-index:200; background:#fff; color:#1f2a33; border-radius:18px; box-shadow:0 18px 50px rgba(0,0,0,.28); padding:16px 18px;" +
+    "  display:flex; flex-direction:column; align-items:flex-start; gap:12px; max-width:min(620px, 92vw); max-height:80vh; overflow:auto;}" +
+    ".menu-panneau[hidden]{display:none !important;}" +
+    ".menu-panneau h4{margin:0; font-family:sans-serif; font-size:.85rem; text-transform:uppercase; letter-spacing:.6px; color:#6d7a85;}" +
+    ".menu-panneau > *{position:static !important; margin:0 !important;}" +
+    ".menu-panneau > div,.menu-panneau > nav{display:flex; flex-wrap:wrap; gap:8px;}";
+  document.head.appendChild(st);
+  function installer() {
+    var autres = [];
+    if (CONF.cacher) CONF.cacher.forEach(function (s) { document.querySelectorAll(s).forEach(function (e) { if (autres.indexOf(e) === -1) autres.push(e); }); });
+    else { var d = document.querySelector(".barre .droite"); if (d) autres = Array.prototype.filter.call(d.children, function (e) { return !e.classList.contains("score"); }); }
+    if (!autres.length) return;
+    var btn = document.createElement("button"); btn.type = "button"; btn.className = "menu-btn"; btn.title = "Niveaux et réglages"; btn.textContent = "☰";
+    var pan = document.createElement("div"); pan.className = "menu-panneau"; pan.hidden = true;
+    var t = document.createElement("h4"); t.textContent = "Niveaux et réglages"; pan.appendChild(t);
+    autres.forEach(function (e) { pan.appendChild(e); });
+    var ancre = document.querySelector(CONF.ancre || ".barre .droite");
+    if (ancre) ancre.appendChild(btn); else { btn.classList.add("fixe"); document.body.appendChild(btn); }
+    document.body.appendChild(pan);
+    function ouvrir(o) { pan.hidden = !o; btn.classList.toggle("ouvert", o); }
+    btn.addEventListener("click", function (e) { e.stopPropagation(); ouvrir(pan.hidden); });
+    // un niveau choisi, ou une fenêtre ouverte (✏️, 🖨️) : le menu se referme ; on garde le menu ouvert pour choisir un type de jeu
+    pan.addEventListener("click", function (e) { var b = e.target.closest("button"); if (b && !b.closest(CONF.garderOuvert || ".types")) setTimeout(function () { ouvrir(false); }, 120); });
+    document.addEventListener("pointerdown", function (e) { if (!pan.hidden && !pan.contains(e.target) && e.target !== btn) ouvrir(false); });
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", installer); else installer();
+})();
+</script>
+<!-- /MENU -->
+<!-- INDICE-COTE -->
+<script>
+/* 💡 sur le côté (Karim, 21/10) : dans les jeux qui ont un bouton « 💡 Indice » (.btn-indice), le bouton devient une ampoule seule,
+   collée au bord droit de l'écran, à mi-hauteur ; l'indice s'ouvre dans une bulle à côté d'elle, jamais sous le jeu.
+   Le jeu garde son propre code : au toucher, on regarde quel texte il vient d'écrire (zone #indice, ou la ligne de message),
+   on le reprend dans la bulle et on remet la zone comme avant. Installé par injecter.py. */
+(function () {
+  var b = document.querySelector(".btn-indice"); if (!b) return;
+  var st = document.createElement("style");
+  st.textContent =
+    ".btn-indice.cote{position:fixed !important; right:18px; top:50%; transform:translateY(-50%); width:76px; height:76px; padding:0 !important; border-radius:50% !important;" +
+    " font-size:40px !important; line-height:1; z-index:60; margin:0 !important; display:flex; align-items:center; justify-content:center}" +
+    "#bulle-cote{position:fixed; right:110px; top:50%; transform:translateY(-50%); max-width:520px; background:#fff8c4; border:2px solid #d4b106; border-radius:18px;" +
+    " padding:16px 22px; font-size:26px; line-height:1.35; z-index:60; box-shadow:0 6px 18px rgba(0,0,0,.15); display:none}" +
+    "#bulle-cote::after{content:''; position:absolute; right:-14px; top:50%; margin-top:-12px; border:12px solid transparent; border-left:14px solid #d4b106; border-right:none}";
+  document.head.appendChild(st);
+  b.classList.add("cote"); b.textContent = "💡"; b.title = "Indice"; document.body.appendChild(b);
+  var bulle = document.createElement("div"); bulle.id = "bulle-cote"; document.body.appendChild(bulle);
+  var zones = function () { return Array.prototype.slice.call(document.querySelectorAll("#indice, .indice, #message, .message, #verdict, .verdict, #consigne-aide")); };
+  var avant = [], minuteur = null;
+  b.addEventListener("click", function () { avant = zones().map(function (z) { return [z, z.textContent, z.className]; }); }, true);   // avant le code du jeu
+  b.addEventListener("click", function () {
+    setTimeout(function () {
+      var txt = "";
+      avant.forEach(function (a) {
+        var z = a[0], neuf = z.textContent;
+        if (neuf !== a[1] && neuf.trim()) { txt = neuf; z.textContent = a[1]; z.className = a[2]; }
+      });
+      if (!txt) return;   // le jeu montre l'indice autrement : on le laisse faire
+      bulle.textContent = txt.replace(/^\s*💡\s*/, ""); bulle.style.display = "block";
+      clearTimeout(minuteur); minuteur = setTimeout(function () { bulle.style.display = "none"; }, 8000);
+    }, 0);
+  });
+  document.addEventListener("pointerdown", function (e) { if (e.target !== b && e.target !== bulle) bulle.style.display = "none"; });
+})();
+</script>
+<!-- /INDICE-COTE -->
+</body>
+</html>

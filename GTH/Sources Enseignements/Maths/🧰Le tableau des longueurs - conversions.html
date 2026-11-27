@@ -1,0 +1,321 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Le tableau des longueurs</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect x='4' y='14' width='56' height='36' rx='3' fill='%23deb887' stroke='%236d4521' stroke-width='4'/%3E%3Cpath d='M18 14v36M32 14v36M46 14v36M4 26h56' stroke='%236d4521' stroke-width='3'/%3E%3C/svg%3E">
+<!--
+  🧰 Le tableau des longueurs — unités et conversions, P2 📅 6 (GTH v2 : donnees/seances/maths/ma-s6-mesures.js).
+  Maquette (21/10) ; Karim a demandé de coder toutes les activités (21/10).
+  Univers : l'atelier du menuisier ; un grand tableau en bois km · hm · dam · m · dm · cm · mm.
+  Pour chaque mesure : 1) glisser chaque chiffre dans sa colonne (le chiffre des unités sous l'unité de la mesure), 2) poser soi-même les
+  zéros jusqu'à la nouvelle unité, 3) lire et écrire le nombre. Le dépôt vaut réponse ; l'outil ne pose jamais un chiffre à la place de l'élève.
+  Onglets : « Sans virgule » (3 m 45 cm en cm…) · « Avec la virgule » (3,5 m en cm… : la virgule se place après le chiffre des unités).
+  Liens : #entiers, #virgule. Gestes : glisser l'étiquette, ou la toucher puis toucher la colonne.
+  Contenu : 3 m = 300 cm, 5 cm + 8 mm = 58 mm, 3,5 m = 350 cm viennent de la séance ; les autres mesures sont de moi
+  (les fiches de la banque, exercices P3 p. 5 et p. 8, sont sur papier). Hors ligne (ENI, Chromebook).
+-->
+<style>
+:root{--mur:#f1e7d6;--bois:#deb887;--boisf:#6d4521;--encre:#3e2a14;--vert:#2e7d32;--rouge:#c62828;--talbot:#1f7a8c}
+html,body{margin:0;height:100%;background:#3e2a14;overflow:hidden;font-family:Arial,Helvetica,sans-serif;color:var(--encre)}
+#scene{position:absolute;left:0;top:0;width:1920px;height:1080px;transform-origin:0 0;background:var(--mur);
+  background-image:repeating-linear-gradient(0deg,rgba(109,69,33,.05) 0 1px,transparent 1px 64px)}
+#barre{height:84px;display:flex;align-items:center;gap:22px;padding:0 28px;background:#6d4521;color:#fff}
+#barre h1{margin:0;font-size:34px;display:flex;align-items:center;gap:12px}
+#barre h1 svg{width:52px;height:52px}
+.onglets{display:flex;gap:8px;margin-left:24px}
+.onglets button{font:inherit;font-size:24px;padding:10px 22px;border-radius:10px;border:2px solid #a07040;background:#835a30;color:#fff;cursor:pointer}
+.onglets button.on{background:var(--bois);color:var(--encre);font-weight:700;border-color:var(--bois)}
+#coin{margin-left:auto;font-size:22px}
+#coin b{font-size:28px;color:#ffe0a8}
+#consigne{height:100px;display:flex;align-items:center;justify-content:center;font-size:50px;font-weight:700;text-align:center}
+#consigne .q{color:var(--talbot)}
+#jeu{position:absolute;left:0;right:0;top:188px;bottom:110px}
+#bas{position:absolute;left:0;right:0;bottom:0;height:110px;display:flex;align-items:center;justify-content:center;gap:30px}
+#indice{font:inherit;font-size:24px;padding:12px 26px;border-radius:30px;border:2px solid #d4b106;background:#fff8c4;cursor:pointer}
+#verdict{font-size:38px;font-weight:700;min-width:760px;text-align:center}
+#verdict.ok{color:var(--vert)} #verdict.ko{color:var(--rouge)}
+#bulle{position:absolute;left:50%;bottom:118px;transform:translateX(-50%);max-width:1100px;background:#fff8c4;border:2px solid #d4b106;border-radius:18px;padding:16px 26px;font-size:30px;display:none;box-shadow:0 6px 18px rgba(0,0,0,.15)}
+#tableau{position:absolute;left:150px;top:20px;display:flex;border:4px solid #6d4521;border-radius:16px;background:#fff;overflow:hidden;box-shadow:0 8px 0 rgba(109,69,33,.25)}
+.col{position:relative;width:230px;border-left:2px solid #d7ccc8}
+.col:first-child{border-left:none}
+.col .u{height:74px;display:flex;align-items:center;justify-content:center;font-size:40px;font-weight:700;color:#6d4521;background:#f5ebe0;border-bottom:3px solid #6d4521}
+.col .u.cible{background:#bfe3ea;color:#0d4f5c}
+.col .u.grand{background:#ffe0b2;color:#e65100}
+.col .case{height:160px;display:flex;align-items:center;justify-content:center;font-size:104px;font-weight:700;color:#3e2723}
+.col.survol .case{background:#e0f2f5}
+.col .case.zero{color:#a1887f}
+.col .virg{position:absolute;right:-16px;bottom:16px;font-size:104px;font-weight:700;color:var(--rouge);z-index:2;line-height:1}
+/* les deux lectures des mêmes chiffres : avec la virgule, sans la virgule */
+.lecture{position:absolute;height:58px;border:5px solid;border-top:none;border-radius:0 0 18px 18px;display:flex;align-items:flex-end;justify-content:center;font-size:40px;font-weight:700;padding-bottom:4px;box-sizing:border-box;animation:lect .4s ease-out}
+.lecture b{transform:translateY(46px);background:var(--mur);padding:0 14px}
+.lecture.l1{border-color:#e65100;color:#e65100} .lecture.l2{border-color:var(--talbot);color:var(--talbot)}
+@keyframes lect{from{opacity:0;transform:translateY(-14px)}}
+#mesure{position:absolute;left:150px;top:350px;display:flex;align-items:flex-end;gap:12px;font-size:64px;font-weight:700}
+.eti{width:100px;height:120px;border:4px solid var(--boisf);border-radius:12px;background:#fffdf5;display:flex;align-items:center;justify-content:center;font-size:84px;font-weight:700;cursor:grab;touch-action:none;user-select:none;box-shadow:0 5px 0 rgba(109,69,33,.35)}
+.eti.pose{visibility:hidden}
+.eti.choisi{outline:6px solid var(--talbot);outline-offset:4px}
+.eti.zero{background:#fff3e0;color:#8a5a2b}
+.vole{position:fixed;z-index:30;pointer-events:none;opacity:.92}
+#reserve{position:absolute;left:1240px;top:350px;display:flex;align-items:center;gap:20px;font-size:30px;font-weight:700;color:#8a5a2b}
+#ecran{position:absolute;left:150px;top:600px;display:flex;align-items:center;gap:14px;font-size:44px;font-weight:700}
+#tape{min-width:220px;height:76px;font-size:46px !important;border:5px solid var(--talbot);border-radius:16px;background:#fff;display:flex;align-items:center;justify-content:center;font-size:66px}
+#tape.ko{border-color:var(--rouge);animation:secoue .45s 2}
+#tape.ok{border-color:var(--vert)}
+@keyframes secoue{0%,100%{transform:translateX(0)}25%{transform:translateX(-10px)}75%{transform:translateX(10px)}}
+#pave{position:absolute;left:1340px;top:540px;display:grid;grid-template-columns:repeat(6,70px);gap:10px}
+#pave button{font:inherit;font-size:30px;font-weight:700;height:60px;border-radius:16px;border:3px solid #c9a679;background:#fff;color:var(--encre);cursor:pointer}
+#crayon{position:absolute;left:26px;top:96px;width:82px;height:82px;border-radius:50%;border:2px solid #c9a679;background:#fff;font-size:40px;cursor:pointer;z-index:20}
+#choix{position:absolute;inset:0;background:rgba(62,42,20,.55);display:none;align-items:center;justify-content:center;z-index:40}
+#choix div{background:#fff;border-radius:20px;padding:30px 44px;font-size:32px;font-weight:700;display:flex;flex-direction:column;gap:20px;align-items:flex-start}
+#choix input,#choix select{font:inherit;font-size:36px;padding:6px 12px;margin-left:12px}
+#choix button{font:inherit;font-size:30px;padding:10px 30px;border-radius:30px;border:3px solid var(--talbot);background:var(--talbot);color:#fff;cursor:pointer;align-self:center}
+#choix .err{color:var(--rouge);font-size:24px;min-height:30px}
+/* 💡 sur le côté (21/10) : l'ampoule seule, au bout de la consigne ; la bulle à côté, jamais sous le jeu */
+#indice{position:absolute;right:26px;top:96px;width:82px;height:82px;padding:0;border-radius:50%;font-size:44px;line-height:1;z-index:20}
+#bulle{left:auto;right:124px;top:100px;bottom:auto;transform:none;max-width:640px;font-size:28px;z-index:20}
+/* 🧮 la calculette (21/10) : petite, sur le côté, on touche les touches */
+#pave{position:absolute !important; left:auto !important; right:40px !important; top:440px !important; bottom:auto !important; grid-template-columns:repeat(3,64px) !important; gap:8px !important;
+  padding:14px; background:#37474f; border-radius:20px; box-shadow:0 6px 0 #263238; z-index:15}
+#pave button{height:52px !important; font-size:26px !important; border-radius:10px !important; border:none !important; background:#eceff1 !important; color:#263238 !important; box-shadow:0 3px 0 #90a4ae; grid-column:auto !important}
+#pave button:active{transform:translateY(2px); box-shadow:none}
+/* 🧮 calculette discrète (21/10) : petite, pâle, petits chiffres */
+#pave{padding:8px !important; gap:5px !important; grid-template-columns:repeat(3,46px) !important; background:#eceff1 !important; box-shadow:none !important; border:2px solid #cfd8dc; border-radius:14px !important; opacity:.85}
+#pave button{height:38px !important; font-size:19px !important; border-radius:8px !important; background:#fff !important; color:#607d8b !important; box-shadow:none !important; border:1px solid #cfd8dc !important}
+</style>
+</head>
+<body>
+<div id="scene">
+  <div id="barre">
+    <h1><svg viewBox="0 0 64 64"><rect x="4" y="14" width="56" height="36" rx="3" fill="#deb887" stroke="#fff" stroke-width="4"/><path d="M18 14v36M32 14v36M46 14v36M4 26h56" stroke="#6d4521" stroke-width="3"/></svg>Le tableau des longueurs</h1>
+    <div class="onglets"><button data-o="pareil">Avec et sans virgule</button><button data-o="entiers">Sans virgule</button><button data-o="virgule">Avec la virgule</button></div>
+    <div id="coin">Série sans faute : <b id="score">0</b> · 🏆 Record : <b id="record">0</b></div>
+  </div>
+  <div id="consigne"></div>
+  <div id="jeu"></div>
+  <div id="bulle"></div>
+  <button id="crayon" title="Taper ma longueur">✏️</button>
+  <div id="choix"><div><label>Longueur <input id="lg" value="3 m 45 cm" size="12"></label><label>en <select id="vers"></select></label><span class="err" id="err"></span><button id="ok">C'est parti</button></div></div>
+  <button id="indice" title="Indice">💡</button><div id="bas"><div id="verdict"></div></div>
+</div>
+<script>
+"use strict";
+const U = ["km", "hm", "dam", "m", "dm", "cm", "mm"];
+// une mesure = ses morceaux [chiffres, unité] (avec la virgule : un seul morceau « 3,5 ») et l'unité demandée
+const ENTIERS = [
+  { m: [["3", "m"], ["45", "cm"]], vers: "cm" }, { m: [["3", "m"]], vers: "cm" }, { m: [["5", "cm"], ["8", "mm"]], vers: "mm" },
+  { m: [["2", "km"]], vers: "m" }, { m: [["4", "m"], ["7", "cm"]], vers: "cm" }, { m: [["12", "m"]], vers: "dm" },
+  { m: [["3", "km"], ["250", "m"]], vers: "m" }, { m: [["6", "dm"], ["4", "cm"]], vers: "mm" }, { m: [["1", "m"], ["5", "mm"]], vers: "mm" },
+  { m: [["7", "cm"]], vers: "mm" }
+];
+const VIRGULE = [
+  { m: [["3,5", "m"]], vers: "cm" }, { m: [["2,5", "km"]], vers: "m" }, { m: [["2,75", "m"]], vers: "cm" }, { m: [["0,8", "m"]], vers: "cm" },
+  { m: [["4,2", "cm"]], vers: "mm" }, { m: [["1,05", "m"]], vers: "cm" }, { m: [["6,3", "km"]], vers: "m" }, { m: [["0,25", "km"]], vers: "m" },
+  { m: [["7,5", "dm"]], vers: "mm" }, { m: [["2,08", "m"]], vers: "mm" }
+];
+// Même longueur : on écrit la mesure avec la virgule dans la grande unité, puis sans virgule dans la petite
+const PAREIL = [
+  { m: [["3", "m"], ["45", "cm"]], grand: "m", vers: "cm" }, { m: [["2", "m"], ["5", "cm"]], grand: "m", vers: "cm" }, { m: [["1", "km"], ["250", "m"]], grand: "km", vers: "m" },
+  { m: [["4", "cm"], ["7", "mm"]], grand: "cm", vers: "mm" }, { m: [["6", "m"], ["8", "dm"]], grand: "m", vers: "dm" }, { m: [["12", "m"], ["50", "cm"]], grand: "m", vers: "cm" },
+  { m: [["5", "km"], ["300", "m"]], grand: "km", vers: "m" }, { m: [["8", "dm"], ["6", "cm"]], grand: "dm", vers: "cm" }, { m: [["1", "m"], ["75", "cm"]], grand: "m", vers: "cm" },
+  { m: [["3", "cm"], ["2", "mm"]], grand: "cm", vers: "mm" }
+];
+const LISTES = { entiers: ENTIERS, virgule: VIRGULE, pareil: PAREIL };
+const etat = { onglet: "entiers", i: 0, score: 0, aide: 0, cases: [], attendu: [], phase: "", tape: "", reponse: "" };
+window.LONGUEURS = etat;   // pour le test automatique
+const $ = id => document.getElementById(id);
+const mem = { lire(k) { try { return +localStorage.getItem(k) || 0; } catch (e) { return 0; } }, ecrire(k, v) { try { localStorage.setItem(k, v); } catch (e) {} } };
+const cleRecord = () => "longueurs-record-" + etat.onglet;
+function afficheScore() { $("score").textContent = etat.score; $("record").textContent = mem.lire(cleRecord()); }
+function marque() { etat.score++; if (etat.score > mem.lire(cleRecord())) mem.ecrire(cleRecord(), etat.score); afficheScore(); }
+function verdict(t, cls) { const v = $("verdict"); v.textContent = t; v.className = cls || ""; if (cls === "ko" && etat.score) { etat.score = 0; afficheScore(); } }   // série sans faute : une erreur la remet à 0
+function consigne(h) { $("consigne").innerHTML = "<span>" + h + "</span>"; }
+function bulle(t) { const b = $("bulle"); b.textContent = t; b.style.display = "block"; clearTimeout(bulle.t); bulle.t = setTimeout(() => b.style.display = "none", 7000); }
+const echelle = () => +($("scene").dataset.ech || 1);
+let minuteur = 0;
+const plusTard = f => { clearTimeout(minuteur); minuteur = setTimeout(f, 1800); };
+const question = () => LISTES[etat.onglet][etat.i % LISTES[etat.onglet].length];
+
+// ---------- les deux gestes ----------
+const choix = { el: null, f: null };
+let enGlisse = false;
+function rendGlissable(el, cibles, quandDepose) {
+  el.addEventListener("pointerdown", ev => {
+    ev.preventDefault();
+    const sx = ev.clientX, sy = ev.clientY, r0 = el.getBoundingClientRect();
+    let bouge = false, survol = null, fantome = null;
+    const move = e => {
+      if (!bouge && Math.hypot(e.clientX - sx, e.clientY - sy) > 12) {
+        bouge = true; enGlisse = true; if (choix.el) { choix.el.classList.remove("choisi"); choix.el = null; }
+        fantome = el.cloneNode(true); fantome.classList.add("vole"); fantome.classList.remove("choisi");
+        Object.assign(fantome.style, { left: r0.left + "px", top: r0.top + "px", transform: "scale(" + echelle() + ")", transformOrigin: "0 0" });
+        document.body.appendChild(fantome);
+      }
+      if (!bouge) return;
+      fantome.style.left = (r0.left + e.clientX - sx) + "px"; fantome.style.top = (r0.top + e.clientY - sy) + "px";
+      const c = cibles().find(t => { const r = t.getBoundingClientRect(); return e.clientX > r.left && e.clientX < r.right && e.clientY > r.top && e.clientY < r.bottom; }) || null;
+      if (c !== survol) { survol && survol.classList.remove("survol"); survol = c; survol && survol.classList.add("survol"); }
+    };
+    const up = () => {
+      removeEventListener("pointermove", move); removeEventListener("pointerup", up); setTimeout(() => enGlisse = false, 0);
+      survol && survol.classList.remove("survol"); fantome && fantome.remove();
+      if (!bouge) { document.querySelectorAll(".choisi").forEach(x => x !== el && x.classList.remove("choisi")); el.classList.toggle("choisi"); choix.el = el.classList.contains("choisi") ? el : null; choix.f = quandDepose; return; }
+      if (survol) quandDepose(survol);
+    };
+    addEventListener("pointermove", move); addEventListener("pointerup", up);
+  });
+}
+function cibleTouchable(t) { t.addEventListener("pointerup", () => { if (enGlisse || !choix.el) return; const f = choix.f; choix.el.classList.remove("choisi"); choix.el = null; f(t); }); }
+
+// ---------- une mesure ----------
+function tour() {
+  const q = question(); $("jeu").innerHTML = ""; etat.aide = 0; etat.phase = "chiffres"; etat.cases = U.map(() => "");
+  // la colonne attendue de chaque chiffre : le chiffre des unités sous l'unité du morceau
+  etat.attendu = []; etat.virg = null;
+  for (const [ch, u] of q.m) {
+    const [ent, dec = ""] = ch.split(","), k = U.indexOf(u);
+    [...ent].forEach((c, j) => etat.attendu.push({ c, col: k - (ent.length - 1 - j) }));
+    [...dec].forEach((c, j) => etat.attendu.push({ c, col: k + 1 + j }));
+    if (dec) etat.virg = k;
+  }
+  const T = document.createElement("div"); T.id = "tableau";
+  T.innerHTML = U.map((u, k) => '<div class="col" data-k="' + k + '"><div class="u' + (u === q.vers ? " cible" : u === q.grand ? " grand" : "") + '">' + u + '</div><div class="case"></div></div>').join("");
+  $("jeu").appendChild(T); T.querySelectorAll(".col").forEach(cibleTouchable);
+  // la mesure, avec une étiquette par chiffre
+  const M = document.createElement("div"); M.id = "mesure"; let n = 0;
+  for (const [ch, u] of q.m) {
+    for (const c of ch) {
+      if (c === ",") { M.insertAdjacentHTML("beforeend", '<span style="color:#c62828;font-size:90px">,</span>'); continue; }
+      const e = document.createElement("div"); e.className = "eti"; e.textContent = c; e.dataset.n = n++;
+      rendGlissable(e, () => [...document.querySelectorAll("#tableau .col")], col => poseChiffre(e, col)); M.appendChild(e);
+    }
+    M.insertAdjacentHTML("beforeend", '<span style="margin:0 26px 0 6px">' + u + "</span>");
+  }
+  $("jeu").appendChild(M);
+  consigne('Range <span class="q">' + q.m.map(([c, u]) => c + " " + u).join(" ") + "</span>");
+}
+function dessineCases() {
+  document.querySelectorAll("#tableau .col").forEach((c, k) => {
+    const v = etat.cases[k], cs = c.querySelector(".case"); cs.textContent = v ? v.c : ""; cs.classList.toggle("zero", !!(v && v.zero));
+    const old = c.querySelector(".virg"); old && old.remove();
+    if (etat.virg === k && v) c.insertAdjacentHTML("beforeend", '<div class="virg">,</div>');
+  });
+}
+function poseChiffre(e, col) {
+  if (etat.phase !== "chiffres") return;
+  const a = etat.attendu[+e.dataset.n], k = +col.dataset.k;
+  if (k !== a.col) { verdict(k < a.col ? "🤪 Trop à gauche." : "🤪 Trop à droite.", "ko"); return; }
+  etat.cases[k] = { c: a.c }; e.classList.add("pose"); dessineCases(); verdict("");
+  if (document.querySelectorAll("#mesure .eti:not(.pose)").length === 0) { $("mesure").remove(); passeAuxZeros(); }
+}
+// ---------- les zéros : l'élève les pose lui-même dans les colonnes vides, jusqu'à la nouvelle unité ----------
+function zerosManquants() { const q = question(), kv = U.indexOf(q.vers), k0 = etat.cases.findIndex(v => v); const L = []; for (let k = k0; k <= kv; k++) if (!etat.cases[k]) L.push(k); return L; }
+function passeAuxZeros() {
+  const q = question();
+  if (!zerosManquants().length) return passeALaReponse();
+  etat.phase = "zeros";
+  consigne('Pose les <span class="q">zéros</span>');
+  const R = document.createElement("div"); R.id = "reserve";
+  R.innerHTML = '<div class="eti zero" id="zero">0</div><span>autant de zéros<br>que tu veux</span>';
+  $("jeu").appendChild(R);
+  rendGlissable($("zero"), () => [...document.querySelectorAll("#tableau .col")], col => poseZero(col));
+}
+function poseZero(col) {
+  if (etat.phase !== "zeros") return;
+  const k = +col.dataset.k, q = question();
+  if (etat.cases[k]) { verdict("🤪 Cette colonne a déjà un chiffre.", "ko"); return; }
+  if (!zerosManquants().includes(k)) { verdict(k > U.indexOf(q.vers) ? "🤪 On s'arrête aux " + q.vers + "." : "🤪 Pas de zéro devant le nombre.", "ko"); return; }
+  etat.cases[k] = { c: "0", zero: true }; dessineCases(); verdict("");
+  if (!zerosManquants().length) { $("reserve").remove(); passeALaReponse(); }
+}
+// ---------- la réponse : lire les chiffres jusqu'à la colonne de la nouvelle unité (Même longueur : d'abord avec la virgule) ----------
+const fmt = s => s.replace(/^(\d+)/, n => n.replace(/\B(?=(\d{3})+(?!\d))/g, " "));
+const texte = q => q.m.map(([c, u]) => c + " " + u).join(" ");
+function ecritures() {
+  const q = question(), kv = U.indexOf(q.vers), k0 = etat.cases.findIndex(v => v), lire = (a, b) => etat.cases.slice(a, b + 1).map(v => v ? v.c : "0").join("");
+  const petit = { u: q.vers, rep: [String(+lire(k0, kv))] };
+  if (!q.grand) return [petit];
+  const kg = U.indexOf(q.grand), ent = String(+lire(k0, kg)), dec = lire(kg + 1, kv), d = dec.replace(/0+$/, "");
+  return [{ u: q.grand, rep: d ? [ent + "," + d].concat(dec !== d ? [ent + "," + dec] : []) : [ent], virgule: true, kg }, petit];
+}
+function lecture(n, txt) {   // un trait sous les chiffres lus, du premier chiffre à la colonne de l'unité demandée
+  const q = question(), cols = document.querySelectorAll("#tableau .col"), T = $("tableau"), k0 = etat.cases.findIndex(v => v), kv = U.indexOf(q.vers);
+  const x = T.offsetLeft + 4 + cols[k0].offsetLeft, w = cols[kv].offsetLeft + cols[kv].offsetWidth - cols[k0].offsetLeft;
+  $("jeu").insertAdjacentHTML("beforeend", '<div class="lecture l' + (n + 1) + '" style="left:' + x + "px;top:" + (T.offsetTop + T.offsetHeight + 8 + n * 92) + "px;width:" + w + 'px"><b>' + txt + "</b></div>");
+}
+function passeALaReponse() { etat.etapes = ecritures(); etat.etape = 0; etat.ecrits = []; afficheEtape(); }
+function afficheEtape() {
+  const q = question(), e = etat.etapes[etat.etape];
+  etat.phase = "reponse"; etat.tape = "";
+  consigne('En <span class="q">' + e.u + "</span> ?");
+  ["ecran", "pave"].forEach(id => { const x = $(id); x && x.remove(); });
+  const el = document.createElement("div"); el.id = "ecran"; el.innerHTML = "<span>" + [texte(q)].concat(etat.ecrits).join(" = ") + ' =</span><div id="tape"></div><span>' + e.u + "</span>";
+  const p = document.createElement("div"); p.id = "pave";
+  ["7", "8", "9", "4", "5", "6", "1", "2", "3", "0"].concat(e.virgule ? [","] : [], ["⌫"]).forEach(c => { const b = document.createElement("button"); b.textContent = c; b.onclick = () => touche(c); p.appendChild(b); });
+  $("jeu").append(el, p);
+}
+function touche(c) {
+  if (etat.phase !== "reponse") return;
+  const e = etat.etapes[etat.etape], T = $("tape");
+  if (c === "⌫") etat.tape = etat.tape.slice(0, -1);
+  else if (c === ",") { if (!e.virgule || !etat.tape || etat.tape.includes(",")) return; etat.tape += c; }
+  else if (etat.tape.length < 7) etat.tape += c;
+  T.textContent = fmt(etat.tape);
+  if (e.rep.includes(etat.tape)) {
+    T.classList.add("ok"); etat.ecrits.push(fmt(etat.tape) + " " + e.u);
+    if (e.virgule) { etat.virg = e.kg; dessineCases(); }   // la virgule s'affiche après le chiffre des unités de la grande unité
+    if (question().grand) lecture(etat.etape, fmt(etat.tape) + " " + e.u);
+    if (etat.etape + 1 < etat.etapes.length) { etat.phase = "attente"; etat.etape++; verdict("✅ " + texte(question()) + " = " + etat.ecrits[0], "ok"); setTimeout(afficheEtape, 1200); return; }
+    marque(); const q = question();
+    verdict("✅ " + [texte(q)].concat(etat.ecrits).join(" = ") + (q.grand ? " : c'est la même longueur" : ""), "ok");
+    etat.phase = "fini"; etat.i++; plusTard(tour);
+  } else if (etat.tape && !e.rep.some(r => r.startsWith(etat.tape))) {
+    T.classList.add("ko"); verdict(e.virgule ? "🤪 La virgule va juste après le chiffre des " + e.u + "." : "🤪 Lis les chiffres jusqu'à la colonne des " + e.u + ".", "ko");
+    setTimeout(() => { T.classList.remove("ko"); etat.tape = ""; T.textContent = ""; }, 1000);
+  }
+}
+
+// ---------- ✏️ ma longueur : elle remplace la question en cours ----------
+$("vers").innerHTML = U.map(u => "<option>" + u + "</option>").join("");
+$("crayon").onclick = () => { $("err").textContent = ""; $("vers").value = question().vers; $("choix").style.display = "flex"; };
+$("choix").addEventListener("pointerup", ev => { if (ev.target.id === "choix") $("choix").style.display = "none"; });
+$("ok").onclick = () => {
+  const m = [...$("lg").value.replace(/\./g, ",").matchAll(/(\d+(?:,\d+)?)\s*(km|hm|dam|mm|cm|dm|m)\b/g)].map(x => [x[1], x[2]]), vers = $("vers").value, err = s => $("err").textContent = s;
+  if (!m.length) return err("Écris par exemple : 3 m 45 cm, ou 3,5 m.");
+  // chaque chiffre doit trouver sa colonne, une seule fois
+  const cols = []; for (const [ch, u] of m) { const [e, d = ""] = ch.split(","), k = U.indexOf(u); [...e].forEach((c, j) => cols.push(k - (e.length - 1 - j))); [...d].forEach((c, j) => cols.push(k + 1 + j)); }
+  if (cols.some(c => c < 0 || c > 6) || new Set(cols).size !== cols.length) return err("Ces chiffres ne tiennent pas dans le tableau.");
+  if (U.indexOf(vers) < Math.max(...cols)) return err("Choisis une unité plus petite (jusqu'au dernier chiffre).");
+  const q = { m, vers }; if (etat.onglet === "pareil") { q.grand = m[0][1]; if (U.indexOf(q.grand) >= U.indexOf(vers)) return err("Choisis une unité plus petite que " + q.grand + "."); }
+  const L = LISTES[etat.onglet]; L.splice(etat.i % L.length, 0, q);
+  $("choix").style.display = "none"; clearTimeout(minuteur); verdict(""); tour();
+};
+
+// ---------- démarrer ----------
+function ouvre(o) {
+  clearTimeout(minuteur); etat.onglet = o; etat.i = 0; etat.score = 0; choix.el = null;
+  document.querySelectorAll(".onglets button").forEach(b => b.classList.toggle("on", b.dataset.o === o));
+  history.replaceState(null, "", "#" + o);
+  afficheScore(); verdict(""); $("bulle").style.display = "none"; tour();
+}
+document.querySelectorAll(".onglets button").forEach(b => b.onclick = () => ouvre(b.dataset.o));
+addEventListener("keydown", e => { if ($("choix").style.display === "flex") return; if (/^[0-9,]$/.test(e.key)) touche(e.key); else if (e.key === ".") touche(","); else if (e.key === "Backspace") touche("⌫"); });
+// l'indice donne la méthode de la séance, jamais le nombre
+$("indice").onclick = () => {
+  etat.aide++;
+  if (etat.phase === "chiffres") bulle(etat.onglet === "virgule" ? "Le chiffre juste avant la virgule va sous l'unité de la mesure. Les chiffres après la virgule vont dans les colonnes de droite, un par colonne." : "Le dernier chiffre de chaque morceau va sous son unité : dans 45 cm, le 5 va sous cm. Un seul chiffre par colonne.");
+  else if (etat.phase === "zeros") bulle("Chaque colonne vide, jusqu'à la nouvelle unité, reçoit un 0.");
+  else bulle("Lis tous les chiffres, de la gauche jusqu'à la colonne de la nouvelle unité.");
+};
+function ajuste() {
+  const e = Math.min(innerWidth / 1920, innerHeight / 1080), s = $("scene");
+  s.style.transform = "scale(" + e + ")"; s.style.left = ((innerWidth - 1920 * e) / 2) + "px"; s.style.top = ((innerHeight - 1080 * e) / 2) + "px"; s.dataset.ech = e;
+}
+addEventListener("resize", ajuste); ajuste();
+function depuisLien() { const h = location.hash.slice(1); ouvre(LISTES[h] ? h : "pareil"); }
+addEventListener("hashchange", depuisLien);
+depuisLien();
+</script>
+</body>
+</html>

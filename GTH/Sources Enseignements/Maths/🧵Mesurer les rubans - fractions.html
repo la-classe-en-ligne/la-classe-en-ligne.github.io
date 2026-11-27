@@ -1,0 +1,398 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mesurer les rubans</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect x='4' y='14' width='56' height='14' rx='3' fill='%23d6456b'/%3E%3Crect x='4' y='36' width='24' height='14' fill='%23f2c94c' stroke='%23a07a10' stroke-width='2'/%3E%3Crect x='28' y='36' width='12' height='14' fill='%23f2c94c' stroke='%23a07a10' stroke-width='2'/%3E%3C/svg%3E">
+<!--
+  🧵 Mesurer les rubans — fractions, P2 📅 2, 3 et 5 (GTH v2 : donnees/seances/maths/ma-s2-nombres.js, ma-s3, ma-s5).
+  ERMEL CM1, « Bande-unité » (p. 64-71). Maquette montrée à Karim le 21/10 ; il a demandé de coder toutes les activités (21/10).
+  Univers : l'atelier de la couturière ; les segments sont des rubans, la bande-unité est un mètre de couturière sans graduations.
+  Onglets : « Je mesure » (reporter la bande, la plier pour le bout, écrire le message), « Je retrouve » (un message → le ruban parmi 6),
+  « Défi » (le message est écrit autrement : 10/8 u, 7/4 u, 2 u − 1/4 u…). Liens : #mesure, #retrouve, #defi.
+  Gestes : glisser la bande sur le ruban (ou la toucher, puis toucher le ruban) ; Plier / Déplier ; toucher le dernier morceau l'enlève.
+  L'outil ne mesure jamais à la place de l'élève : il accroche le morceau bout à bout et refuse seulement ce qui dépasse.
+  Contenu : les six segments de la feuille n° 3 d'ERMEL (1 u + 1/4, 2 u + 1/2, 1 u + 5/8, 2 u + 3/8, 1 u + 3/4, 2 u + 1/8) ;
+  les autres longueurs (en huitièmes, de 9/8 à 23/8) sont de moi. Fonctionne hors ligne (ENI, Chromebook).
+-->
+<style>
+:root{--lin:#f3ead8;--ruban:#d6456b;--rubanf:#a8284d;--metre:#f2c94c;--metref:#a07a10;--encre:#3b2a1a;--vert:#2e7d32;--rouge:#c62828;--talbot:#1f7a8c}
+html,body{margin:0;height:100%;background:#3b2a1a;overflow:hidden;font-family:Arial,Helvetica,sans-serif;color:var(--encre)}
+#scene{position:absolute;left:0;top:0;width:1920px;height:1080px;transform-origin:0 0;background:var(--lin);
+  background-image:repeating-linear-gradient(0deg,rgba(120,90,50,.05) 0 2px,transparent 2px 6px),repeating-linear-gradient(90deg,rgba(120,90,50,.05) 0 2px,transparent 2px 6px)}
+#barre{height:84px;display:flex;align-items:center;gap:22px;padding:0 28px;background:#e9dcc2;border-bottom:3px solid #cdb68c}
+#barre h1{margin:0;font-size:34px;display:flex;align-items:center;gap:12px;color:var(--rubanf)}
+#barre h1 svg{width:54px;height:54px}
+.onglets{display:flex;gap:8px;margin-left:24px}
+.onglets button{font:inherit;font-size:24px;padding:10px 22px;border-radius:14px 14px 0 0;border:2px solid #cdb68c;border-bottom:none;background:#efe3cc;color:var(--encre);cursor:pointer}
+.onglets button.on{background:var(--lin);font-weight:700}
+#coin{margin-left:auto;font-size:22px}
+#coin b{font-size:28px}
+#consigne{height:100px;display:flex;align-items:center;justify-content:center;font-size:50px;font-weight:700;text-align:center}
+#consigne .q{color:var(--rubanf)}
+#jeu{position:absolute;left:0;right:0;top:188px;bottom:110px}
+#bas{position:absolute;left:0;right:0;bottom:0;height:110px;display:flex;align-items:center;justify-content:center;gap:30px}
+#indice{font:inherit;font-size:24px;padding:12px 26px;border-radius:30px;border:2px solid #d4b106;background:#fff8c4;cursor:pointer}
+#verdict{font-size:38px;font-weight:700;min-width:760px;text-align:center}
+#verdict.ok{color:var(--vert)} #verdict.ko{color:var(--rouge)}
+#bulle{position:absolute;left:50%;bottom:118px;transform:translateX(-50%);max-width:1100px;background:#fff8c4;border:2px solid #d4b106;border-radius:18px;padding:16px 26px;font-size:30px;display:none;box-shadow:0 6px 18px rgba(0,0,0,.15)}
+/* les rubans */
+.rang{position:absolute;touch-action:none}
+.rang.survol .ruban,.rang.choisi .ruban{outline:6px solid var(--talbot);outline-offset:4px}
+.ruban{position:absolute;left:0;top:0;border-radius:2px;background:linear-gradient(180deg,#f48fab 0%,#d6456b 30%,#b52e52 72%,#d6456b 100%);box-shadow:0 4px 0 rgba(90,20,40,.18)}
+.ruban::before{content:"";position:absolute;left:8px;right:8px;top:22%;bottom:22%;border-top:2px dashed rgba(255,255,255,.75);border-bottom:2px dashed rgba(255,255,255,.75)}
+.epingle{position:absolute;top:-26px;width:4px;margin-left:-2px;background:#9e9e9e;border-radius:2px}
+.epingle::before{content:"";position:absolute;left:-9px;top:-14px;width:22px;height:22px;border-radius:50%;background:#1f7a8c;box-shadow:inset -4px -4px 0 rgba(0,0,0,.2)}
+.ruban.fini{animation:brille 1s 2}
+@keyframes brille{50%{filter:brightness(1.35)}}
+.nom{position:absolute;font-size:30px;font-weight:700;color:var(--rubanf)}
+.morceau{position:absolute;box-sizing:border-box;background:var(--metre);border:3px solid var(--metref);display:flex;align-items:center;justify-content:center;font-weight:700;color:#5a4300;animation:pose .3s}
+.morceau.trop{background:#ffcdd2;border-color:var(--rouge);color:var(--rouge)}
+@keyframes pose{from{transform:translateY(-30px);opacity:.3}to{transform:none;opacity:1}}
+.morceau.dernier{cursor:pointer}
+/* la bande et ses boutons */
+#etabli{position:absolute;display:flex;align-items:center;gap:26px}
+#bande{position:relative;height:74px;box-sizing:border-box;background:var(--metre);border:4px solid var(--metref);border-radius:4px;cursor:grab;touch-action:none;user-select:none;transition:width .35s}
+#bande.choisi{outline:6px solid var(--talbot);outline-offset:4px}
+#bande i{position:absolute;top:0;bottom:0;border-left:3px dashed var(--metref)}
+#bande span{position:absolute;right:-90px;top:14px;font-size:34px;font-weight:700;color:#5a4300}
+.vole{position:fixed;z-index:30;pointer-events:none;opacity:.9}
+.bande-vole{box-sizing:border-box;background:var(--metre);border:4px solid var(--metref);border-radius:4px;transition:width .15s,height .15s}
+.bande-vole.aimante{opacity:1;box-shadow:0 0 0 5px var(--talbot)}
+.bande-vole.trop{background:#ffcdd2;border-color:var(--rouge);box-shadow:0 0 0 5px var(--rouge)}
+.morceau i.pli{position:absolute;top:4px;bottom:4px;border-left:3px dashed #8a6500}
+.morceau.sous{background:#fff3c4;border-style:dashed;animation:none}
+.egal{position:absolute;font-size:30px;font-weight:700;color:#5a4300;white-space:nowrap}
+.outil{font:inherit;font-size:28px;font-weight:700;padding:12px 26px;border-radius:40px;border:3px solid var(--metref);background:#fff3c4;color:#5a4300;cursor:pointer}
+/* le message */
+#message{position:absolute;display:flex;align-items:center;gap:12px;font-size:44px;font-weight:700}
+.champ{min-width:70px;height:74px;font-size:42px;border:5px solid #b08a5a;border-radius:16px;background:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.champ.actif{border-color:var(--talbot);box-shadow:0 0 0 5px #bfe3ea}
+.frac{display:flex;flex-direction:column;align-items:center;gap:6px}
+.frac .champ{height:58px;min-width:62px;font-size:36px}
+.frac hr{width:80px;border:0;border-top:5px solid var(--encre);margin:0}
+#message.ko .champ{border-color:var(--rouge);animation:secoue .45s 2}
+@keyframes secoue{0%,100%{transform:translateX(0)}25%{transform:translateX(-10px)}75%{transform:translateX(10px)}}
+#pave{position:absolute;display:grid;grid-template-columns:repeat(5,70px);gap:10px}
+#pave button{font:inherit;font-size:30px;font-weight:700;height:60px;border-radius:16px;border:3px solid #cdb68c;background:#fff;color:var(--encre);cursor:pointer}
+/* l'étiquette du message (Je retrouve) */
+#etiquette{position:absolute;font-size:52px;font-weight:700;padding:22px 34px;background:#fff;border:4px solid var(--encre);border-radius:8px;box-shadow:6px 6px 0 rgba(59,42,26,.25);cursor:grab;touch-action:none;user-select:none;white-space:nowrap}
+#etiquette::before{content:"";position:absolute;left:-18px;top:50%;width:22px;height:22px;margin-top:-11px;border-radius:50%;background:var(--lin);border:4px solid var(--encre)}
+#etiquette.choisi{outline:6px solid var(--talbot);outline-offset:4px}
+/* 💡 sur le côté (21/10) : l'ampoule seule, au bout de la consigne ; la bulle à côté, jamais sous le jeu */
+#indice{position:absolute;right:26px;top:96px;width:82px;height:82px;padding:0;border-radius:50%;font-size:44px;line-height:1;z-index:20}
+#bulle{left:auto;right:124px;top:100px;bottom:auto;transform:none;max-width:640px;font-size:28px;z-index:20}
+/* 🧮 la calculette (21/10) : petite, sur le côté, on touche les touches */
+#pave{position:absolute !important; left:auto !important; right:40px !important; top:440px !important; bottom:auto !important; grid-template-columns:repeat(3,64px) !important; gap:8px !important;
+  padding:14px; background:#37474f; border-radius:20px; box-shadow:0 6px 0 #263238; z-index:15}
+#pave button{height:52px !important; font-size:26px !important; border-radius:10px !important; border:none !important; background:#eceff1 !important; color:#263238 !important; box-shadow:0 3px 0 #90a4ae; grid-column:auto !important}
+#pave button:active{transform:translateY(2px); box-shadow:none}
+/* ✏️ mes nombres (21/10) */
+#crayon{position:absolute;left:26px;top:96px;width:82px;height:82px;border-radius:50%;border:2px solid #b0bec5;background:#fff;font-size:40px;cursor:pointer;z-index:20}
+#choix{position:absolute;left:0;top:0;right:0;bottom:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;z-index:40}
+#choix > div{background:#fff;border-radius:20px;padding:30px 44px;font-size:36px;font-weight:700;display:flex;flex-direction:column;gap:20px;align-items:center;color:#263238}
+#choix .ligne-choix{display:flex;align-items:center;gap:12px}
+#choix input,#choix select{font:inherit;font-size:40px;width:110px;text-align:center;padding:4px}
+#choix button{font:inherit;font-size:30px;padding:10px 30px;border-radius:30px;border:3px solid #1f7a8c;background:#1f7a8c;color:#fff;cursor:pointer}
+#choix .err{color:#c62828;font-size:24px;min-height:28px}
+/* 🧮 calculette discrète (21/10) : petite, pâle, petits chiffres */
+#pave{padding:8px !important; gap:5px !important; grid-template-columns:repeat(3,46px) !important; background:#eceff1 !important; box-shadow:none !important; border:2px solid #cfd8dc; border-radius:14px !important; opacity:.85}
+#pave button{height:38px !important; font-size:19px !important; border-radius:8px !important; background:#fff !important; color:#607d8b !important; box-shadow:none !important; border:1px solid #cfd8dc !important}
+</style>
+</head>
+<body>
+<div id="scene">
+  <div id="barre">
+    <h1><svg viewBox="0 0 64 64"><rect x="4" y="12" width="56" height="16" rx="3" fill="#d6456b"/><rect x="4" y="36" width="26" height="16" fill="#f2c94c" stroke="#a07a10" stroke-width="2.5"/><rect x="30" y="36" width="13" height="16" fill="#f2c94c" stroke="#a07a10" stroke-width="2.5"/><path d="M50 30 l8 24" stroke="#555" stroke-width="3"/><circle cx="49" cy="27" r="3" fill="none" stroke="#555" stroke-width="2"/></svg>Mesurer les rubans</h1>
+    <div class="onglets"><button data-o="mesure">Je mesure</button><button data-o="retrouve">Je retrouve</button><button data-o="defi">Défi</button></div>
+    <div id="coin"><span id="nom-score">Rubans mesurés</span> : <b id="score">0</b> · 🏆 Record : <b id="record">0</b></div>
+  </div>
+  <div id="consigne"></div>
+  <div id="jeu"></div>
+  <div id="bulle"></div>
+  <button id="crayon" title="Mes nombres">✏️</button>
+  <div id="choix"><div><div class="ligne-choix">Ruban : <input id="ca" type="number" min="0" max="2" value="2"> u + <input id="cb" type="number" min="0" max="7" value="3"> / <select id="cc"><option>2</option><option>4</option><option selected>8</option></select> u</div><span class="err" id="err"></span><button id="ok">C'est parti</button></div></div>
+  <button id="indice" title="Indice">💡</button><div id="bas"><div id="verdict"></div></div>
+</div>
+<script>
+"use strict";
+// ---------- les longueurs, en huitièmes d'unité ----------
+// ERMEL, feuille n° 3 : (1) 10/8 · (2) 20/8 · (3) 13/8 · (4) 19/8 · (5) 14/8 · (6) 17/8 ; les autres sont de moi
+const ERMEL = [10, 20, 13, 19, 14, 17];
+const MESURE = [20, 14, 17, 10, 13, 19, 12, 22, 11, 18, 21, 15];
+// Je retrouve : 6 rubans par tour (le 1er tour = la feuille n° 3) et le ruban du message
+const TOURS = [
+  { r: ERMEL, c: 14 }, { r: ERMEL, c: 13 }, { r: [12, 18, 9, 22, 15, 20], c: 18 }, { r: [11, 21, 16, 10, 23, 14], c: 21 },
+  { r: [20, 12, 17, 22, 9, 13], c: 9 }, { r: [15, 10, 19, 12, 21, 18], c: 15 }, { r: [14, 22, 11, 16, 20, 10], c: 22 },
+  { r: [13, 9, 18, 23, 12, 19], c: 23 }, { r: [17, 21, 10, 14, 11, 16], c: 11 }, { r: [19, 12, 22, 9, 15, 20], c: 19 }
+];
+// Défi : le même ruban, écrit autrement (ERMEL phases 4 et 5 : 10/8 = 1 + 1/4, 7/4 = 1 + 3/4, 2 − 1/4…)
+const DEFI = [
+  { r: ERMEL, c: 10, m: "10/8 u" }, { r: ERMEL, c: 14, m: "7/4 u" }, { r: ERMEL, c: 20, m: "5/2 u" }, { r: ERMEL, c: 14, m: "2 u − 1/4 u" },
+  { r: [12, 18, 9, 22, 15, 20], c: 12, m: "3/2 u" }, { r: [12, 18, 9, 22, 15, 20], c: 18, m: "1 u + 5/4 u" }, { r: [11, 21, 16, 10, 23, 14], c: 16, m: "1/2 u + 1/2 u + 1/2 u + 1/2 u" },
+  { r: [11, 21, 16, 10, 23, 14], c: 10, m: "1 u + 2/8 u" }, { r: [20, 12, 17, 22, 9, 13], c: 22, m: "3 u − 1/4 u" }, { r: [15, 10, 19, 12, 21, 18], c: 15, m: "2 u − 1/8 u" }
+];
+const PLIS = [1, 2, 4, 8];   // la bande dépliée, pliée en 2, en 4, en 8
+const NOMF = { 1: "1 u", 2: "½ u", 4: "¼ u", 8: "⅛ u" };
+const etat = { onglet: "mesure", i: 0, pli: 0, rubans: [], cible: 0, score: 0, aide: 0, phase: "mesure", champs: ["", "", ""], actif: 0 };
+window.SEGMENT = etat;   // pour le test automatique
+const $ = id => document.getElementById(id);
+const mem = { lire(k) { try { return +localStorage.getItem(k) || 0; } catch (e) { return 0; } }, ecrire(k, v) { try { localStorage.setItem(k, v); } catch (e) {} } };
+const cleRecord = () => "segment-record-" + etat.onglet;
+function afficheScore() { $("score").textContent = etat.score; $("record").textContent = mem.lire(cleRecord()); $("nom-score").textContent = "Série sans faute"; }
+function marque() { etat.score++; if (etat.score > mem.lire(cleRecord())) mem.ecrire(cleRecord(), etat.score); afficheScore(); }
+function verdict(t, cls) { const v = $("verdict"); v.textContent = t; v.className = cls || ""; if (cls === "ko" && etat.score) { etat.score = 0; afficheScore(); } }   // série sans faute : une erreur la remet à 0
+function consigne(h) { $("consigne").innerHTML = "<span>" + h + "</span>"; }
+function bulle(t) { const b = $("bulle"); b.textContent = t; b.style.display = "block"; clearTimeout(bulle.t); bulle.t = setTimeout(() => b.style.display = "none", 7000); }
+let minuteur = 0;   // le passage à la question suivante, annulé si on change d'onglet
+const plusTard = f => { clearTimeout(minuteur); minuteur = setTimeout(f, 1800); };
+const echelle = () => +($("scene").dataset.ech || 1);
+const ecrit = k => { const e = Math.floor(k / 8), r = k % 8; if (!r) return e + " u"; let n = r, d = 8; while (n % 2 === 0) { n /= 2; d /= 2; } return (e ? e + " u + " : "") + n + "/" + d + " u"; };
+
+// ---------- les deux gestes : glisser, ou toucher puis toucher la cible ----------
+const choix = { el: null, f: null };
+let enGlisse = false;   // pendant un glisser, le lâcher ne compte pas comme un toucher
+function rendGlissable(el, cibles, quandDepose) {
+  el.addEventListener("pointerdown", ev => {
+    ev.preventDefault();
+    const sx = ev.clientX, sy = ev.clientY, r0 = el.getBoundingClientRect();
+    let bouge = false, survol = null, fantome = null;
+    const move = e => {
+      if (!bouge && Math.hypot(e.clientX - sx, e.clientY - sy) > 12) {
+        bouge = true; enGlisse = true; if (choix.el) { choix.el.classList.remove("choisi"); choix.el = null; }
+        fantome = el.cloneNode(true); fantome.classList.add("vole"); fantome.classList.remove("choisi"); fantome.removeAttribute("id");
+        Object.assign(fantome.style, { left: r0.left + "px", top: r0.top + "px", width: (r0.width / echelle()) + "px", transform: "scale(" + echelle() + ")", transformOrigin: "0 0", margin: 0 });
+        document.body.appendChild(fantome);
+      }
+      if (!bouge) return;
+      fantome.style.left = (r0.left + e.clientX - sx) + "px"; fantome.style.top = (r0.top + e.clientY - sy) + "px";
+      const c = cibles().find(t => { const r = t.getBoundingClientRect(); return e.clientX > r.left && e.clientX < r.right && e.clientY > r.top && e.clientY < r.bottom; }) || null;
+      if (c !== survol) { survol && survol.classList.remove("survol"); survol = c; survol && survol.classList.add("survol"); }
+    };
+    const up = () => {
+      removeEventListener("pointermove", move); removeEventListener("pointerup", up);
+      setTimeout(() => enGlisse = false, 0);
+      survol && survol.classList.remove("survol"); fantome && fantome.remove();
+      if (!bouge) {
+        document.querySelectorAll(".choisi").forEach(x => x !== el && x.classList.remove("choisi"));
+        el.classList.toggle("choisi"); choix.el = el.classList.contains("choisi") ? el : null; choix.f = quandDepose; return;
+      }
+      if (survol) quandDepose(survol);
+    };
+    addEventListener("pointermove", move); addEventListener("pointerup", up);
+  });
+}
+function cibleTouchable(t) { t.addEventListener("pointerup", ev => { if (enGlisse || !choix.el || choix.el === t) return; ev.stopImmediatePropagation(); const f = choix.f; choix.el.classList.remove("choisi"); choix.el = null; f(t); }); }
+
+// ---------- un ruban ----------
+function creeRuban(k, x, y, U, h, nom) {
+  const r = { k, U, h, morceaux: [], el: document.createElement("div") };
+  r.el.className = "rang"; Object.assign(r.el.style, { left: x + "px", top: y + "px", width: (k / 8 * U + 120) + "px", height: (h * 2 + 14) + "px" });
+  r.el.innerHTML = '<div class="ruban" style="width:' + (k / 8 * U) + 'px;height:' + h + 'px"></div>' +
+    '<i class="epingle" style="left:0;height:' + (2 * h + 36) + 'px"></i><i class="epingle" style="left:' + (k / 8 * U) + 'px;height:' + (2 * h + 36) + 'px"></i>' + (nom ? '<div class="nom" style="left:-62px;top:' + (h / 2 - 18) + 'px">' + nom + '</div>' : "");
+  r.el.ruban = r;
+  $("jeu").appendChild(r.el); cibleTouchable(r.el);
+  return r;
+}
+function dessineMorceaux(r, trop) {
+  r.el.querySelectorAll(".morceau").forEach(m => m.remove());
+  let x = 0;
+  r.morceaux.forEach((d, j) => {
+    const w = r.U / d, m = document.createElement("div");
+    m.className = "morceau" + (j === r.morceaux.length - 1 ? " dernier" : "");
+    Object.assign(m.style, { left: x + "px", top: (r.h + 10) + "px", width: w + "px", height: r.h + "px", fontSize: Math.min(30, r.h * 0.55, w / 2.2) + "px" });
+    m.textContent = w > 34 ? NOMF[d] : "";
+    if (j === r.morceaux.length - 1) m.addEventListener("pointerup", ev => { if (choix.el) return; ev.stopPropagation(); enleve(r); });
+    r.el.appendChild(m); x += w;
+  });
+  if (Math.abs(longueur(r) - r.k) < 1e-9) montreEgalites(r);
+  if (trop) {   // le morceau qui dépasse : on le voit, puis il repart
+    const w = r.U / trop, m = document.createElement("div");
+    m.className = "morceau trop"; Object.assign(m.style, { left: x + "px", top: (r.h + 10) + "px", width: w + "px", height: r.h + "px", fontSize: Math.min(30, r.h * 0.55) + "px" });
+    m.textContent = NOMF[trop]; r.el.appendChild(m); setTimeout(() => m.remove(), 1100);
+  }
+}
+// les morceaux plus petits qu'une unité, et le plus petit d'entre eux
+function restes(r) { const f = r.morceaux.filter(d => d > 1); return { f, dmax: f.length ? Math.max(...f) : 1 }; }
+const NOMD = { 2: "demi", 4: "quart", 8: "huitième" };
+function montreEgalites(r) {   // sous le ½ u : deux morceaux de ¼ u, et « ½ u = 2/4 u » ; le ½ ne change pas
+  const { f, dmax } = restes(r); if (!f.some(d => d < dmax)) return;
+  let x = 0; const vus = [], y = 2 * r.h + 18, h = Math.round(r.h * 0.6);
+  r.morceaux.forEach(d => {
+    const w = r.U / d;
+    if (d > 1 && d < dmax) {
+      for (let k = 0; k < dmax / d; k++) r.el.insertAdjacentHTML("beforeend", '<div class="morceau sous" style="left:' + (x + k * r.U / dmax) + "px;top:" + y + "px;width:" + (r.U / dmax) + "px;height:" + h + "px;font-size:" + Math.min(24, h * 0.6) + 'px">' + (r.U / dmax > 34 ? NOMF[dmax] : "") + "</div>");
+      if (!vus.includes(d)) { vus.push(d); r.el.insertAdjacentHTML("beforeend", '<div class="egal" style="left:' + x + "px;top:" + (y + h + 6) + 'px">1/' + d + " u = " + (dmax / d) + "/" + dmax + " u</div>"); }
+    }
+    x += w;
+  });
+}
+const longueur = r => r.morceaux.reduce((s, d) => s + 8 / d, 0);   // en huitièmes
+function reporte(r) {
+  if (etat.onglet === "mesure" && etat.phase !== "mesure") return;
+  const d = PLIS[etat.pli];
+  if (longueur(r) + 8 / d > r.k + 1e-9) {
+    dessineMorceaux(r, d);
+    verdict(d === 8 ? "🤪 Le morceau dépasse le ruban." : "🤪 La bande dépasse : plie-la.", "ko"); return;
+  }
+  r.morceaux.push(d); dessineMorceaux(r); verdict("");
+  if (Math.abs(longueur(r) - r.k) < 1e-9) {
+    r.el.querySelector(".ruban").classList.add("fini");
+    if (etat.onglet === "mesure") { etat.phase = "message"; verdict("✅ La bande couvre tout le ruban.", "ok"); dessineMessage(); }
+  }
+}
+function enleve(r) {
+  if (etat.onglet === "mesure" && etat.phase !== "mesure") return;
+  r.morceaux.pop(); dessineMorceaux(r); r.el.querySelector(".ruban").classList.remove("fini"); verdict("");
+}
+
+// ---------- la bande : plier, déplier ----------
+function etabli(x, y, U) {
+  const e = document.createElement("div"); e.id = "etabli"; Object.assign(e.style, { left: x + "px", top: y + "px" });
+  e.innerHTML = '<button class="outil" id="deplier">Déplier</button><div id="bande"></div><button class="outil" id="plier" style="margin-left:100px">Plier en deux</button>';
+  $("jeu").appendChild(e); etat.U = U;
+  glisseBande();
+  $("plier").onclick = () => { if (etat.pli < 3) { etat.pli++; dessineBande(); } else bulle("Pliée en 8, c'est le plus petit morceau."); };
+  $("deplier").onclick = () => { etat.pli = 0; dessineBande(); };
+  dessineBande();
+}
+function glisseBande() {
+  const b = $("bande");
+  b.addEventListener("pointerdown", ev => {
+    ev.preventDefault();
+    const sx = ev.clientX, sy = ev.clientY, r0 = b.getBoundingClientRect(), e = echelle();
+    let bouge = false, f = null, aimant = null;
+    const move = m => {
+      if (!bouge && Math.hypot(m.clientX - sx, m.clientY - sy) > 12) {
+        bouge = true; enGlisse = true; if (choix.el) { choix.el.classList.remove("choisi"); choix.el = null; }
+        f = document.createElement("div"); f.className = "vole bande-vole"; document.body.appendChild(f);
+      }
+      if (!bouge) return;
+      const w = etat.U / PLIS[etat.pli];
+      let x = r0.left + m.clientX - sx, y = r0.top + m.clientY - sy, h = 74;
+      aimant = etat.rubans.find(r => { const rr = r.el.getBoundingClientRect(), yb = rr.top + (r.h * 1.5 + 10) * e; return m.clientX > rr.left - 80 * e && m.clientX < rr.left + (r.k / 8 * r.U + 160) * e && Math.abs(m.clientY - yb) < (r.h + 30) * e; }) || null;
+      if (aimant) { const rr = aimant.el.getBoundingClientRect(); x = rr.left + longueur(aimant) / 8 * aimant.U * e; y = rr.top + (aimant.h + 10) * e; h = aimant.h; }
+      Object.assign(f.style, { left: x + "px", top: y + "px", width: w + "px", height: h + "px", transform: "scale(" + e + ")", transformOrigin: "0 0" });
+      f.classList.toggle("aimante", !!aimant); f.classList.toggle("trop", !!aimant && longueur(aimant) + 8 / PLIS[etat.pli] > aimant.k + 1e-9);
+      etat.rubans.forEach(r => r.el.classList.toggle("survol", r === aimant));
+    };
+    const up = () => {
+      removeEventListener("pointermove", move); removeEventListener("pointerup", up); setTimeout(() => enGlisse = false, 0);
+      etat.rubans.forEach(r => r.el.classList.remove("survol")); if (f) f.remove();
+      if (!bouge) { b.classList.toggle("choisi"); choix.el = b.classList.contains("choisi") ? b : null; choix.f = t => reporte(t.ruban); return; }
+      if (aimant) reporte(aimant);
+    };
+    addEventListener("pointermove", move); addEventListener("pointerup", up);
+  });
+}
+function dessineBande() {
+  const d = PLIS[etat.pli], b = $("bande"); if (!b) return;
+  b.style.width = (etat.U / d) + "px";
+  b.innerHTML = "<span>" + NOMF[d] + "</span>";
+  $("plier").style.visibility = etat.pli < 3 ? "visible" : "hidden";
+  $("deplier").style.visibility = etat.pli ? "visible" : "hidden";
+}
+
+// ---------- Je mesure ----------
+function tourMesure() {
+  const k = MESURE[etat.i % MESURE.length];
+  $("jeu").innerHTML = ""; etat.phase = "mesure"; etat.pli = 0; etat.champs = ["", "", ""]; etat.actif = 0; etat.aide = 0;
+  etat.rubans = [creeRuban(k, (1920 - k / 8 * 560) / 2, 30, 560, 74)];
+  etabli(430, 330, 560);
+  consigne('Mesure le <span class="q">ruban</span>');
+}
+function dessineMessage() {
+  consigne('Écris sa <span class="q">mesure</span>');
+  const old = $("etabli"); old && old.remove();
+  const m = document.createElement("div"); m.id = "message"; Object.assign(m.style, { left: "760px", top: "400px" });
+  m.innerHTML = '<div class="champ" data-c="0"></div><span>u +</span><div class="frac"><div class="champ" data-c="1"></div><hr><div class="champ" data-c="2"></div></div><span>u</span>';
+  $("jeu").appendChild(m);
+  m.querySelectorAll(".champ").forEach(c => c.onclick = () => { etat.actif = +c.dataset.c; afficheChamps(); });
+  const p = document.createElement("div"); p.id = "pave"; Object.assign(p.style, { left: "1300px", top: "340px" });
+  ["7", "8", "9", "4", "5", "6", "1", "2", "3", "0"].forEach(t => { const b = document.createElement("button"); b.textContent = t; b.onclick = () => tape(t); p.appendChild(b); });
+  const eff = document.createElement("button"); eff.textContent = "⌫"; eff.style.gridColumn = "5"; eff.onclick = () => tape("⌫"); p.appendChild(eff);
+  $("jeu").appendChild(p); afficheChamps();
+}
+function afficheChamps() { document.querySelectorAll("#message .champ").forEach((c, j) => { c.textContent = etat.champs[j]; c.classList.toggle("actif", j === etat.actif); }); }
+function tape(t) {
+  if (etat.phase !== "message") return;
+  if (t === "⌫") { if (!etat.champs[etat.actif] && etat.actif) etat.actif--; etat.champs[etat.actif] = ""; afficheChamps(); return; }
+  if (etat.champs[etat.actif].length >= 1) return;
+  etat.champs[etat.actif] = t;
+  if (etat.actif < 2) { etat.actif++; afficheChamps(); return; }
+  afficheChamps(); verifieMessage();
+}
+function verifieMessage() {
+  const [e, n, d] = etat.champs.map(Number), k = etat.rubans[0].k, m = $("message");
+  const rate = msg => { verdict(msg, "ko"); m.classList.add("ko"); setTimeout(() => { m.classList.remove("ko"); etat.champs = ["", "", ""]; etat.actif = 0; afficheChamps(); }, 1100); };
+  if (!d) return rate("🤪 On ne partage pas en 0.");
+  if (n >= d) return rate("🤪 " + n + "/" + d + ", c'est une unité ou plus : mets-la avec les unités.");
+  if (Math.abs((e + n / d) * 8 - k) < 1e-9) {
+    const msg = e + " u + " + n + "/" + d + " u";
+    marque(); verdict("✅ Le ruban mesure " + msg + (ecrit(k) !== msg ? " = " + ecrit(k) : ""), "ok");
+    etat.phase = "fini"; etat.i++; plusTard(tourMesure);
+  } else rate("🤪 Cette mesure ne donne pas ce ruban : relis tes morceaux.");
+}
+
+// ---------- Je retrouve, Défi ----------
+function tourRetrouve() {
+  const L = etat.onglet === "defi" ? DEFI : TOURS, t = L[etat.i % L.length];
+  $("jeu").innerHTML = ""; etat.pli = 0; etat.aide = 0; etat.cible = t.c; etat.trouve = false;
+  etat.rubans = t.r.map((k, j) => creeRuban(k, 260, 46 + j * 112, 400, 44, "(" + (j + 1) + ")"));
+  etat.rubans.forEach(r => r.el.addEventListener("pointerup", () => { if (!enGlisse && !choix.el) choisitRuban(r.el); }));
+  etabli(1420, 200, 400); $("etabli").style.flexWrap = "wrap"; $("etabli").style.width = "460px";
+  consigne('Quel ruban mesure <span class="q">' + (t.m || ecrit(t.c)) + "</span> ?");
+}
+function choisitRuban(t) {
+  const r = t.ruban; if (etat.trouve) return;
+  if (r.k === etat.cible) {
+    etat.trouve = true; marque(); verdict("✅ C'est le ruban " + (etat.rubans.indexOf(r) + 1) + " : " + ecrit(r.k), "ok");
+    r.el.querySelector(".ruban").classList.add("fini"); etat.i++; plusTard(tourRetrouve);
+  } else verdict("🤪 Ce ruban mesure " + (longueur(r) === r.k ? ecrit(r.k) : "autre chose") + ". Mesure avec la bande.", "ko");
+}
+
+
+// ---------- ✏️ mes nombres : le maître tape sa question ; elle remplace la question en cours ----------
+$("crayon").onclick = () => { $("err").textContent = ""; prepareChoix(); $("choix").style.display = "flex"; };
+$("choix").addEventListener("pointerup", ev => { if (ev.target.id === "choix") $("choix").style.display = "none"; });
+const val = id => +String($(id).value).replace(",", ".");
+function prepareChoix() {}
+$("ok").onclick = () => {
+  const a = val("ca"), b = val("cb"), c = val("cc"), k = (a * c + b) * 8 / c;
+  if (!(b < c) || k < 1 || k > 23 || k % 1) { $("err").textContent = "Entre 1/8 u et 2 u + 7/8 u, et le haut plus petit que le bas."; return; }
+  $("choix").style.display = "none"; clearTimeout(minuteur); verdict("");
+  if (etat.onglet === "mesure") { MESURE.splice(etat.i % MESURE.length, 0, k); tourMesure(); return; }
+  const L = etat.onglet === "defi" ? DEFI : TOURS, base = L[etat.i % L.length].r.slice();
+  if (!base.includes(k)) base[Math.floor(Math.random() * base.length)] = k;
+  L.splice(etat.i % L.length, 0, { r: base, c: k }); tourRetrouve();
+};
+// ---------- démarrer ----------
+function ouvre(o) {
+  clearTimeout(minuteur);
+  etat.onglet = o; etat.i = 0; etat.score = 0;
+  document.querySelectorAll(".onglets button").forEach(b => b.classList.toggle("on", b.dataset.o === o));
+  history.replaceState(null, "", "#" + o);
+  afficheScore(); verdict(""); $("bulle").style.display = "none";
+  o === "mesure" ? tourMesure() : tourRetrouve();
+}
+document.querySelectorAll(".onglets button").forEach(b => b.onclick = () => ouvre(b.dataset.o));
+addEventListener("keydown", e => { if ($("choix").style.display === "flex") return; if (/^[0-9]$/.test(e.key)) tape(e.key); else if (e.key === "Backspace") tape("⌫"); });
+// l'indice donne la méthode de la séance (reporter, plier ce qui reste, compter les parts), jamais la mesure
+$("indice").onclick = () => {
+  etat.aide++;
+  if (etat.onglet === "mesure" && etat.phase === "message") { bulle("Compte les bandes entières : ce sont les unités. Puis le bout : en combien la bande était-elle pliée ? Combien de morceaux ?"); return; }
+  if (etat.onglet === "defi") { bulle(etat.aide === 1 ? "Transforme la mesure : 4 quarts font 1 unité, 8 huitièmes font 1 unité, 2 demis font 1 unité." : "Mesure chaque ruban avec la bande, puis compare les deux écritures."); return; }
+  bulle(etat.aide === 1 ? "Reporte la bande bout à bout autant de fois que tu peux." : "Ce qui reste est plus petit que la bande : plie la bande en deux, puis encore en deux, et reporte le morceau.");
+};
+function ajuste() {
+  const e = Math.min(innerWidth / 1920, innerHeight / 1080), s = $("scene");
+  s.style.transform = "scale(" + e + ")"; s.style.left = ((innerWidth - 1920 * e) / 2) + "px"; s.style.top = ((innerHeight - 1080 * e) / 2) + "px"; s.dataset.ech = e;
+}
+addEventListener("resize", ajuste); ajuste();
+function depuisLien() { const m = location.hash.slice(1); ouvre(["mesure", "retrouve", "defi"].includes(m) ? m : "mesure"); }
+addEventListener("hashchange", depuisLien);
+depuisLien();
+</script>
+</body>
+</html>

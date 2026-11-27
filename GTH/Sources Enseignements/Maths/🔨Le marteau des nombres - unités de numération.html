@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Le marteau des nombres</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect x='28' y='22' width='8' height='38' rx='3' fill='%23a0662b'/%3E%3Crect x='10' y='8' width='44' height='18' rx='4' fill='%236b7b88' stroke='%232b3742' stroke-width='3'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Quicksand:wght@600;700&display=swap">
+<style>
+  /* Univers de ce jeu : l'atelier du marteau. Les cubes emboîtables de la classe : cube = 1 unité, barre = 10 cubes = 1 dizaine,
+     plaque = 10 barres = 1 centaine, gros cube = 10 plaques = 1 millier. On glisse le marteau sur un objet : crac ! il se casse
+     en 10 objets du rang du dessous, qui tombent dans le bac, rangés par 10. Au niveau « Je recolle », on fait l'inverse :
+     on glisse une rangée de 10 dans le moule, clac ! elle devient 1 objet du rang du dessus. Puis on dit combien. */
+  :root{ --encre:#2b2233; --gris:#6d6475; --bord:#e0d6c8; --bien:#1a8f5c; --faux:#d6455d;
+    --r0:#f2c230; --r1:#3a86d4; --r2:#3fae5a; --r3:#e4572e; }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{margin:0; color:var(--encre); font-family:"Quicksand",system-ui,sans-serif; overflow:hidden; height:100vh; display:flex; flex-direction:column;
+    background:#efe6d8 repeating-linear-gradient(0deg,rgba(150,110,60,.07) 0 2px,transparent 2px 40px); user-select:none; -webkit-user-select:none; touch-action:none;}
+  .barre{display:grid; grid-template-columns:1fr auto; align-items:center; gap:16px; padding:10px 26px; background:#fffaf2; border-bottom:3px solid var(--bord);}
+  .titre{display:flex; align-items:center; gap:12px;} .titre svg{width:48px; height:48px;}
+  .titre h1{font-family:"Baloo 2",cursive; font-weight:800; font-size:1.9rem; margin:0;}
+  .droite{display:flex; align-items:center; gap:12px;}
+  .score{display:flex; flex-direction:column; align-items:center; padding:2px 14px; border-radius:12px; background:#fff; border:2px solid var(--bord); min-width:130px;}
+  .score small{font-size:.8rem; font-weight:700; color:var(--gris); text-transform:uppercase; letter-spacing:.5px;}
+  .score b{font-family:"Baloo 2",cursive; font-size:1.8rem; line-height:1.05;}
+  .niveaux{display:grid; grid-template-columns:auto auto; gap:4px;}
+  .niveaux button{font:inherit; font-weight:700; font-size:.9rem; padding:2px 14px; border-radius:999px; cursor:pointer; background:#fff; color:var(--gris); border:2px solid var(--bord);}
+  .niveaux button.actif{background:var(--encre); color:#fff; border-color:var(--encre);}
+  .btn-son{width:44px; height:44px; border-radius:50%; font-size:1.2rem; cursor:pointer; background:#fff; border:2px solid var(--bord);}
+  .consigne{display:flex; justify-content:center; padding:10px 20px 0;}
+  .consigne p:empty{display:none;}
+  .consigne p{margin:0; font-family:"Baloo 2",cursive; font-weight:700; font-size:2.1rem; text-align:center; background:#fff; padding:2px 22px; border-radius:16px; border:2px solid var(--bord);}
+
+  .haut-question{display:flex; justify-content:center; padding:10px 20px 0;}
+  .jeu{flex:1; min-height:0; display:grid; grid-template-columns:1fr 470px; gap:24px; padding:8px 30px 0;}
+  .atelier{display:flex; flex-direction:column; gap:14px; min-height:0;}
+  /* l'enclume (refaite le 10/10) : la table d'acier s'allonge avec les objets posés dessus ; la bigorne à gauche, le talon à droite,
+     le pied en dessous ; le marteau, très gros, à droite de l'enclume ; le bac juste en dessous */
+  .forge{position:relative; flex:0 0 auto; display:flex; flex-direction:column; align-items:center; padding:0 330px 0 150px; justify-content:flex-end;}
+  .etabli{position:relative; display:flex; align-items:flex-end; justify-content:center; gap:22px; flex-wrap:wrap; min-width:380px; min-height:110px;
+    padding:0 26px 56px; z-index:1;}
+  .etabli::after{content:""; position:absolute; left:0; right:0; bottom:0; height:56px; border-radius:6px 10px 4px 4px;
+    background:linear-gradient(180deg,#b7c2cb 0,#8d99a4 7px,#5d6873 8px,#46515b 60%,#333d46 100%); box-shadow:inset 0 -6px 0 rgba(0,0,0,.25), 0 3px 0 #1d252c; z-index:-1;}
+  .etabli::before{content:""; position:absolute; right:100%; bottom:6px; width:140px; height:50px; z-index:-1;
+    background:linear-gradient(180deg,#b7c2cb 0,#8d99a4 7px,#5d6873 8px,#46515b 60%,#333d46 100%); clip-path:polygon(0 30%, 100% 0, 100% 100%, 55% 92%);}
+  .pied{display:block; width:340px; height:150px; margin-top:-2px;}
+  .etabli.survol::after{box-shadow:0 0 0 6px #1f7a8c;}
+  .etabli.survol{outline:6px solid #1f7a8c;}
+  .bac{flex:0 1 auto; min-height:120px; align-self:center; width:min(100%,1100px); background:#fff; border-radius:18px; border:4px solid #8a5a2b; padding:12px 16px; display:flex; flex-direction:column; justify-content:flex-start; gap:8px; overflow:hidden;}
+  .bac h3{margin:0; font-family:"Baloo 2",cursive; font-size:1.3rem; color:#8a5a2b;}
+  .rangee{display:flex; align-items:flex-end; gap:4px; padding:4px 8px; border-radius:10px; animation:tombe .45s ease; cursor:grab; touch-action:none; width:max-content;}
+  .rangee.choisi{outline:5px solid #1f7a8c;} .rangee.parti{visibility:hidden;}
+  .bac.mini .obj.r0{width:13px; height:13px;} .bac.mini .obj.r1{width:9px; height:54px; background-image:repeating-linear-gradient(180deg,transparent 0 4.6px,rgba(0,0,0,.35) 4.6px 5.4px);}
+  .bac.mini .obj.r2{width:40px; height:40px; background-image:repeating-linear-gradient(90deg,transparent 0 3.4px,rgba(0,0,0,.25) 3.4px 4px),repeating-linear-gradient(180deg,transparent 0 3.4px,rgba(0,0,0,.25) 3.4px 4px);}
+  .bac.mini .rangee{gap:3px; padding:2px 4px;}
+  .rangees{flex-shrink:0; display:flex; flex-wrap:wrap; gap:8px 26px; align-content:flex-start;}
+  @keyframes tombe{0%{transform:translateY(-60px); opacity:0}100%{transform:none; opacity:1}}
+  /* les objets : rien ne se change en chiffre */
+  .obj{position:relative; flex:none;}
+  .obj.r0{width:26px; height:26px; background:var(--r0); border:2px solid rgba(0,0,0,.4); border-radius:4px; box-shadow:inset -4px -4px 0 rgba(0,0,0,.15);}
+  .obj.r1{width:22px; height:150px; background:var(--r1); border:2px solid rgba(0,0,0,.45); border-radius:3px; background-image:repeating-linear-gradient(180deg,transparent 0 13.6px,rgba(0,0,0,.35) 13.6px 14.6px);}
+  .obj.r2{width:150px; height:150px; background-color:var(--r2); border:2px solid rgba(0,0,0,.45); border-radius:4px;
+    background-image:repeating-linear-gradient(90deg,transparent 0 13.6px,rgba(0,0,0,.25) 13.6px 14.6px),repeating-linear-gradient(180deg,transparent 0 13.6px,rgba(0,0,0,.25) 13.6px 14.6px);}
+  .obj.r3{width:170px; height:170px;}
+  .obj.r3 svg{width:100%; height:100%;}
+  .obj.r4{display:flex; width:460px; height:56px; padding:3px; border-radius:6px; background:#7b4bb3;} .obj.r4 svg{width:46px; height:50px; flex:none;}
+  .etabli.petit .obj.r4{width:300px; height:38px;} .etabli.petit .obj.r4 svg{width:29px; height:32px;}
+  .question .r4{color:#7b4bb3;}
+  .petit .obj.r0{width:20px; height:20px;}
+  .petit .obj.r1{width:13px; height:80px; background-image:repeating-linear-gradient(180deg,transparent 0 7.2px,rgba(0,0,0,.35) 7.2px 8px);}
+  .etabli.petit .obj.r3{width:90px; height:90px;}
+  .petit .obj.r2{width:62px; height:62px; background-image:repeating-linear-gradient(90deg,transparent 0 5.4px,rgba(0,0,0,.25) 5.4px 6.2px),repeating-linear-gradient(180deg,transparent 0 5.4px,rgba(0,0,0,.25) 5.4px 6.2px);}
+  .etabli .obj{cursor:pointer;}
+  .obj.cible{outline:5px dashed #1f7a8c; outline-offset:6px;}
+  .obj.survol{outline:6px solid #ffb300; outline-offset:6px;}
+  .obj.crac{animation:crac .35s ease;} @keyframes crac{0%{transform:none}30%{transform:rotate(-6deg) scale(1.05)}60%{transform:rotate(5deg) scale(.95)}100%{transform:scale(.2); opacity:0}}
+  .obj.neuf{animation:neuf .45s ease;} @keyframes neuf{0%{transform:scale(.2); opacity:0}70%{transform:scale(1.1)}100%{transform:none; opacity:1}}
+  .marteau{position:absolute; left:calc(100% + 40px); bottom:-150px; width:280px; height:280px; cursor:grab; touch-action:none; z-index:5; filter:drop-shadow(0 8px 6px rgba(0,0,0,.3));}
+  .marteau.choisi{outline:6px solid #1f7a8c; border-radius:14px;}
+  .moule{position:absolute; left:calc(100% + 40px); bottom:70px; width:170px; padding:10px; border-radius:14px; border:5px dashed #8a5a2b; background:rgba(255,255,255,.5); color:#5b3a1a;
+    font-family:"Baloo 2",cursive; font-weight:800; font-size:1.2rem; text-align:center;}
+  .moule.survol{background:rgba(255,255,255,.6); color:var(--encre);}
+  .en-vol{position:fixed !important; z-index:50; pointer-events:none; margin:0 !important; transform:rotate(-20deg) scale(1.05);}
+
+  .droit{display:flex; flex-direction:column; align-items:center; justify-content:center; gap:26px;}
+  .question{font-family:"Baloo 2",cursive; font-weight:800; font-size:3rem; line-height:1.15; text-align:center; background:#fff; padding:10px 24px; border-radius:22px; border:3px solid var(--bord);}
+  .question .r0{color:#b38a00;} .question .r1{color:var(--r1);} .question .r2{color:var(--r2);} .question .r3{color:var(--r3);}
+  .case{display:inline-flex; min-width:150px; padding:0 16px; white-space:nowrap; height:100px; border:5px dashed var(--encre); border-radius:18px; align-items:center; justify-content:center; background:#fff; font-size:3.6rem; vertical-align:middle;}
+  .case.survol,.case.choisie{background:#fff6d8; border-style:solid;}
+  .case.pleine{border-style:solid; border-color:var(--bien); color:var(--bien);}
+  .tuiles{display:flex; gap:18px; flex-wrap:wrap; justify-content:center; min-height:110px;}
+  .tuile{min-width:120px; height:100px; padding:0 18px; border-radius:18px; background:#fff; border:4px solid var(--encre); display:flex; align-items:center; justify-content:center;
+    font-family:"Baloo 2",cursive; font-weight:800; font-size:3.4rem; cursor:grab; touch-action:none; box-shadow:0 6px 0 rgba(43,34,51,.2);}
+  .tuile.choisi{outline:7px solid #1f7a8c; outline-offset:3px;} .tuile.parti{visibility:hidden;}
+  /* le tableau de numération : le nombre de dizaines se lit dans l'écriture du nombre (on cache ce qui est à droite) */
+  .tableau{border-collapse:separate; border-spacing:6px 0; font-family:"Baloo 2",cursive; font-weight:800;}
+  .tableau th{font-size:1.45rem; color:#fff; border-radius:12px 12px 0 0; padding:4px 0; width:112px;}
+  .tableau td{font-size:4.6rem; line-height:1.1; text-align:center; background:#fff; border:3px solid var(--bord); border-top:none; border-radius:0 0 12px 12px; transition:all .4s ease;}
+  .tableau.t5 th{width:84px; font-size:1.05rem;} .tableau.t5 td{font-size:3.6rem;}
+  .etabli.predire .obj.cible{outline:none;}
+  .tableau tr.images td{background:none; border:none; height:96px; vertical-align:bottom; padding-bottom:6px;}
+  .tableau td.image .obj{margin:0 auto; cursor:default;}
+  .tableau td.image .obj.r1{width:14px; height:84px; background-image:repeating-linear-gradient(180deg,transparent 0 7.4px,rgba(0,0,0,.35) 7.4px 8.4px);}
+  .tableau td.image .obj.r2{width:76px; height:76px; background-image:repeating-linear-gradient(90deg,transparent 0 6.6px,rgba(0,0,0,.25) 6.6px 7.6px),repeating-linear-gradient(180deg,transparent 0 6.6px,rgba(0,0,0,.25) 6.6px 7.6px);}
+  .tableau td.image .obj.r3{width:84px; height:84px;}
+  .tableau td.image .obj.r4{width:100px; height:40px; padding:2px;} .tableau td.image .obj.r4 svg{width:31px; height:34px;}
+  .tableau td.lu{background:#fff3c4; border-color:#e0a800; color:var(--encre);}
+  .tableau td.cache{color:#d8d0c4; background:#f4f0ea;}
+  .lecture{font-family:"Baloo 2",cursive; font-weight:800; font-size:1.6rem; color:#7a5b00; text-align:center; min-height:2.2rem;}
+  .egal{font-family:"Baloo 2",cursive; font-weight:800; font-size:2.1rem; color:var(--bien); text-align:center; min-height:3rem;}
+  .secoue{animation:secoue .4s ease;} @keyframes secoue{0%,100%{transform:none}25%{transform:translateX(-10px)}75%{transform:translateX(10px)}}
+  [hidden]{display:none !important;}
+  .btn-perso{font:inherit; font-weight:700; font-size:1rem; padding:4px 14px; border-radius:999px; cursor:pointer; background:#fff; border:2px solid var(--bord);}
+  .fenetre{position:fixed; inset:0; background:rgba(30,25,35,.45); z-index:300; display:flex; align-items:center; justify-content:center;}
+  .carte-perso{background:#fff; border-radius:26px; padding:24px 34px; display:flex; flex-direction:column; align-items:center; gap:16px; box-shadow:0 20px 60px rgba(0,0,0,.3);}
+  .carte-perso h2{margin:0; font-family:"Baloo 2",cursive; font-size:2rem;}
+  .phrase-perso{font-family:"Baloo 2",cursive; font-weight:800; font-size:2.6rem; display:flex; align-items:center; gap:14px; flex-wrap:wrap; justify-content:center;}
+  .choix-rang{font:inherit; padding:0 18px; border-radius:16px; border:4px solid; background:#fff; cursor:pointer;}
+  .nb-perso{min-width:110px; text-align:center; border-bottom:5px solid var(--encre);}
+  .clavier{display:grid; grid-template-columns:repeat(6, 76px); gap:10px;}
+  .clavier button{font-family:"Baloo 2",cursive; font-weight:800; font-size:2.2rem; height:70px; border-radius:16px; border:3px solid var(--bord); background:#fffaf2; cursor:pointer;}
+  .aide-perso{margin:0; font-size:1.2rem; font-weight:700; color:var(--gris); min-height:1.6rem;}
+  .aide-perso.faux{color:var(--faux);}
+  .actions-perso{display:flex; gap:16px;}
+  .actions-perso button{font:inherit; font-weight:700; font-size:1.3rem; padding:8px 26px; border-radius:999px; cursor:pointer; border:2px solid var(--bord); background:#fff;}
+  .actions-perso .go{background:var(--encre); color:#fff; border-color:var(--encre);}
+
+  .bas{display:flex; align-items:center; justify-content:center; gap:18px; padding:8px 0 14px;}
+  .btn-indice{font:inherit; font-weight:700; font-size:1.2rem; padding:6px 16px; border-radius:999px; cursor:pointer; background:#fff8dc; border:2px solid #f1d27a; color:#7a5b00;}
+  .verdict{min-height:3rem; font-family:"Baloo 2",cursive; font-size:2.2rem; font-weight:800; text-align:center;}
+  .verdict:not(:empty){background:#fff; padding:0 24px; border-radius:14px;}
+  .verdict.bien{color:var(--bien);} .verdict.faux{color:var(--faux);}
+  .btn-suivant{font:inherit; font-family:"Baloo 2",cursive; font-weight:800; font-size:1.8rem; padding:4px 34px; border-radius:999px; cursor:pointer; background:var(--encre); color:#fff; border:none;}
+  .btn-suivant[hidden]{display:none;}
+</style>
+</head>
+<body>
+<div class="barre">
+  <div class="titre">
+    <svg viewBox="0 0 64 64" aria-hidden="true"><rect x="28" y="22" width="8" height="38" rx="3" fill="#a0662b"/><rect x="10" y="8" width="44" height="18" rx="4" fill="#6b7b88" stroke="#2b3742" stroke-width="3"/></svg>
+    <h1>Le marteau des nombres</h1>
+  </div>
+  <div class="droite">
+    <div class="score" title="Questions réussies du premier coup"><small>Questions réussies</small><b id="score">0</b></div>
+    <div class="score" title="Le meilleur score à ce niveau, gardé sur cet ordinateur"><small>🏆 Record</small><b id="record">0</b></div>
+    <div class="niveaux" id="niveaux">
+      <button type="button" data-niveau="casse" class="actif">Je casse</button>
+      <button type="button" data-niveau="combien">Combien ?</button>
+      <button type="button" data-niveau="recolle">Je recolle</button>
+      <button type="button" data-niveau="defi">Défi</button>
+    </div>
+    <button class="btn-perso" id="btnPerso" type="button" title="Écrire ma propre question">✏️ Ma question</button>
+    <button class="btn-son" id="btnSon" type="button" title="Son">🔊</button>
+  </div>
+</div>
+<div class="consigne"><p id="consigne"></p></div>
+<div class="haut-question"><div class="question" id="question"></div></div>
+<div class="jeu">
+  <div class="atelier">
+    <div class="forge"><div class="etabli" id="etabli"></div>
+      <svg class="pied" viewBox="0 0 340 150" aria-hidden="true"><defs><linearGradient id="acier" x1="0" x2="1"><stop offset="0" stop-color="#333d46"/><stop offset=".45" stop-color="#5d6873"/><stop offset="1" stop-color="#2b343c"/></linearGradient></defs>
+        <path d="M70 0 H270 Q222 26 214 74 H126 Q118 26 70 0 Z" fill="url(#acier)" stroke="#1d252c" stroke-width="3"/>
+        <path d="M118 74 H222 Q236 104 290 120 L300 138 H40 L50 120 Q104 104 118 74 Z" fill="url(#acier)" stroke="#1d252c" stroke-width="3"/>
+        <ellipse cx="170" cy="144" rx="160" ry="6" fill="rgba(0,0,0,.18)"/></svg></div>
+    <div class="bac"><div class="rangees" id="bac"></div></div>
+  </div>
+  <div class="droit">
+    <table class="tableau" id="tableau"></table>
+    <div class="lecture" id="lecture"></div>
+    <div class="tuiles" id="tuiles"></div>
+    <div class="egal" id="egal"></div>
+  </div>
+</div>
+<div class="fenetre" id="fenetre" hidden>
+  <div class="carte-perso">
+    <h2>✏️ Ma question</h2>
+    <div class="phrase-perso">Combien de <button type="button" class="choix-rang" id="persoCible" data-r="1"></button>
+      dans <span class="nb-perso" id="persoN">1</span> <button type="button" class="choix-rang" id="persoRang" data-r="2"></button> ?</div>
+    <div class="clavier" id="clavier"></div>
+    <p class="aide-perso" id="aidePerso">Touche les mots en couleur pour les changer.</p>
+    <div class="actions-perso"><button type="button" id="persoAnnuler">Annuler</button><button type="button" class="go" id="persoGo">C'est parti !</button></div>
+  </div>
+</div>
+<div class="bas">
+  <button class="btn-indice" id="btnIndice" type="button">💡 Indice</button>
+  <div class="verdict" id="verdict"></div>
+  <button class="btn-suivant" id="btnSuivant" type="button" hidden>➜</button>
+</div>
+<script>
+(function () {
+  // Questions inventées. [nombre d'objets, rang des objets, rang demandé] ; rang : 0 unité, 1 dizaine, 2 centaine, 3 millier.
+  var QUESTIONS = {
+    casse: [[1, 2, 1], [1, 3, 2], [1, 1, 0], [1, 2, 1], [1, 3, 2], [1, 1, 0], [1, 2, 1], [1, 1, 0], [1, 3, 2], [1, 2, 1], [1, 3, 2], [1, 1, 0]],
+    combien: [[3, 2, 1], [2, 3, 2], [4, 1, 0], [5, 2, 1], [3, 3, 2], [7, 1, 0], [2, 2, 1], [4, 3, 2], [6, 2, 1], [9, 1, 0], [8, 2, 1], [5, 3, 2]],
+    // Je recolle : [nombre de rangées de 10, rang des objets du bac] → combien d'objets du rang du dessus
+    recolle: [[2, 1], [3, 2], [4, 0], [5, 1], [2, 2], [6, 0], [3, 1], [4, 2], [7, 1], [8, 0], [9, 1], [5, 2]],
+    // Défi : on casse deux fois
+    defi: [[1, 3, 1], [1, 2, 0], [2, 3, 2], [3, 2, 1], [1, 3, 1], [5, 3, 2], [1, 2, 0], [6, 2, 1], [4, 3, 2], [1, 3, 1], [8, 2, 1], [1, 2, 0]]
+  };
+  var NOM = ["unité", "dizaine", "centaine", "millier", "dizaine de milliers"], NOMS = ["unités", "dizaines", "centaines", "milliers", "dizaines de milliers"], VAL = [1, 10, 100, 1000, 10000];
+  var el = function (id) { return document.getElementById(id); };
+  var niveau = "casse", index = 0, score = 0, erreurs = 0, etape = "", Q = null, fini = false, sonActif = true;
+
+  // ---------- les sons : crac, clac, ding ----------
+  var ctx = null;
+  function son(type) {
+    if (!sonActif) return;
+    try {
+      ctx = ctx || new (window.AudioContext || window.webkitAudioContext)();
+      var t = ctx.currentTime;
+      if (type === "crac") {   // un bruit sec
+        var b = ctx.createBuffer(1, ctx.sampleRate * 0.25, ctx.sampleRate), d = b.getChannelData(0);
+        for (var k = 0; k < d.length; k++) d[k] = (Math.random() * 2 - 1) * Math.pow(1 - k / d.length, 3);
+        var s = ctx.createBufferSource(), g = ctx.createGain(); s.buffer = b; g.gain.value = 0.35; s.connect(g); g.connect(ctx.destination); s.start(t);
+        return;
+      }
+      var notes = type === "clac" ? [[440, 0, 0.12, "square"], [880, 0.06, 0.15, "triangle"]] : type === "bien" ? [[784, 0, 0.3], [988, 0.08, 0.3], [1175, 0.16, 0.45]]
+        : type === "fin" ? [[523, 0, 0.2], [659, 0.12, 0.2], [784, 0.24, 0.2], [1047, 0.36, 0.6]] : [[196, 0, 0.3, "sawtooth"]];
+      notes.forEach(function (n) { var o = ctx.createOscillator(), g = ctx.createGain(); o.type = n[3] || "triangle"; o.frequency.value = n[0];
+        o.connect(g); g.connect(ctx.destination); g.gain.setValueAtTime(0.0001, t + n[1]); g.gain.exponentialRampToValueAtTime(0.14, t + n[1] + 0.01);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + n[1] + n[2]); o.start(t + n[1]); o.stop(t + n[1] + n[2] + 0.05); });
+    } catch (e) {}
+  }
+
+  // ---------- les objets ----------
+  var CUBE = '<svg viewBox="0 0 100 100"><path d="M10 30 L40 10 H90 L60 30 Z" fill="#f08a6b"/><path d="M60 30 L90 10 V70 L60 90 Z" fill="#b8401f"/><rect x="10" y="30" width="50" height="60" fill="#e4572e"/>' +
+    '<path d="M15 30 V90 M20 30 V90 M25 30 V90 M30 30 V90 M35 30 V90 M40 30 V90 M45 30 V90 M50 30 V90 M55 30 V90 M10 36 H60 M10 42 H60 M10 48 H60 M10 54 H60 M10 60 H60 M10 66 H60 M10 72 H60 M10 78 H60 M10 84 H60" stroke="rgba(0,0,0,.25)" stroke-width=".8"/>' +
+    '<path d="M10 30 L40 10 H90 L60 30 Z M60 30 L90 10 V70 L60 90 Z M10 30 H60 V90 H10 Z" fill="none" stroke="#5a1d0b" stroke-width="2.5" stroke-linejoin="round"/></svg>';
+  function objet(r) { var d = document.createElement("div"); d.className = "obj r" + r; d.dataset.r = r; if (r === 3) d.innerHTML = CUBE;
+    if (r === 4) { for (var k = 0; k < 10; k++) d.insertAdjacentHTML("beforeend", CUBE); }   // une dizaine de milliers : 10 gros cubes collés
+    return d; }
+  function rangee(r) { var d = document.createElement("div"); d.className = "rangee petit"; d.dataset.r = r; for (var k = 0; k < 10; k++) d.appendChild(objet(r)); return d; }
+  var MARTEAU = '<svg class="marteau" id="marteau" viewBox="0 0 100 100"><rect x="44" y="34" width="12" height="62" rx="5" fill="#a0662b" stroke="#5e3a14" stroke-width="3"/>' +
+    '<rect x="12" y="10" width="76" height="30" rx="6" fill="#7b8a96" stroke="#2b3742" stroke-width="4"/><rect x="12" y="10" width="14" height="30" fill="#5d6b77"/></svg>';
+
+  function cleRecord() { return "marteau-nombres-record-" + niveau; }
+  function majScore() {
+    var r = 0; try { r = parseInt(localStorage.getItem(cleRecord()), 10) || 0; } catch (e) {}
+    if (score > r) { r = score; try { localStorage.setItem(cleRecord(), String(r)); } catch (e) {} }
+    el("score").textContent = score; el("record").textContent = r;
+  }
+  function verdict(t, c) { el("verdict").textContent = t; el("verdict").className = "verdict" + (c ? " " + c : ""); }
+  function secoue(x) { x.classList.remove("secoue"); void x.offsetWidth; x.classList.add("secoue"); }
+  function melanger(t) { for (var i = t.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)), x = t[i]; t[i] = t[j]; t[j] = x; } return t; }
+  var recolle = function () { return Q && Q.mode === "recolle"; };
+  function nombre(v) { return String(v).replace(/\B(?=(\d{3})+(?!\d))/g, " "); }
+  function libelle(n, r) { return n === 1 ? (r === 0 || r === 3 ? "un " : "une ") + NOM[r] : n + " " + NOMS[r]; }
+
+  // une question = { n objets du rang r, combien d'objets du rang cible, mode }
+  //   casse : on casse au marteau, puis on compte · predire (« Combien ? ») : on répond d'abord, le marteau casse ensuite pour prouver
+  //   recolle : 10 objets → 1 objet du rang du dessus, dans le moule · seul (✏️ trop d'objets à dessiner) : on répond, le tableau prouve
+  var perso = null;
+  function laQuestion() {
+    if (perso) return perso;
+    var q = QUESTIONS[niveau][index];
+    if (niveau === "recolle") return { n: q[0] * 10, r: q[1], cible: q[1] + 1, mode: "recolle" };
+    return { n: q[0], r: q[1], cible: q[2], mode: niveau === "combien" ? "predire" : "casse" };
+  }
+  function dessinable(S) {   // assez peu d'objets pour les dessiner, et assez peu de rangées dans le bac une fois cassés
+    if (S.mode === "recolle") return S.n % 10 === 0 && S.n / 10 <= 9;
+    return S.n <= 9 && S.n * Math.pow(10, S.r - S.cible - 1) <= 12;
+  }
+  function afficher() {
+    var S = laQuestion(); erreurs = 0; fini = false; oublier();
+    el("etabli").innerHTML = ""; el("bac").innerHTML = ""; el("tuiles").innerHTML = ""; el("egal").textContent = ""; el("lecture").textContent = ""; verdict(""); el("btnSuivant").hidden = true;
+    Q = { n: S.n, r: S.r, cible: S.cible, mode: S.mode, reponse: S.n * VAL[S.r] / VAL[S.cible] };
+    var dans = Q.mode === "recolle" || perso ? Q.n + " <span class='r" + Q.r + "'>" + (Q.n === 1 ? NOM[Q.r] : NOMS[Q.r]) + "</span>" : (Q.n === 1 ? libelle(1, Q.r) : nombre(Q.n * VAL[Q.r]));
+    el("question").innerHTML = "Combien de <span class='r" + Q.cible + "'>" + NOMS[Q.cible] + "</span> dans " + dans + " ? <div class='case' id='caseRep'>?</div>";
+    if (Q.mode === "recolle") {
+      for (var k = 0; k < Q.n / 10; k++) { var rg = rangee(Q.r); el("bac").appendChild(rg); mobile(rg); }
+      el("etabli").insertAdjacentHTML("beforeend", '<div class="moule" id="moule">Le moule</div>');
+      etape = "recolle"; el("consigne").textContent = "Glisse chaque rangée de 10 dans le moule";
+    } else if (Q.mode === "casse") {
+      for (var m = 0; m < Q.n; m++) el("etabli").appendChild(objet(Q.r));
+      el("etabli").insertAdjacentHTML("beforeend", MARTEAU); mobile(el("marteau"));
+      etape = "casse"; el("consigne").textContent = "";
+    } else {   // predire ou seul : on répond tout de suite
+      if (Q.mode === "predire") for (var p = 0; p < Q.n; p++) el("etabli").appendChild(objet(Q.r));
+      aRepondre();
+    }
+    el("etabli").classList.toggle("predire", Q.mode === "predire");
+    marquerCibles(); tailleEtabli(); majScore();
+    tableau(Q.n * VAL[Q.r], Q.cible, false);
+  }
+  // « Combien ? » : la réponse est donnée, le marteau casse tout pour le prouver
+  function preuve() {
+    if (Q.mode !== "predire") return;
+    el("etabli").insertAdjacentHTML("beforeend", MARTEAU);
+    var q0 = Q; (function suite() { if (Q !== q0) return; var o = document.querySelector("#etabli .obj.cible"); if (!o) return; casser(o); setTimeout(suite, 420); })();
+  }
+  function marquerCibles() { document.querySelectorAll("#etabli .obj").forEach(function (o) { o.classList.toggle("cible", +o.dataset.r > Q.cible); }); }
+  // beaucoup d'objets sur l'établi (10 plaques…) : on les dessine plus petits pour qu'ils tiennent
+  function tailleEtabli() { el("etabli").classList.toggle("petit", document.querySelectorAll("#etabli .obj").length > 4);
+    document.querySelector(".bac").classList.toggle("mini", document.querySelectorAll("#bac .rangee").length > 3); }
+
+  // ---------- casser : 1 objet du rang r → 10 objets du rang r − 1 ----------
+  function casser(o) {
+    var r = +o.dataset.r; if (r <= Q.cible) return;
+    o.classList.add("crac"); son("crac");
+    setTimeout(function () {
+      o.remove();
+      if (r - 1 === Q.cible) el("bac").appendChild(rangee(r - 1));                  // le bon rang : une rangée de 10 dans le bac
+      else for (var k = 0; k < 10; k++) { var n = objet(r - 1); n.classList.add("neuf"); el("etabli").insertBefore(n, el("marteau")); }   // encore à casser
+      marquerCibles(); tailleEtabli();
+      if (!document.querySelector("#etabli .obj.cible")) { if (Q.mode === "casse") aRepondre(); }
+      else if (Q.mode === "casse") verdict("");
+    }, 330);
+  }
+  // ---------- recoller : 1 rangée de 10 → 1 objet du rang du dessus ----------
+  function recoller(rg) {
+    rg.remove(); son("clac");
+    var n = objet(Q.cible); n.classList.add("neuf"); el("etabli").insertBefore(n, el("moule")); tailleEtabli();
+    if (!document.querySelector("#bac .rangee")) aRepondre();
+  }
+  // le tableau de numération du nombre ; lire = true : on montre où se lit le nombre d'objets du rang demandé
+  var COUL_R = ["#c9a100", "var(--r1)", "var(--r2)", "var(--r3)", "#7b4bb3"], COURT_R = ["unités", "dizaines", "centaines", "milliers", "diz. de milliers"];
+  var IMAGE_R = ['<div class="obj r0"></div>', '<div class="obj r1"></div>', '<div class="obj r2"></div>', '<div class="obj r3">' + CUBE + '</div>',
+    '<div class="obj r4">' + CUBE + CUBE + CUBE + '</div>'];
+  function tableau(total, cible, lire) {
+    var ch = String(total).split("").reverse(), haut = Math.max(3, ch.length - 1, cible, Q ? Q.r : 0), h = "<tr class='images'>";
+    for (var r0 = haut; r0 >= 0; r0--) h += "<td class='image'>" + IMAGE_R[r0] + "</td>";
+    h += "</tr><tr>";
+    for (var r = haut; r >= 0; r--) h += "<th style='background:" + COUL_R[r] + "'>" + COURT_R[r] + "</th>";
+    h += "</tr><tr>";
+    var tete = ch.length - 1;
+    for (var r2 = haut; r2 >= 0; r2--) { var c = r2 <= tete ? ch[r2] : "", cls = lire ? (r2 >= cible ? (r2 <= tete ? "lu" : "") : "cache") : "";
+      h += "<td class='" + cls + "'>" + c + "</td>"; }
+    el("tableau").innerHTML = h + "</tr>"; el("tableau").classList.toggle("t5", haut > 3);
+    el("lecture").innerHTML = lire ? "Le nombre de " + NOMS[cible] + " se lit dans le nombre : " + nombre(Math.floor(total / VAL[cible])) : "";
+  }
+  function aRepondre() {
+    etape = "reponse";
+    el("consigne").textContent = recolle() ? "Combien d'objets as-tu fabriqués ? Glisse la réponse" : Q.mode === "casse" ? "Compte ce qu'il y a dans le bac, puis glisse la réponse" : "Réfléchis, puis glisse la réponse";
+    var j = Q.reponse, prop = [j, j * 10, Math.max(1, j / 10), j + 1].filter(function (v, i, t) { return v === Math.floor(v) && t.indexOf(v) === i; });
+    while (prop.length < 4) prop.push(j + prop.length + 1);
+    var box = el("tuiles"); box.innerHTML = "";
+    melanger(prop).forEach(function (v) { var t = document.createElement("div"); t.className = "tuile"; t.textContent = nombre(v); t.dataset.v = v; box.appendChild(t); mobile(t); });
+  }
+
+  // ---------- deux gestes : glisser, ou toucher puis toucher ----------
+  var choisi = null, enVol = false;
+  function oublier() { document.querySelectorAll(".choisi").forEach(function (x) { x.classList.remove("choisi"); }); choisi = null; }
+  function cibleDe(obj) { if (obj.id === "marteau") return "#etabli .obj.cible"; if (obj.classList.contains("rangee")) return "#moule"; return "#caseRep"; }
+  function mobile(obj) {
+    obj.addEventListener("pointerdown", function (ev) {
+      if (fini) return; ev.preventDefault();
+      var r = obj.getBoundingClientRect(), vol = obj.cloneNode(true); vol.removeAttribute("id"); vol.classList.remove("choisi"); vol.classList.add("en-vol");
+      vol.style.width = r.width + "px"; vol.style.height = r.height + "px"; vol.style.position = "fixed"; document.body.appendChild(vol); obj.classList.add("parti"); obj.style.visibility = "hidden"; enVol = true;
+      var x0 = ev.clientX, y0 = ev.clientY, dx = x0 - r.left, dy = y0 - r.top, bouge = false, survol = null, sel = cibleDe(obj);
+      function place(x, y) { vol.style.left = (x - dx) + "px"; vol.style.top = (y - dy) + "px"; }
+      place(x0, y0);
+      function sous(x, y) { var t = document.elementFromPoint(x, y); return t && t.closest ? t.closest(sel) : null; }
+      function mv(e) { place(e.clientX, e.clientY); if (Math.hypot(e.clientX - x0, e.clientY - y0) > 12) bouge = true;
+        var c = sous(e.clientX, e.clientY); if (survol && survol !== c) survol.classList.remove("survol"); if (c) c.classList.add("survol"); survol = c; }
+      function up(e) {
+        document.removeEventListener("pointermove", mv); document.removeEventListener("pointerup", up);
+        vol.remove(); obj.classList.remove("parti"); obj.style.visibility = ""; setTimeout(function () { enVol = false; }, 0); if (survol) survol.classList.remove("survol");
+        if (!bouge) { var seule = Array.prototype.filter.call(document.querySelectorAll(cibleDe(obj)), function (c) { var q = c.getBoundingClientRect(); return q.width > 0 && q.height > 0; });
+          if (seule.length === 1) { oublier(); deposer(obj, seule[0]); return; }   // une seule case : un toucher suffit (Karim, 10/10)
+          var deja = choisi === obj; oublier(); if (!deja) { choisi = obj; obj.classList.add("choisi"); } return; }
+        var c = sous(e.clientX, e.clientY); if (c) deposer(obj, c);
+      }
+      document.addEventListener("pointermove", mv); document.addEventListener("pointerup", up);
+    });
+  }
+  document.addEventListener("pointerup", function (ev) {
+    if (enVol || !choisi || fini) return;
+    var c = ev.target.closest && ev.target.closest(cibleDe(choisi)); if (!c) return;
+    var o = choisi; if (o.id !== "marteau") oublier(); deposer(o, c);   // le marteau reste dans la main : on peut taper plusieurs fois
+  });
+  function deposer(obj, c) {
+    if (obj.id === "marteau" && etape === "casse") return casser(c);
+    if (obj.classList.contains("rangee") && etape === "recolle") return recoller(obj);
+    if (obj.classList.contains("tuile") && etape === "reponse") {
+      var v = Number(obj.dataset.v);
+      if (v !== Q.reponse) { erreurs++; secoue(c); son("non"); verdict("🤪", "faux"); return; }
+      c.textContent = nombre(v); c.classList.add("pleine"); obj.remove(); fini = true; etape = "fini";
+      var dans = recolle() || perso ? Q.n + " " + (Q.n === 1 ? NOM[Q.r] : NOMS[Q.r]) : (Q.n === 1 ? libelle(1, Q.r) : nombre(Q.n * VAL[Q.r]));
+      if (Q.mode === "predire") { var q0 = Q; setTimeout(function () { if (Q === q0) preuve(q0); }, 700); }
+      el("egal").textContent = (dans.charAt(0).toUpperCase() + dans.slice(1)) + " = " + nombre(v) + " " + (v === 1 ? NOM[Q.cible] : NOMS[Q.cible]);
+      tableau(Q.n * VAL[Q.r], Q.cible, true);
+      if (!erreurs) score++; majScore(); son(index % 4 === 3 ? "fin" : "bien");
+      verdict(erreurs ? "✅" : "✅ Du premier coup !", "bien"); el("btnSuivant").hidden = false; el("consigne").textContent = "Bravo !";
+    }
+  }
+
+  el("btnIndice").addEventListener("click", function () {
+    if (fini) return;
+    if (etape === "casse") verdict("💡 Le marteau casse un objet en 10 objets plus petits");
+    else if (etape === "recolle") verdict("💡 10 objets pareils se recollent en 1 seul objet plus grand");
+    else verdict("💡 Compte les rangées : dans chaque rangée, il y en a 10");
+  });
+  // ✏️ Ma question : « Combien de [rang] dans [nombre] [rang] ? » ; on touche un rang pour le changer
+  var persoN = "1";
+  function majPerso() {
+    ["persoCible", "persoRang"].forEach(function (id) { var b = el(id), r = +b.dataset.r; b.textContent = id === "persoRang" && persoN === "1" ? NOM[r] : NOMS[r]; b.style.color = COUL_R[r]; b.style.borderColor = COUL_R[r]; });
+    el("persoN").textContent = persoN;
+  }
+  function ouvrirPerso() { el("fenetre").hidden = false; el("aidePerso").textContent = "Touche les mots en couleur pour les changer."; el("aidePerso").className = "aide-perso"; majPerso(); }
+  "1234567890".split("").concat(["⌫"]).forEach(function (c) {
+    var b = document.createElement("button"); b.type = "button"; b.textContent = c; el("clavier").appendChild(b);
+    b.addEventListener("click", function () {
+      if (c === "⌫") persoN = persoN.length > 1 ? persoN.slice(0, -1) : "0";
+      else persoN = persoN === "0" ? c : (persoN + c).slice(0, 3);
+      majPerso();
+    });
+  });
+  ["persoCible", "persoRang"].forEach(function (id) { el(id).addEventListener("click", function () { var b = el(id); b.dataset.r = (+b.dataset.r + 1) % 5; majPerso(); }); });
+  el("btnPerso").addEventListener("click", ouvrirPerso);
+  el("persoAnnuler").addEventListener("click", function () { el("fenetre").hidden = true; });
+  el("persoGo").addEventListener("click", function () {
+    var n = parseInt(persoN, 10), c = +el("persoCible").dataset.r, r = +el("persoRang").dataset.r, a = el("aidePerso");
+    function non(t) { a.textContent = t; a.className = "aide-perso faux"; }
+    if (!n) return non("Écris un nombre plus grand que 0.");
+    if (c === r) return non("Choisis deux mots différents.");
+    if (c > r && (n * VAL[r]) % VAL[c]) return non(n + " " + NOMS[r] + " ne font pas un nombre entier de " + NOMS[c] + ".");
+    var S = { n: n, r: r, cible: c, mode: c > r ? "recolle" : "casse" };
+    if (S.mode === "recolle" && (c !== r + 1 || !dessinable(S))) S.mode = "seul";
+    if (S.mode === "casse" && !dessinable(S)) S.mode = "seul";
+    perso = S; el("fenetre").hidden = true; afficher();
+  });
+  el("btnSuivant").addEventListener("click", function () { if (perso) { ouvrirPerso(); return; } index = (index + 1) % QUESTIONS[niveau].length; afficher(); });
+  el("btnSon").addEventListener("click", function () { sonActif = !sonActif; el("btnSon").textContent = sonActif ? "🔊" : "🔇"; });
+  function choisirNiveau(nv) {
+    perso = null;
+    var bt = document.querySelector('#niveaux button[data-niveau="' + nv + '"]'); if (!bt) return false;
+    niveau = nv; index = 0; score = 0;
+    document.querySelectorAll("#niveaux button").forEach(function (x) { x.classList.toggle("actif", x === bt); });
+    afficher(); return true;
+  }
+  document.querySelectorAll("#niveaux button").forEach(function (bt) { bt.addEventListener("click", function () { choisirNiveau(bt.dataset.niveau); }); });
+  if (!(location.hash && choisirNiveau(decodeURIComponent(location.hash.slice(1))))) afficher();
+  window.__marteau = { etat: function () { return { niveau: niveau, etape: etape, Q: Q, fini: fini, perso: perso }; }, nb: function () { return QUESTIONS[niveau].length; } };
+})();
+</script>
+<!-- MENU -->
+<script>
+/* ==== LE MENU ☰ (GTH, 10/10) : interface épurée — à l'écran, seulement le titre, le score, la consigne et l'activité ====
+   Tout le reste (niveaux, onglets de méthode, ✏️, 🔊, 🖨️, aide…) part dans un menu ☰, ouvert d'un toucher.
+   Réglage par outil (CONF, posé par l'injecteur) : ancre = où mettre le bouton ☰ (sinon en haut à droite de l'écran) ;
+   cacher = ce qui part dans le menu (sinon : tout ce qui, dans « .barre .droite », n'est pas un score).
+   Installé par .claude/outils/menu-outil/injecter.py ; ne pas modifier dans l'outil, mais dans ce fichier. */
+(function () {
+  var CONF = {};
+  var st = document.createElement("style");
+  st.textContent =
+    ".menu-btn{width:58px; height:58px; border-radius:16px; border:2px solid rgba(0,0,0,.15); background:#fff; color:#1f2a33; font-size:2rem; line-height:1; cursor:pointer; flex:none; padding:0;}" +
+    ".menu-btn.fixe{position:fixed; top:10px; right:12px; z-index:150; box-shadow:0 4px 14px rgba(0,0,0,.15);}" +
+    ".menu-btn.ouvert{background:#1f2a33; color:#fff;}" +
+    ".menu-panneau{position:fixed; top:76px; right:16px; z-index:200; background:#fff; color:#1f2a33; border-radius:18px; box-shadow:0 18px 50px rgba(0,0,0,.28); padding:16px 18px;" +
+    "  display:flex; flex-direction:column; align-items:flex-start; gap:12px; max-width:min(620px, 92vw); max-height:80vh; overflow:auto;}" +
+    ".menu-panneau[hidden]{display:none !important;}" +
+    ".menu-panneau h4{margin:0; font-family:sans-serif; font-size:.85rem; text-transform:uppercase; letter-spacing:.6px; color:#6d7a85;}" +
+    ".menu-panneau > *{position:static !important; margin:0 !important;}" +
+    ".menu-panneau > div,.menu-panneau > nav{display:flex; flex-wrap:wrap; gap:8px;}";
+  document.head.appendChild(st);
+  function installer() {
+    var autres = [];
+    if (CONF.cacher) CONF.cacher.forEach(function (s) { document.querySelectorAll(s).forEach(function (e) { if (autres.indexOf(e) === -1) autres.push(e); }); });
+    else { var d = document.querySelector(".barre .droite"); if (d) autres = Array.prototype.filter.call(d.children, function (e) { return !e.classList.contains("score"); }); }
+    if (!autres.length) return;
+    var btn = document.createElement("button"); btn.type = "button"; btn.className = "menu-btn"; btn.title = "Niveaux et réglages"; btn.textContent = "☰";
+    var pan = document.createElement("div"); pan.className = "menu-panneau"; pan.hidden = true;
+    var t = document.createElement("h4"); t.textContent = "Niveaux et réglages"; pan.appendChild(t);
+    autres.forEach(function (e) { pan.appendChild(e); });
+    var ancre = document.querySelector(CONF.ancre || ".barre .droite");
+    if (ancre) ancre.appendChild(btn); else { btn.classList.add("fixe"); document.body.appendChild(btn); }
+    document.body.appendChild(pan);
+    function ouvrir(o) { pan.hidden = !o; btn.classList.toggle("ouvert", o); }
+    btn.addEventListener("click", function (e) { e.stopPropagation(); ouvrir(pan.hidden); });
+    // un niveau choisi, ou une fenêtre ouverte (✏️, 🖨️) : le menu se referme ; on garde le menu ouvert pour choisir un type de jeu
+    pan.addEventListener("click", function (e) { var b = e.target.closest("button"); if (b && !b.closest(CONF.garderOuvert || ".types")) setTimeout(function () { ouvrir(false); }, 120); });
+    document.addEventListener("pointerdown", function (e) { if (!pan.hidden && !pan.contains(e.target) && e.target !== btn) ouvrir(false); });
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", installer); else installer();
+})();
+</script>
+<!-- /MENU -->
+<!-- INDICE-COTE -->
+<script>
+/* 💡 sur le côté (Karim, 21/10) : dans les jeux qui ont un bouton « 💡 Indice » (.btn-indice), le bouton devient une ampoule seule,
+   collée au bord droit de l'écran, à mi-hauteur ; l'indice s'ouvre dans une bulle à côté d'elle, jamais sous le jeu.
+   Le jeu garde son propre code : au toucher, on regarde quel texte il vient d'écrire (zone #indice, ou la ligne de message),
+   on le reprend dans la bulle et on remet la zone comme avant. Installé par injecter.py. */
+(function () {
+  var b = document.querySelector(".btn-indice"); if (!b) return;
+  var st = document.createElement("style");
+  st.textContent =
+    ".btn-indice.cote{position:fixed !important; right:18px; top:50%; transform:translateY(-50%); width:76px; height:76px; padding:0 !important; border-radius:50% !important;" +
+    " font-size:40px !important; line-height:1; z-index:60; margin:0 !important; display:flex; align-items:center; justify-content:center}" +
+    "#bulle-cote{position:fixed; right:110px; top:50%; transform:translateY(-50%); max-width:520px; background:#fff8c4; border:2px solid #d4b106; border-radius:18px;" +
+    " padding:16px 22px; font-size:26px; line-height:1.35; z-index:60; box-shadow:0 6px 18px rgba(0,0,0,.15); display:none}" +
+    "#bulle-cote::after{content:''; position:absolute; right:-14px; top:50%; margin-top:-12px; border:12px solid transparent; border-left:14px solid #d4b106; border-right:none}";
+  document.head.appendChild(st);
+  b.classList.add("cote"); b.textContent = "💡"; b.title = "Indice"; document.body.appendChild(b);
+  var bulle = document.createElement("div"); bulle.id = "bulle-cote"; document.body.appendChild(bulle);
+  var zones = function () { return Array.prototype.slice.call(document.querySelectorAll("#indice, .indice, #message, .message, #verdict, .verdict, #consigne-aide")); };
+  var avant = [], minuteur = null;
+  b.addEventListener("click", function () { avant = zones().map(function (z) { return [z, z.textContent, z.className]; }); }, true);   // avant le code du jeu
+  b.addEventListener("click", function () {
+    setTimeout(function () {
+      var txt = "";
+      avant.forEach(function (a) {
+        var z = a[0], neuf = z.textContent;
+        if (neuf !== a[1] && neuf.trim()) { txt = neuf; z.textContent = a[1]; z.className = a[2]; }
+      });
+      if (!txt) return;   // le jeu montre l'indice autrement : on le laisse faire
+      bulle.textContent = txt.replace(/^\s*💡\s*/, ""); bulle.style.display = "block";
+      clearTimeout(minuteur); minuteur = setTimeout(function () { bulle.style.display = "none"; }, 8000);
+    }, 0);
+  });
+  document.addEventListener("pointerdown", function (e) { if (e.target !== b && e.target !== bulle) bulle.style.display = "none"; });
+})();
+</script>
+<!-- /INDICE-COTE -->
+</body>
+</html>

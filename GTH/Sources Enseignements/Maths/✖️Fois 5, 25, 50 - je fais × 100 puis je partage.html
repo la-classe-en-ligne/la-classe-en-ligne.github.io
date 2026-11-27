@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>✖️ × 5, × 25, × 50</title>
+<!--
+  24/11 (Karim : « un peu de changement » au calcul mental en deux colonnes) : les CM2 multiplient par 5, 25, 50.
+  La technique (leçon de calcul mental du cours moyen : multiplier par 5, 25, 50) : × 5 = × 10 puis la moitié ; × 50 = × 100 puis la moitié ;
+  × 25 = × 100 puis le quart (la moitié de la moitié). Un calcul à la fois : les élèves écrivent sur l'ardoise, je touche « Étape » pour montrer le chemin,
+  puis « Réponse ». Niveaux : #x5, #x50, #x25, #tout. Fond clair, rien d'autre à l'écran.
+-->
+<style>
+:root { --encre:#17252b; --bleu:#1565c0; --vert:#2e7d32; --gris:#607d8b; --fond:#f7f9fb; }
+html,body { margin:0; height:100%; background:var(--fond); color:var(--encre); font-family:"Segoe UI",Calibri,Arial,sans-serif; user-select:none; }
+#app { height:100%; display:grid; grid-template-rows:auto 1fr auto; padding:10px 16px; box-sizing:border-box; }
+#haut { display:flex; justify-content:space-between; align-items:center; }
+#niveaux button, #bas button { font:inherit; font-size:20px; padding:6px 14px; border-radius:10px; border:2px solid #cfd8dc; background:#fff; cursor:pointer; }
+#niveaux button.actif { background:var(--encre); color:#fff; border-color:var(--encre); }
+#centre { display:grid; place-items:center; text-align:center; }
+#calcul { font-size:84px; font-weight:700; }
+#etapes { font-size:40px; color:var(--gris); min-height:120px; margin-top:12px; line-height:1.5; }
+#etapes b { color:var(--bleu); }
+#reponse { font-size:72px; font-weight:700; color:var(--vert); min-height:90px; }
+#bas { display:flex; justify-content:center; gap:14px; }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="haut"><div id="niveaux"></div><div id="compte"></div></div>
+  <div id="centre"><div><div id="calcul"></div><div id="etapes"></div><div id="reponse"></div></div></div>
+  <div id="bas"><button id="etape">Étape</button><button id="rep">Réponse</button><button id="suiv">Suivant ▶</button></div>
+</div>
+<script>
+const NIV = {
+  x5:  { nom: "× 5",  L: [14, 8, 22, 16, 30, 46, 12, 64, 18, 120] },
+  x50: { nom: "× 50", L: [6, 8, 12, 14, 22, 30, 16, 44, 9, 60] },
+  x25: { nom: "× 25", L: [4, 8, 12, 24, 16, 20, 36, 44, 6, 10] }
+};
+NIV.tout = { nom: "Les trois", L: [] };
+["x5", "x50", "x25"].forEach((k, j) => NIV[k].L.forEach((n, i) => { if (i < 4) NIV.tout.L.push([k, n]); }));
+let niv = "x5", k = 0, pas = 0;
+const $ = id => document.getElementById(id), fmt = n => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+function courant() { const x = NIV[niv].L[k]; return Array.isArray(x) ? x : [niv, x]; }
+function chemin(t, n) {
+  if (t === "x5") return [n + " × 10 = <b>" + fmt(n * 10) + "</b>", "la moitié de " + fmt(n * 10) + " = <b>" + fmt(n * 5) + "</b>"];
+  if (t === "x50") return [n + " × 100 = <b>" + fmt(n * 100) + "</b>", "la moitié de " + fmt(n * 100) + " = <b>" + fmt(n * 50) + "</b>"];
+  return [n + " × 100 = <b>" + fmt(n * 100) + "</b>", "la moitié : <b>" + fmt(n * 50) + "</b>, puis encore la moitié : <b>" + fmt(n * 25) + "</b>"];
+}
+function dessiner() {
+  const [t, n] = courant();
+  $("calcul").textContent = n + " × " + t.slice(1) + " = ?";
+  const C = chemin(t, n); $("etapes").innerHTML = C.slice(0, pas).join("<br>");
+  $("reponse").textContent = pas > C.length ? fmt(n * +t.slice(1)) : "";
+  $("compte").textContent = (k + 1) + " / " + NIV[niv].L.length;
+  $("niveaux").innerHTML = Object.keys(NIV).map(x => '<button data-n="' + x + '" class="' + (x === niv ? "actif" : "") + '">' + NIV[x].nom + "</button>").join(" ");
+  $("niveaux").querySelectorAll("button").forEach(b => b.onclick = () => { location.hash = b.dataset.n; });
+}
+$("etape").onclick = () => { if (pas < 2) pas++; dessiner(); };
+$("rep").onclick = () => { pas = 3; dessiner(); };
+$("suiv").onclick = () => { k = (k + 1) % NIV[niv].L.length; pas = 0; dessiner(); };
+function lien() { const h = location.hash.slice(1); niv = NIV[h] ? h : "x5"; k = 0; pas = 0; dessiner(); }
+window.addEventListener("hashchange", lien); lien();
+</script>
+</body>
+</html>

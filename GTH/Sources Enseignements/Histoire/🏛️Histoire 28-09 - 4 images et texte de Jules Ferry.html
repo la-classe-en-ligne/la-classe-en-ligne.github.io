@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Histoire — la République et l'école</title>
+<style>
+  :root { --fond: #111; --texte: #f4f1ea; --vert: #2e7d4f; --gris: #8a8a8a; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; background: var(--fond); color: var(--texte); font-family: Arial, Helvetica, sans-serif; overflow: hidden; user-select: none; -webkit-user-select: none; touch-action: manipulation; }
+  .vue { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; padding: 2vh 2vw 7vh; }
+  .vue.active { display: flex; }
+  .vue img { max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 6px; box-shadow: 0 0 40px rgba(0,0,0,.6); }
+  .texte { background: #f7f2e7; color: #1d1d1d; max-width: 1300px; width: 100%; padding: 4vh 4vw; border-radius: 10px; border-left: 14px solid var(--vert); }
+  .texte h2 { font-size: 3.2vh; color: var(--vert); margin-bottom: 3vh; font-weight: normal; }
+  .texte blockquote { font-family: Georgia, "Times New Roman", serif; font-size: 4.6vh; line-height: 1.45; margin-bottom: 3.5vh; }
+  .texte blockquote:last-child { margin-bottom: 0; }
+  .texte b { background: #ffe9a8; font-weight: normal; padding: 0 .15em; border-radius: 3px; }
+  nav { position: fixed; left: 0; right: 0; bottom: 0; height: 7vh; display: flex; align-items: center; justify-content: center; gap: 1.6vh; }
+  nav button { width: 3.2vh; height: 3.2vh; border-radius: 50%; border: 2px solid var(--gris); background: transparent; cursor: pointer; }
+  nav button.on { background: var(--texte); border-color: var(--texte); }
+  .zone { position: fixed; top: 0; bottom: 7vh; width: 50%; cursor: pointer; }
+  #prec { left: 0; } #suiv { right: 0; }
+  .outils { position: fixed; left: 1.2vw; bottom: 1.1vh; display: flex; gap: 1vh; z-index: 5; }
+  .outils button { font-size: 3.4vh; width: 5.6vh; height: 5.6vh; border-radius: 50%; border: 2px solid #444; background: #222; cursor: pointer; line-height: 1; }
+  .outils button.on { border-color: #f4c95d; background: #3a3217; }
+  .outils.cache { visibility: hidden; }
+  #bulle { position: fixed; left: 50%; bottom: 9vh; transform: translateX(-50%); width: min(1100px, 92vw); background: #f7f2e7; color: #1d1d1d; border-left: 12px solid var(--vert); border-radius: 10px; padding: 2.4vh 2.4vw; font-size: 3.3vh; line-height: 1.4; display: none; z-index: 6; box-shadow: 0 8px 40px rgba(0,0,0,.6); }
+  #bulle.vu { display: block; }
+  #bulle b { color: var(--vert); }
+  .cadre { position: relative; max-width: 100%; max-height: 100%; display: flex; }
+  .meme { position: absolute; left: 3%; right: 3%; bottom: 4%; text-align: center; font-family: Impact, "Anton", "Arial Black", sans-serif; font-size: 5.2vh; line-height: 1.1; color: #fff; text-transform: uppercase; -webkit-text-stroke: 2px #000; text-shadow: 3px 3px 0 #000, -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000; display: none; }
+  .meme.vu { display: block; }
+  #credits { position: fixed; right: 1.2vw; bottom: 1.6vh; font-size: 1.3vh; color: #666; max-width: 40vw; text-align: right; }
+  .legende-bing { position: absolute; left: 1.2vw; top: 1.2vw; max-width: 55%; background: rgba(0,0,0,.6); color: #fff; border-radius: 8px; padding: 1vh 1.2vw; text-align: left; z-index: 2; }
+  .legende-bing b { display: block; font-size: 2.6vh; }
+  .legende-bing i { display: block; font-style: normal; opacity: .78; font-size: 1.9vh; margin: .3vh 0 .6vh; }
+  .legende-bing span { display: block; font-size: 2.1vh; line-height: 1.35; }
+</style>
+</head>
+<body>
+  <section class="vue active"><div class="cadre"><img src="images/classe-1912.jpg" alt="Une classe d'école vers 1912"><div class="meme"></div></div></section>
+  <section class="vue"><div class="cadre"><img src="images/jules-ferry.jpg" alt="Jules Ferry"><div class="meme"></div></div></section>
+  <section class="vue"><div class="cadre"><img src="images/affiche-proclamation-1870.jpg" alt="Affiche : République française, proclamation, septembre 1870"><div class="meme"></div></div></section>
+  <section class="vue"><div class="cadre"><img src="images/marianne-place-republique.jpg" alt="Marianne, place de la République à Paris"><div class="meme"></div></div></section>
+  <section class="vue">
+    <div class="texte">
+      <h2>Jules Ferry, lettre aux instituteurs, 17 novembre 1883</h2>
+      <blockquote>« L'instruction religieuse appartient <b>aux familles</b> et à l'église, l'instruction morale <b>à l'école</b>. »</blockquote>
+      <blockquote>« [La loi] a eu pour premier objet de <b>séparer l'école de l'église</b>, d'assurer <b>la liberté de conscience</b> et des maîtres et des élèves […]. »</blockquote>
+    </div>
+  </section>
+
+  <div class="zone" id="prec"></div>
+  <div class="zone" id="suiv"></div>
+  <nav id="points"></nav>
+  <div id="credits"></div>
+  <div class="outils" id="outils">
+    <button type="button" data-k="ouquand" title="Quand et où">🗺️</button>
+    <button type="button" data-k="anecdote" title="Anecdote">💡</button>
+    <button type="button" data-k="meme" title="Mème">😄</button>
+  </div>
+  <div id="bulle"></div>
+
+<script src="images/legendes.js"></script>
+<script>
+  var CREDITS = [
+    "Agence Rol, 1912 — Gallica / BnF, domaine public",
+    "Jules Ferry — domaine public",
+    "Proclamation, Tours, 9 septembre 1870 — Paris Musées, CC0",
+    "Léopold Morice, 1883 — photo Coyau, Wikimedia Commons, CC BY-SA 3.0",
+    ""
+  ];
+  // Mêmes textes que la fiche maître (.claude/outils/photocopies/histoire_ferry.py).
+  var INFOS = [
+    { ouquand: "<b>🗓️ 16 octobre 1912</b>, 30 ans après les lois de Jules Ferry.<br><b>📍 Une école de garçons, en France.</b> Photo de presse.",
+      anecdote: "On écrivait avec une plume en métal trempée dans un encrier, un petit pot d'encre posé dans un trou du pupitre. Une goutte de trop, et c'était la tache ! On l'épongeait avec un buvard.",
+      meme: "Quand le maître passe dans les rangs… et que tu n'as encore rien écrit" },
+    { ouquand: "<b>🗓️ 1832-1893.</b> Ministre de l'Instruction publique : lois de 1881 et 1882.<br><b>📍 Né à Saint-Dié, dans les Vosges.</b> Il travaille à Paris.",
+      anecdote: "En 1870-1871, Paris est encerclé pendant 4 mois. Jules Ferry doit partager la nourriture qui manque : on mange du cheval, des rats, et même les éléphants du zoo ! Les Parisiens le surnomment « Ferry-Famine ».",
+      meme: "Jules Ferry quand il voit qu'il y a toujours école le lundi matin" },
+    { ouquand: "<b>🗓️ Automne 1870.</b> La République est proclamée le 4 septembre 1870, après la défaite de Sedan.<br><b>📍 Écrite à Tours par Léon Gambetta</b>, imprimée à Issoire, collée sur les murs.",
+      anecdote: "Paris est encerclé par l'armée prussienne. Le 7 octobre 1870, Gambetta s'envole en ballon au-dessus des soldats ennemis ! Et l'affiche dit « 9 septembre »… mais c'était le 9 octobre : l'imprimeur s'est trompé de mois.",
+      meme: "Pas de train, pas de voiture… pas grave, j'ai un ballon 🎈" },
+    { ouquand: "<b>🗓️ Inaugurée en 1883</b>, au moment des lois de Jules Ferry.<br><b>📍 Place de la République, à Paris.</b> 9,5 m de haut, en bronze.",
+      anecdote: "Pourquoi « Marianne » ? Le prénom viendrait d'une chanson en occitan, écrite en 1792 par un cordonnier de Puylaurens, dans le Tarn : pas si loin de chez nous !",
+      meme: "Quand le maître demande qui a fini l'exercice" },
+    { ouquand: "<b>🗓️ 17 novembre 1883.</b><br><b>📍 Une lettre envoyée à chaque instituteur de France</b> : environ 80 000 maîtres et maîtresses.",
+      anecdote: "Ferry donne une règle aux maîtres : avant de dire quelque chose, se demander si un seul papa, assis dans la classe, pourrait être choqué. Si oui, se taire.",
+      meme: "" }
+  ];
+  document.querySelectorAll(".cadre img").forEach(function (img) {
+    var L = (window.LEGENDES_IMAGES || {})[img.getAttribute("src").split("/").pop()];
+    if (!L) return;
+    var d = document.createElement("div"); d.className = "legende-bing";
+    ["b", "i", "span"].forEach(function (t, k) { var e = document.createElement(t); e.textContent = L[k]; d.appendChild(e); });
+    img.parentNode.appendChild(d);
+  });
+  var bulle = document.getElementById("bulle"), ouvert = null;
+  document.querySelectorAll(".meme").forEach(function (m, k) { m.textContent = INFOS[k].meme; });
+  function fermer() { ouvert = null; bulle.classList.remove("vu"); document.querySelectorAll(".meme").forEach(function (m) { m.classList.remove("vu"); }); document.querySelectorAll("#outils button").forEach(function (b) { b.classList.remove("on"); }); }
+  document.querySelectorAll("#outils button").forEach(function (b) {
+    b.addEventListener("click", function (e) {
+      e.stopPropagation();
+      var k = b.dataset.k, deja = ouvert === k;
+      fermer();
+      if (deja) return;
+      ouvert = k; b.classList.add("on");
+      if (k === "meme") { var m = vues[i].querySelector(".meme"); if (m) m.classList.add("vu"); }
+      else { bulle.innerHTML = INFOS[i][k]; bulle.classList.add("vu"); }
+    });
+  });
+  bulle.addEventListener("click", fermer);
+  var vues = document.querySelectorAll(".vue"), nav = document.getElementById("points"), i = 0;
+  vues.forEach(function (_, k) {
+    var b = document.createElement("button");
+    b.setAttribute("aria-label", "Vue " + (k + 1));
+    b.addEventListener("click", function () { montrer(k); });
+    nav.appendChild(b);
+  });
+  function montrer(k) {
+    fermer();
+    i = Math.max(0, Math.min(vues.length - 1, k));
+    document.querySelector('#outils [data-k="meme"]').style.display = INFOS[i].meme ? '' : 'none';
+    vues.forEach(function (v, n) { v.classList.toggle("active", n === i); });
+    nav.querySelectorAll("button").forEach(function (b, n) { b.classList.toggle("on", n === i); });
+    document.getElementById("credits").textContent = CREDITS[i];
+  }
+  document.getElementById("prec").addEventListener("click", function () { montrer(i - 1); });
+  document.getElementById("suiv").addEventListener("click", function () { montrer(i + 1); });
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "ArrowRight" || e.key === " " || e.key === "PageDown") montrer(i + 1);
+    if (e.key === "ArrowLeft" || e.key === "PageUp") montrer(i - 1);
+    if (e.key === "f") document.documentElement.requestFullscreen && document.documentElement.requestFullscreen();
+  });
+  montrer(0);
+</script>
+</body>
+</html>

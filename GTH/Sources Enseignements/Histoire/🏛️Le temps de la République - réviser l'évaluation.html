@@ -1,0 +1,461 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Le temps de la République</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Bebas+Neue&display=swap">
+<style>
+/* Layout: a school notebook (Seyès ruling) with a sticky tab bar; one activity at a time, large touch targets for tablet and ENI. Answers stay hidden until the pupil has tried. */
+:root {
+  --bg: #F2F4FA;
+  --paper: #FFFFFF;
+  --ink: #16213E;
+  --muted: #56607E;
+  --rule: #D9DFF0;
+  --blue: #1B3F9B;
+  --blue-soft: #E3E9FB;
+  --red: #BE1A30;
+  --ok: #1B7A4B;
+  --ok-soft: #DDF2E6;
+  --display: "Bebas Neue", "Oswald", "Arial Narrow", Impact, sans-serif;
+  --body: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0E1325; --paper: #171E36; --ink: #E9EDFB; --muted: #9DA8CC; --rule: #27315A;
+    --blue: #8FAAFF; --blue-soft: #1F2C5A; --red: #FF6F82; --ok: #5FD39A; --ok-soft: #13352A;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0E1325; --paper: #171E36; --ink: #E9EDFB; --muted: #9DA8CC; --rule: #27315A;
+  --blue: #8FAAFF; --blue-soft: #1F2C5A; --red: #FF6F82; --ok: #5FD39A; --ok-soft: #13352A;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background-color: var(--bg);
+  background-image: repeating-linear-gradient(to bottom, transparent 0 1.85rem, var(--rule) 1.85rem 1.9rem);
+  color: var(--ink);
+  font-family: var(--body);
+  font-size: 1.0625rem;
+  line-height: 1.55;
+  padding-inline: 1rem;
+  padding-block: 1rem 3rem;
+}
+.wrap { max-width: 62rem; margin-inline: auto; display: flex; flex-direction: column; gap: 1.25rem; }
+header { display: flex; flex-direction: column; gap: .25rem; padding-top: .5rem; }
+.kicker { font-size: .85rem; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
+h1 { font-family: var(--display); font-weight: 400; font-size: clamp(2.6rem, 8vw, 4.6rem); line-height: .95; letter-spacing: .01em; margin: 0; text-wrap: balance; }
+h1 .tri { display: block; height: .5rem; width: 100%; max-width: 9rem; margin-top: .5rem; background: linear-gradient(90deg, var(--blue) 0 33.3%, var(--paper) 33.3% 66.6%, var(--red) 66.6% 100%); border: 1px solid var(--rule); border-radius: 2px; }
+.intro { margin: .5rem 0 0; max-width: 42rem; color: var(--muted); }
+h2 { font-family: var(--display); font-weight: 400; font-size: 2rem; line-height: 1; letter-spacing: .02em; margin: 0; text-wrap: balance; }
+h3 { font-size: 1.05rem; margin: 0; }
+p { margin: 0; }
+
+nav.tabs { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; display: flex; flex-wrap: wrap; gap: .5rem; padding: .5rem; background: var(--paper); border: 1px solid var(--rule); border-radius: 10px; }
+nav.tabs button { flex: 1 1 8rem; min-height: 3rem; display: flex; align-items: center; justify-content: center; gap: .5rem; font: inherit; font-weight: 700; color: var(--ink); background: transparent; border: 2px solid transparent; border-radius: 8px; padding: .4rem .75rem; cursor: pointer; }
+nav.tabs button:hover { background: var(--blue-soft); }
+nav.tabs button[aria-selected="true"] { background: var(--blue); color: var(--paper); }
+nav.tabs .pip { width: 1.25rem; height: 1.25rem; border-radius: 50%; border: 2px solid currentColor; display: inline-grid; place-items: center; font-size: .75rem; line-height: 1; flex: none; }
+nav.tabs button.done .pip { background: var(--ok); border-color: var(--ok); color: #fff; }
+button:focus-visible, textarea:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
+
+section.panel { background: var(--paper); border: 1px solid var(--rule); border-radius: 10px; padding: 1.25rem; display: flex; flex-direction: column; gap: 1.1rem; min-width: 0; }
+.lead { color: var(--muted); max-width: 44rem; }
+.retiens { background: var(--blue-soft); border-radius: 8px; padding: .8rem 1rem; max-width: 44rem; }
+.retiens b { color: var(--blue); }
+
+.task { display: flex; flex-direction: column; gap: .4rem; padding: .8rem 1rem; border: 2px solid var(--blue); border-radius: 8px; }
+.task .q { font-weight: 700; font-size: 1.1rem; }
+.prog { font-weight: 700; color: var(--muted); }
+.fb { min-height: 1.5em; font-weight: 700; }
+.fb.good { color: var(--ok); }
+.fb.bad { color: var(--red); }
+.fb.info { color: var(--muted); font-weight: 400; }
+.shake { animation: shake .35s; }
+@keyframes shake { 20% { transform: translateX(-6px); } 40% { transform: translateX(6px); } 60% { transform: translateX(-4px); } 80% { transform: translateX(4px); } }
+@media (prefers-reduced-motion: reduce) { .shake { animation: none; outline: 3px solid var(--red); } }
+
+.chip { font: inherit; font-weight: 700; color: var(--ink); background: var(--paper); border: 2px solid var(--blue); border-radius: 8px; min-height: 2.9rem; padding: .35rem .85rem; cursor: pointer; }
+.chip:hover { background: var(--blue-soft); }
+.chip.sel { background: var(--blue); color: var(--paper); }
+.chip.used { visibility: hidden; position: absolute; }
+.pool { display: flex; flex-wrap: wrap; gap: .5rem; }
+
+/* situation cards (régimes, lois, laïcité) */
+.items { display: grid; grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr)); gap: .9rem; }
+.item { border: 1px solid var(--rule); border-radius: 8px; padding: .9rem; display: flex; flex-direction: column; gap: .6rem; background: var(--paper); min-width: 0; }
+.item .t { font-size: 1.1rem; }
+.item .choices { display: flex; flex-wrap: wrap; gap: .4rem; }
+.item .why { color: var(--ok); font-weight: 700; }
+.item.solved { border-color: var(--ok); background: var(--ok-soft); }
+.item.solved .choices { display: none; }
+
+/* frise */
+.frise { display: grid; grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr)); gap: .6rem; }
+.slot { display: flex; flex-direction: column; gap: .4rem; text-align: center; }
+.slot .n { font-family: var(--display); font-size: 1.4rem; line-height: 1; color: var(--muted); letter-spacing: .03em; }
+.slot .box, .slot .dt { font: inherit; color: var(--ink); cursor: pointer; background: var(--paper); border: 2px dashed var(--muted); border-radius: 8px; padding: .4rem; }
+.slot .box { min-height: 4.2rem; font-weight: 700; line-height: 1.2; }
+.slot .dt { min-height: 2.8rem; font-family: var(--display); font-size: 1.7rem; letter-spacing: .03em; }
+.slot .box.sel, .slot .dt.sel { border-color: var(--blue); background: var(--blue-soft); }
+.slot .box.filled { border: 2px solid var(--blue); background: var(--blue-soft); }
+.slot .dt.filled { border: 2px solid var(--ok); background: var(--ok-soft); color: var(--ok); }
+
+.btn { font: inherit; font-weight: 700; color: var(--paper); background: var(--blue); border: 0; border-radius: 8px; min-height: 2.9rem; padding: .4rem 1.1rem; cursor: pointer; align-self: flex-start; }
+.btn.ghost { background: transparent; color: var(--blue); border: 2px solid var(--blue); }
+textarea { width: 100%; min-height: 9rem; font: inherit; line-height: 1.6; color: var(--ink); background: var(--paper); border: 2px solid var(--blue); border-radius: 8px; padding: .75rem; resize: vertical; }
+.checks { display: flex; flex-direction: column; gap: .5rem; }
+.checks label { display: flex; align-items: flex-start; gap: .6rem; cursor: pointer; }
+.checks input { width: 1.4rem; height: 1.4rem; margin: .1rem 0 0; flex: none; accent-color: var(--blue); }
+.block { display: flex; flex-direction: column; gap: .9rem; }
+
+/* cartes */
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); gap: .8rem; }
+.card { display: flex; flex-direction: column; border: 2px solid var(--blue); border-radius: 10px; background: var(--paper); min-height: 10.5rem; min-width: 0; }
+.card .face { flex: 1; font: inherit; text-align: left; color: var(--ink); background: transparent; border: 0; padding: .9rem; cursor: pointer; display: flex; align-items: center; }
+.card .term { font-weight: 700; font-size: 1.15rem; line-height: 1.3; color: var(--blue); }
+.card .def { display: none; }
+.card.flipped .term { display: none; }
+.card.flipped .def { display: block; }
+.card .know { font: inherit; font-weight: 700; color: var(--muted); background: transparent; border: 0; border-top: 1px solid var(--rule); padding: .6rem; min-height: 2.8rem; cursor: pointer; border-radius: 0 0 8px 8px; }
+.card.known { border-color: var(--ok); }
+.card.known .know { color: var(--ok); background: var(--ok-soft); }
+.count { font-weight: 700; color: var(--muted); }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="kicker">Histoire · Révisions</div>
+    <h1>Le temps de la République<span class="tri" aria-hidden="true"></span></h1>
+    <p class="intro">Ici, rien à recopier : tu dois te rappeler et réfléchir à des situations nouvelles. Les réponses n'apparaissent qu'après ton essai.</p>
+  </header>
+
+  <nav class="tabs" role="tablist" aria-label="Activités">
+    <button role="tab" id="tab-regimes" data-p="regimes" aria-selected="true"><span class="pip">1</span>Quel régime ?</button>
+    <button role="tab" id="tab-frise" data-p="frise" aria-selected="false"><span class="pip">2</span>La frise</button>
+    <button role="tab" id="tab-lois" data-p="lois" aria-selected="false"><span class="pip">3</span>Lois de Ferry</button>
+    <button role="tab" id="tab-laicite" data-p="laicite" aria-selected="false"><span class="pip">4</span>Laïcité</button>
+    <button role="tab" id="tab-cartes" data-p="cartes" aria-selected="false"><span class="pip">5</span>Cartes mémo</button>
+  </nav>
+
+  <!-- 1. REGIMES -->
+  <section class="panel" id="p-regimes" role="tabpanel" aria-labelledby="tab-regimes">
+    <h2>Quel régime ?</h2>
+    <p class="lead">Pour chaque indice, trouve de quel régime il s'agit : monarchie, empire ou république.</p>
+    <div class="prog" id="prog-regimes"></div>
+    <div class="items" id="items-regimes"></div>
+    <div class="retiens" id="ret-regimes" hidden><b>À retenir.</b> La façon de désigner le chef de l'État change tout : un roi (monarchie), un empereur (empire) ou des représentants choisis par les citoyens qui votent (république).</div>
+  </section>
+
+  <!-- 2. FRISE -->
+  <section class="panel" id="p-frise" role="tabpanel" aria-labelledby="tab-frise" hidden>
+    <h2>La frise de mémoire</h2>
+    <p class="lead" id="lead-frise">Étape 1 : remets les sept régimes dans l'ordre, du plus ancien au plus récent. Touche un nom, puis sa case.</p>
+    <div class="pool" id="pool-frise"></div>
+    <div class="frise" id="frise"></div>
+    <div class="task" aria-live="polite"><div class="fb" id="fb-frise"></div></div>
+    <div class="retiens" id="ret-frise" hidden><b>À retenir.</b> Après la République de 1792 viennent un empire, des rois, une deuxième République, un second empire, puis la IIIe République qui commence en 1870 : celle de Jules Ferry.</div>
+  </section>
+
+  <!-- 3. LOIS -->
+  <section class="panel" id="p-lois" role="tabpanel" aria-labelledby="tab-lois" hidden>
+    <h2>Que dit la loi de Jules Ferry ?</h2>
+    <p class="lead">Nous sommes vers 1885. Pour chaque situation, dis si elle est autorisée. Si elle est interdite, trouve quelle règle n'est pas respectée : école gratuite, obligatoire ou laïque.</p>
+    <div class="prog" id="prog-lois"></div>
+    <div class="items" id="items-lois"></div>
+    <div class="retiens" id="ret-lois" hidden><b>À retenir.</b> Gratuite (1881) : on ne paie plus. Obligatoire (1882) : de 6 à 13 ans, filles et garçons. Laïque (1882) : on n'apprend pas la religion à l'école. En 1885 comme aujourd'hui, la République veut des citoyens qui savent lire pour voter.</div>
+  </section>
+
+  <!-- 4. LAICITE -->
+  <section class="panel" id="p-laicite" role="tabpanel" aria-labelledby="tab-laicite" hidden>
+    <h2>La laïcité</h2>
+    <p class="lead">Vrai ou faux ? Quand c'est faux, dis pourquoi dans ta tête avant de regarder la correction.</p>
+    <div class="prog" id="prog-laicite"></div>
+    <div class="items" id="items-laicite"></div>
+    <div class="block" id="write-block" hidden>
+      <h3>Explique avec tes mots</h3>
+      <p>Un copain qui n'était pas là te demande : « C'est quoi, une école laïque ? » Écris ta réponse en 4 à 6 lignes, avec des phrases complètes. Ne regarde pas ton cahier.</p>
+      <label for="ecrit" class="prog">Ta réponse</label>
+      <textarea id="ecrit" placeholder="Une école laïque, c'est…"></textarea>
+      <button class="btn" id="corr-btn" type="button">Je me corrige</button>
+      <div class="block" id="corr" hidden>
+        <p>Relis ton texte. Coche seulement ce que tu as bien écrit.</p>
+        <div class="checks">
+          <label><input type="checkbox"> J'ai dit qu'à l'école on n'apprend pas de religion.</label>
+          <label><input type="checkbox"> J'ai dit que la religion s'apprend en dehors de l'école, si les parents le veulent.</label>
+          <label><input type="checkbox"> J'ai dit que tous les enfants vont à la même école, quelle que soit leur religion.</label>
+          <label><input type="checkbox"> J'ai écrit des phrases complètes, avec des majuscules et des points.</label>
+        </div>
+        <div class="fb" id="fb-corr"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5. CARTES -->
+  <section class="panel" id="p-cartes" role="tabpanel" aria-labelledby="tab-cartes" hidden>
+    <h2>Cartes mémo</h2>
+    <p class="lead">Lis la question et réponds à voix haute avant de toucher la carte. Si tu avais juste, touche « Je savais ».</p>
+    <div class="count" id="count"></div>
+    <div class="cards" id="cards"></div>
+  </section>
+</div>
+
+<script>
+(function () {
+  var $ = function (s, r) { return (r || document).querySelector(s); };
+  var $$ = function (s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
+
+  var tabs = $$('nav.tabs button');
+  function openTab(name) {
+    tabs.forEach(function (b) {
+      var on = b.dataset.p === name;
+      b.setAttribute('aria-selected', on ? 'true' : 'false');
+      $('#p-' + b.dataset.p).hidden = !on;
+    });
+    try { window.scrollTo({ top: 0 }); } catch (e) {}
+  }
+  tabs.forEach(function (b) { b.addEventListener('click', function () { openTab(b.dataset.p); }); });
+  /* Class Flow ouvre le bon onglet : #regimes, #frise, #lois, #laicite, #cartes */
+  var depart = decodeURIComponent((location.hash || '').slice(1));
+  if (depart && $('#p-' + depart)) openTab(depart);
+  function markDone(name) {
+    $('#tab-' + name).classList.add('done');
+    $('#tab-' + name + ' .pip').textContent = '✓';
+  }
+  function setFb(el, text, kind) { el.textContent = text; el.className = 'fb ' + (kind || ''); }
+  function shake(el) { el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake'); }
+  function shuffle(a, seed) {
+    var arr = a.slice(), s = seed || 7;
+    for (var i = arr.length - 1; i > 0; i--) {
+      s = (s * 9301 + 49297) % 233280;
+      var j = Math.floor((s / 233280) * (i + 1));
+      var t = arr[i]; arr[i] = arr[j]; arr[j] = t;
+    }
+    return arr;
+  }
+
+  /* ---------- situation cards: pick an answer, get the reason afterwards ---------- */
+  function quizCards(o) {
+    var box = $(o.container), solved = 0;
+    var prog = $(o.prog);
+    function upd() { prog.textContent = solved + ' sur ' + o.items.length + ' trouvés'; }
+    o.items.forEach(function (it) {
+      var d = document.createElement('div');
+      d.className = 'item';
+      d.innerHTML = '<div class="t"></div><div class="choices"></div><div class="why" hidden></div><div class="fb"></div>';
+      $('.t', d).textContent = it.t;
+      var ch = $('.choices', d), why = $('.why', d), fb = $('.fb', d);
+      o.labels.forEach(function (lb) {
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'chip'; b.textContent = lb[1];
+        b.addEventListener('click', function () {
+          if (lb[0] === it.a) {
+            d.classList.add('solved');
+            why.hidden = false; why.textContent = it.why; fb.textContent = '';
+            solved++; upd();
+            if (solved === o.items.length && o.onAll) o.onAll();
+          } else {
+            shake(b);
+            setFb(fb, (it.hints && it.hints[lb[0]]) || o.wrong, 'bad');
+          }
+        });
+        ch.appendChild(b);
+      });
+      box.appendChild(d);
+    });
+    upd();
+  }
+
+  /* ---------- pairing: touch a word, then its place ---------- */
+  function pairing(o) {
+    var selChip = null, selTarget = null, placed = 0;
+    function clear() {
+      if (selChip) selChip.classList.remove('sel');
+      if (selTarget) selTarget.classList.remove('sel');
+      selChip = null; selTarget = null;
+    }
+    function attempt(chip, target) {
+      if (chip.dataset.v === target.dataset.a) {
+        o.place(chip, target);
+        chip.classList.add('used');
+        target.classList.add('filled');
+        placed++;
+        clear();
+        o.good();
+        if (placed === o.targets.length) o.all();
+      } else {
+        shake(target);
+        clear();
+        o.bad();
+      }
+    }
+    o.chips.forEach(function (c) {
+      c.addEventListener('click', function () {
+        if (c.classList.contains('used')) return;
+        if (selTarget) { attempt(c, selTarget); return; }
+        var was = selChip === c;
+        clear();
+        if (!was) { selChip = c; c.classList.add('sel'); }
+      });
+    });
+    o.targets.forEach(function (t) {
+      t.addEventListener('click', function () {
+        if (t.classList.contains('filled')) return;
+        if (selChip) { attempt(selChip, t); return; }
+        var was = selTarget === t;
+        clear();
+        if (!was) { selTarget = t; t.classList.add('sel'); }
+      });
+    });
+  }
+
+  /* ---------- 1. quel régime ---------- */
+  quizCards({
+    container: '#items-regimes', prog: '#prog-regimes',
+    labels: [['monarchie', 'Monarchie'], ['empire', 'Empire'], ['republique', 'République']],
+    wrong: 'Pas celui-là. Relis l’indice : qui dirige le pays ?',
+    items: [
+      { t: 'En 1789, Louis XVI est le chef de l’État.', a: 'monarchie', why: 'Monarchie : le pays est dirigé par un roi.' },
+      { t: 'Des citoyens votent pour choisir ceux qui dirigent le pays.', a: 'republique', why: 'République : le pouvoir vient des citoyens qui votent.' },
+      { t: 'Napoléon Bonaparte devient empereur des Français en 1804.', a: 'empire', why: 'Empire : le pays est dirigé par un empereur.' },
+      { t: 'Sur les murs, on lit la devise « Liberté, Égalité, Fraternité ».', a: 'republique', why: 'C’est la devise de la République française.' },
+      { t: 'En 1815, la France est de nouveau un royaume.', a: 'monarchie', why: 'Royaume : un pays dirigé par un roi, donc une monarchie.' },
+      { t: 'De 1852 à 1870, la France est dirigée par un empereur.', a: 'empire', why: 'C’est le Second Empire.' }
+    ],
+    onAll: function () { $('#ret-regimes').hidden = false; markDone('regimes'); }
+  });
+
+  /* ---------- 2. frise ---------- */
+  var regimes = [
+    { y: '1789', n: 'La monarchie (Louis XVI)' },
+    { y: '1792', n: 'Ire République' },
+    { y: '1804', n: 'Premier Empire' },
+    { y: '1815', n: 'Des rois' },
+    { y: '1848', n: 'IIe République' },
+    { y: '1852', n: 'Second Empire' },
+    { y: '1870', n: 'IIIe République' }
+  ];
+  var frise = $('#frise'), pool = $('#pool-frise'), fFb = $('#fb-frise');
+  regimes.forEach(function (r, i) {
+    var s = document.createElement('div');
+    s.className = 'slot';
+    s.innerHTML = '<span class="n">' + (i + 1) + '</span><button type="button" class="box" data-a="' + i + '">?</button><button type="button" class="dt" data-a="' + i + '" hidden>date ?</button>';
+    frise.appendChild(s);
+  });
+  function makeChips(list, seed) {
+    pool.innerHTML = '';
+    return shuffle(list, seed).map(function (r) {
+      var c = document.createElement('button');
+      c.type = 'button'; c.className = 'chip'; c.dataset.v = String(r.i); c.textContent = r.label;
+      pool.appendChild(c);
+      return c;
+    });
+  }
+  pairing({
+    chips: makeChips(regimes.map(function (r, i) { return { i: i, label: r.n }; }), 11),
+    targets: $$('.box', frise),
+    place: function (c, t) { t.textContent = c.textContent; },
+    good: function () { setFb(fFb, 'Bien placé.', 'good'); },
+    bad: function () { setFb(fFb, 'Ce n’est pas la bonne place. Demande-toi : qui dirige le pays juste avant, et juste après ?', 'bad'); },
+    all: function () {
+      setFb(fFb, 'L’ordre est bon. Passe à l’étape 2.', 'good');
+      $('#lead-frise').textContent = 'Étape 2 : place maintenant la date où chaque régime commence.';
+      $$('.dt', frise).forEach(function (b) { b.hidden = false; });
+      pairing({
+        chips: makeChips(regimes.map(function (r, i) { return { i: i, label: r.y }; }), 3),
+        targets: $$('.dt', frise),
+        place: function (c, t) { t.textContent = c.textContent; },
+        good: function () { setFb(fFb, 'Bonne date.', 'good'); },
+        bad: function () { setFb(fFb, 'Cette date ne va pas ici. Les dates vont aussi dans l’ordre.', 'bad'); },
+        all: function () {
+          setFb(fFb, 'Frise complète, de mémoire.', 'good');
+          pool.hidden = true;
+          $('#ret-frise').hidden = false;
+          markDone('frise');
+        }
+      });
+    }
+  });
+
+  /* ---------- 3. lois ---------- */
+  quizCards({
+    container: '#items-lois', prog: '#prog-lois',
+    labels: [['ok', 'Autorisé'], ['gratuite', 'Contre la gratuité'], ['obligatoire', 'Contre l’obligation'], ['laique', 'Contre la laïcité']],
+    wrong: 'Pas celui-là. Relis la situation et pense à ce que décident les lois de Jules Ferry.',
+    items: [
+      { t: 'Chaque mois, les parents de Marie versent de l’argent pour qu’elle aille à l’école publique.', a: 'gratuite', why: 'Depuis 1881, l’école publique est gratuite : on ne paie plus.' },
+      { t: 'Paul a 8 ans. Ses parents le gardent à la ferme toute l’année et refusent de l’envoyer en classe.', a: 'obligatoire', why: 'L’école est obligatoire à partir de 6 ans.' },
+      { t: 'Pendant le cours, le maître fait apprendre le catéchisme à toute la classe.', a: 'laique', why: 'À l’école laïque, on n’apprend pas de religion.' },
+      { t: 'Léa a 9 ans. Ses parents disent qu’une fille n’a pas besoin d’aller à l’école.', a: 'obligatoire', why: 'L’obligation concerne les filles comme les garçons.' },
+      { t: 'Le jour où l’école est fermée, Samuel va suivre un cours de religion à l’église.', a: 'ok', why: 'C’est permis : la religion s’apprend en dehors de l’école, si les parents le veulent.' },
+      { t: 'Anna a 14 ans et ne va plus à l’école.', a: 'ok', why: 'L’école est obligatoire jusqu’à 13 ans. À 14 ans, la loi de l’époque ne l’oblige plus.' },
+      { t: 'Tom a 5 ans et n’est pas encore à l’école.', a: 'ok', why: 'L’obligation commence à 6 ans.' }
+    ],
+    onAll: function () { $('#ret-lois').hidden = false; markDone('lois'); }
+  });
+
+  /* ---------- 4. laicite ---------- */
+  var vf = 0;
+  quizCards({
+    container: '#items-laicite', prog: '#prog-laicite',
+    labels: [['vrai', 'Vrai'], ['faux', 'Faux']],
+    wrong: 'Pas tout à fait. Réfléchis encore au sens du mot laïque.',
+    items: [
+      { t: 'Dans une école laïque, on apprend la religion de ses parents.', a: 'faux', why: 'Faux : à l’école laïque, on n’apprend pas de religion. Elle s’apprend en dehors de l’école.' },
+      { t: 'Dans une école laïque, tous les enfants peuvent venir, quelle que soit leur religion.', a: 'vrai', why: 'Vrai : tous les enfants vont à la même école.' },
+      { t: 'Laïque veut dire que la religion est interdite à tout le monde.', a: 'faux', why: 'Faux : chacun reste libre de sa religion. Simplement, on ne l’enseigne pas à l’école.' },
+      { t: 'Les parents peuvent faire apprendre la religion à leurs enfants en dehors de l’école.', a: 'vrai', why: 'Vrai : c’est leur choix, hors de l’école.' },
+      { t: 'École laïque et école gratuite, c’est la même chose.', a: 'faux', why: 'Faux : laïque parle de la religion, gratuite parle de l’argent. Ce sont deux règles différentes.' }
+    ],
+    onAll: function () { var w = $('#write-block'); w.hidden = false; }
+  });
+  $('#corr-btn').addEventListener('click', function () {
+    $('#corr').hidden = false;
+    this.hidden = true;
+  });
+  var checks = $$('#corr input');
+  checks.forEach(function (c) {
+    c.addEventListener('change', function () {
+      var n = checks.filter(function (x) { return x.checked; }).length;
+      var fb = $('#fb-corr');
+      if (n === checks.length) { setFb(fb, 'Parfait : ton explication est complète.', 'good'); markDone('laicite'); }
+      else { setFb(fb, n + ' critère' + (n > 1 ? 's' : '') + ' sur ' + checks.length + '. Complète ton texte pour les autres.', 'info'); }
+    });
+  });
+
+  /* ---------- 5. cartes ---------- */
+  var cartes = [
+    ['Quelle différence entre une monarchie, un empire et une république ?', 'Monarchie : un roi. Empire : un empereur. République : des citoyens qui votent pour choisir ceux qui dirigent.'],
+    ['Cite les sept régimes depuis 1789, dans l’ordre.', 'Monarchie (1789), Ire République (1792), Premier Empire (1804), des rois (1815), IIe République (1848), Second Empire (1852), IIIe République (1870).'],
+    ['Quand commence la IIIe République ?', 'En 1870. C’est le régime de Jules Ferry.'],
+    ['Qui est Jules Ferry ?', 'Un républicain, ministre de l’Instruction publique, dont les lois de 1881 et 1882 organisent l’école.'],
+    ['Quelles sont les trois grandes idées des lois de Jules Ferry ?', 'École gratuite (1881), école obligatoire de 6 à 13 ans, filles et garçons, et école laïque (1882).'],
+    ['Que veut dire « école gratuite » ?', 'Les parents ne paient plus pour que leurs enfants aillent à l’école publique.'],
+    ['Que veut dire « école obligatoire » ?', 'Tous les enfants, filles et garçons, doivent aller à l’école, de 6 ans révolus à 13 ans.'],
+    ['Que veut dire « école laïque » ?', 'À l’école, on n’apprend pas de religion. Elle s’apprend en dehors de l’école, si les parents le veulent.'],
+    ['Pourquoi la République veut-elle que tout le monde sache lire et écrire ?', 'Un citoyen vote : il doit comprendre les journaux et les affiches pour choisir lui-même.'],
+    ['Quelle est la devise de la République française ?', 'Liberté, Égalité, Fraternité.']
+  ];
+  var cardsEl = $('#cards'), known = 0;
+  function upd() { $('#count').textContent = known + ' carte' + (known > 1 ? 's' : '') + ' sue' + (known > 1 ? 's' : '') + ' sur ' + cartes.length; }
+  cartes.forEach(function (c) {
+    var d = document.createElement('div');
+    d.className = 'card';
+    d.innerHTML = '<button type="button" class="face"><span class="term"></span><span class="def"></span></button><button type="button" class="know">Je savais</button>';
+    $('.term', d).textContent = c[0];
+    $('.def', d).textContent = c[1];
+    $('.face', d).addEventListener('click', function () { d.classList.toggle('flipped'); });
+    $('.know', d).addEventListener('click', function () {
+      var k = d.classList.toggle('known');
+      known += k ? 1 : -1;
+      $('.know', d).textContent = k ? 'Je savais ✓' : 'Je savais';
+      upd();
+      if (known === cartes.length) markDone('cartes');
+    });
+    cardsEl.appendChild(d);
+  });
+  upd();
+})();
+</script>
+
+</body></html>

@@ -1,0 +1,474 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Le schéma en barres</title>
+<!--
+  📊 Le schéma en barres, refait le 7/11 (Karim : « horrible, aussi bien visuellement que didactiquement, on comprend rien ») : plus de chocolaterie, de moules ni de couteau.
+  Les quatre gestes de la méthode de la classe, l'un après l'autre, une seule question à l'écran :
+    1. Je cherche : qu'est-ce qu'on cherche ? · 2. Je dessine : combien de parties ? (au Défi : quel schéma ?) · 3. Je place : les nombres de l'histoire et le « ? » sur le schéma · 4. Je calcule : quelle opération ?
+  Le jeu ne donne jamais le résultat : à la fin, « écris ton calcul et ta phrase réponse sur l'ardoise ».
+  Niveaux : Parties-tout (#pt), Comparaison (#cmp), Fois plus (#fois), Défi (#defi, en plusieurs étapes).
+  Glisser une étiquette, ou la toucher puis toucher sa place. Toucher une étiquette posée la reprend.
+  Contenu : fichier recherches de la banque et problèmes des séances P2 (mêmes problèmes qu'avant).
+-->
+<style>
+:root { --encre:#17303a; --tout:#1565c0; --part:#ad1457; --ecart:#ef6c00; --fond:#f7f9fb; --ok:#2e7d32; --ko:#c62828; }
+* { box-sizing:border-box; }
+html,body { margin:0; height:100%; overflow:hidden; background:#10242c; font-family:"Segoe UI",Calibri,Arial,sans-serif; color:var(--encre); user-select:none; -webkit-user-select:none; touch-action:none; }
+#scene { position:absolute; width:1920px; height:1080px; transform-origin:0 0; background:var(--fond); overflow:hidden; }
+#barre { height:80px; display:flex; align-items:center; gap:16px; padding:0 26px; background:#17303a; color:#fff; }
+#barre h1 { font-size:32px; margin:0; white-space:nowrap; }
+#niveaux { display:flex; gap:8px; margin-left:14px; }
+#niveaux button { font:inherit; font-size:22px; padding:7px 18px; border-radius:11px; border:2px solid #5b7480; background:#27444f; color:#eee; cursor:pointer; }
+#niveaux button.on { background:#f6c018; color:#17303a; font-weight:700; border-color:#f6c018; }
+#coin { margin-left:auto; font-size:22px; white-space:nowrap; } #coin b { color:#f6c018; }
+#fil { display:flex; justify-content:center; gap:10px; padding:14px 0 0; font-size:24px; font-weight:600; color:#90a4ae; }
+#fil span { padding:4px 18px; border-radius:20px; background:#e8edf0; } #fil span.on { background:var(--tout); color:#fff; } #fil span.fait { background:#c8e6c9; color:#1b5e20; }
+#histoire { margin:14px 60px 0; background:#fff; border:2px solid #d5dde2; border-radius:18px; padding:16px 30px; font-size:40px; line-height:1.3; text-align:center; min-height:120px; }
+#histoire b { color:var(--tout); } #etape { font-size:30px; font-weight:700; color:var(--part); margin-top:6px; }
+#consigne { text-align:center; font-size:48px; font-weight:800; margin-top:20px; }
+#schema { position:absolute; left:120px; right:120px; top:432px; height:390px; }
+.barre-s { display:flex; width:100%; height:112px; }
+.case-s { position:relative; flex:1; min-width:120px; display:flex; align-items:center; justify-content:center; border:5px solid; font-size:42px; font-weight:800; background:#fff; }
+.case-s + .case-s { border-left:0; }
+.case-s small { position:absolute; left:10px; top:2px; font-size:21px; font-weight:600; opacity:.8; }
+.tout { border-color:var(--tout); background:#e3f2fd; color:var(--tout); }
+.part { border-color:var(--part); background:#fce4ec; color:var(--part); }
+.ecart { border-color:var(--ecart); border-style:dashed; background:#fff3e0; color:var(--ecart); }
+.vide { cursor:pointer; } .vide.cible { outline:6px solid #f6c018; outline-offset:-6px; }
+.pose { cursor:pointer; }
+.q-s { background:#fff; color:#17303a; border-radius:12px; padding:0 22px; border:3px solid #17303a; }
+.lig2 { margin-top:16px; }
+.cmp-l { display:flex; gap:0; width:100%; height:112px; margin-top:16px; }
+.ligne-n { margin-top:14px; font-size:28px; display:flex; align-items:center; gap:14px; justify-content:center; }
+.ligne-n .case-s { flex:none; min-width:380px; padding:0 20px; height:80px; white-space:nowrap; }
+#bas { position:absolute; left:40px; right:40px; top:846px; display:flex; flex-wrap:wrap; justify-content:center; gap:20px; }
+#bas button { font:inherit; font-weight:800; font-size:42px; padding:16px 36px; border-radius:18px; border:4px solid #17303a; background:#fff; color:#17303a; cursor:pointer; }
+#bas button.op { font-size:84px; width:136px; height:136px; padding:0; border-radius:50%; border:0; background:#17303a; color:#fff; line-height:1; box-shadow:0 6px 0 #0b1a20; }   /* Karim, 8/11 : un signe à toucher, pas une case où écrire */
+.sg { position:relative; width:0; z-index:2; } .sg b { position:absolute; left:-34px; top:22px; width:68px; height:68px; border-radius:50%; background:#ff8f00; color:#fff; font-size:54px; display:flex; align-items:center; justify-content:center; box-shadow:0 3px 0 #b26a00; }
+.sg + .case-s { border-left:0; }
+.sg-eq b { left:-84px; background:#2e7d32; box-shadow:0 3px 0 #1b5e20; }
+/* Karim, 11/11 : « la modélisation du tout est très moyenne, justifiée à gauche, les calculs ne sont pas visibles » :
+   la valeur au centre de la case, l'étiquette dessous ; des largeurs qui suivent les nombres ; le calcul en grand avec son résultat ;
+   à la correction, les parties connues s'effacent du tout (j'enlève) et la réponse apparaît dans la case « ? » */
+.case-s { flex-direction:column; transition:flex .6s; }
+.case-s small { position:static; order:2; font-size:22px; margin-top:2px; opacity:.75; }
+.case-s.enl { animation:enl .7s ease forwards; } @keyframes enl { to { opacity:.28; background:repeating-linear-gradient(45deg,#fce4ec,#fce4ec 12px,#fff 12px,#fff 24px); } }
+.case-s .rep { color:#2e7d32; font-size:48px; animation:pop .6s ease both; } @keyframes pop { 0% { transform:scale(.2); opacity:0; } 70% { transform:scale(1.2); opacity:1; } 100% { transform:scale(1); } }
+.case-s.trouve { border-color:#2e7d32 !important; background:#e8f5e9 !important; }
+#schema .calc-s { margin-top:30px; font-size:60px; } #schema .calc-s span { padding:8px 34px; } #schema .calc-s b { color:#2e7d32; }
+.calc-s { margin-top:26px; text-align:center; font-size:46px; font-weight:800; color:#17303a; } .calc-s span { background:#fff8e1; border:4px solid #ff8f00; border-radius:16px; padding:6px 26px; }
+#bas button.mauvais { background:#ffcdd2; }
+.etiq { font-size:38px; font-weight:800; padding:14px 28px; border-radius:16px; background:#fffde7; border:4px solid #f6c018; cursor:grab; touch-action:none; }
+.etiq.choisie { outline:6px solid var(--tout); }
+.etiq.qq { background:#17303a; color:#fff; border-color:#17303a; }
+#vol { position:absolute; z-index:9; pointer-events:none; display:none; }
+#verdict { position:absolute; left:0; right:0; bottom:100px; text-align:center; font-size:36px; font-weight:700; }
+#verdict.ok { color:var(--ok); } #verdict.ko { color:var(--ko); }
+#suivant { position:absolute; right:150px; bottom:24px; font:inherit; font-size:32px; font-weight:800; padding:12px 34px; border-radius:16px; border:0; background:var(--tout); color:#fff; cursor:pointer; display:none; }
+.rond { position:absolute; right:28px; bottom:22px; width:84px; height:84px; border-radius:50%; font-size:42px; border:3px solid #17303a; background:#fff; cursor:pointer; }
+#bulle { position:absolute; right:28px; bottom:118px; width:760px; font-size:32px; line-height:1.3; background:#fffde7; border:3px solid #f6c018; border-radius:18px; padding:16px 24px; display:none; z-index:6; }
+/* 11/11 — « Je comprends le tout » (Karim : « ils ne comprennent pas que la barre du haut représente les parties du bas ») ; source : guide Eduscol « La résolution de problèmes mathématiques au cours moyen », p. 110-111 (démarche concrète-imagée-abstraite : des barres épaisses pour rapprocher la représentation des objets manipulés) et p. 119 (introduire les barres progressivement au cycle 3) :
+   les parties sont faites d'un carré par objet ; je les glisse dans la grande barre : elle se remplit, le tout s'écrit. Puis une partie cachée. */
+#tout { position:absolute; left:40px; right:40px; top:150px; bottom:30px; background:#fff; border-radius:28px; padding:26px 40px; box-sizing:border-box; font-family:inherit; }
+#tout[hidden] { display:none; }
+#tHist { font-size:44px; font-weight:700; color:#2b2350; margin-bottom:10px; }
+#tCons { font-size:32px; color:#5e548e; margin-bottom:80px; }
+#tGrand { position:relative; height:150px; box-sizing:content-box; border:5px dashed #7c4dff; border-radius:16px; display:flex; align-items:stretch; margin-bottom:12px; }
+#tGrand.plein { border-style:solid; }
+#tSegs { display:flex; width:100%; }
+#tLab { position:absolute; left:0; right:0; top:-54px; text-align:center; font-size:38px; font-weight:800; color:#7c4dff; }
+.tseg { display:flex; flex-direction:column; flex-wrap:nowrap; align-items:center; justify-content:center; border-right:4px solid #fff; font-size:36px; font-weight:800; color:#fff; transition:all .5s; overflow:hidden; }
+.tseg small { font-size:26px; margin-top:4px; } .tcar { display:inline-block; width:44px; height:44px; margin:3px; border-radius:8px; background:rgba(255,255,255,.85); }
+#tParts { display:flex; gap:40px; margin-top:70px; align-items:flex-end; flex-wrap:wrap; }
+.tpart { padding:14px; border-radius:16px; cursor:grab; touch-action:none; user-select:none; text-align:center; font-size:30px; font-weight:800; color:#fff; box-shadow:0 6px 0 rgba(0,0,0,.15); }
+.tpart .tl { display:block; margin-top:8px; }
+.tpart.posee { opacity:.15; pointer-events:none; }
+.tseg.cache { background:repeating-linear-gradient(45deg,#ede7f6,#ede7f6 14px,#fff 14px,#fff 28px) !important; color:#7c4dff; font-size:64px; cursor:pointer; }
+#tCalc { font-size:52px; font-weight:800; color:#2b2350; margin-top:30px; min-height:70px; }
+/* 11/11 (2) — « Je cherche une partie : j'enlève » (Karim : « il ne suffit pas de dire la règle, il faut une activité ou une animation qui la montre ») ;
+   source : guide Eduscol « La résolution de problèmes mathématiques au cours moyen » : p. 67 (retrouver une partie connaissant le tout est plus difficile que trouver le tout) ;
+   p. 112 (la barre unique des parties-tout rend « explicites les relations d'inclusion » : « les 2,70 € n'existent pas à côté des 17,30 €, mais ils sont une partie des 17,30 € ») ;
+   p. 111 (les barres épaisses rapprochent le schéma des cubes manipulés) ; p. 114 (« Partie B = Tout – Partie A »).
+   Le tout est plein ; les parties connues sont DEDANS ; je les enlève du tout : ce qui reste, c'est la partie cherchée. */
+.tseg.tk { cursor:grab; touch-action:none; }
+.tseg.vide { background:transparent !important; border:4px dashed #b39ddb; color:#b39ddb; }
+.tseg.vide span, .tseg.vide .tcar { visibility:hidden; }
+.tseg.reste { background:#7c4dff !important; color:#fff; font-size:56px; }
+.tenl { display:inline-flex; align-items:center; gap:10px; font-size:34px; font-weight:800; color:#fff; padding:10px 18px; border-radius:14px; }
+/* Karim, 11/11 (3) : les énoncés en Belle Allure, les nombres en gras et en bleu ; « Je comprends le tout » centré (75 % de l'écran était vide) ;
+   plus de consigne écrite dans « tout » et « partie » ; une validation qui se voit (avant : un petit ✅) */
+@font-face { font-family:"Belle Allure"; src:url("../../Planificateur/BelleAllureCM-Fin.otf") format("opentype"); }
+#histoire, #tHist, .cah-enonce { font-family:"Belle Allure", "Segoe Print", cursive; font-weight:400; }
+#histoire b, #tHist b, .cah-enonce b { font-family:"Segoe UI", Calibri, Arial, sans-serif; font-weight:800; color:#1565c0;  white-space:nowrap; }
+#histoire { font-size:44px; line-height:1.55; }
+#tout { display:flex; flex-direction:column; align-items:center; text-align:center; }
+#tHist { font-size:46px; line-height:1.5; color:#17252b; margin:10px 0 70px; }
+#tCons { display:none !important; }
+#tGrand { margin:0 auto 12px; }
+#tParts { justify-content:center; }
+#tCalc { text-align:center; }
+#okGrand { position:absolute; left:50%; top:46%; width:300px; height:300px; margin:-150px 0 0 -150px; border-radius:50%; background:#2e7d32; color:#fff; font-size:200px; line-height:300px; text-align:center;
+  box-shadow:0 0 0 22px rgba(46,125,50,.25), 0 20px 60px rgba(0,0,0,.25); z-index:30; pointer-events:none; opacity:0; transform:scale(.3); }
+#okGrand.vu { animation:okPop 1.3s ease forwards; }
+@keyframes okPop { 0% { opacity:0; transform:scale(.3); } 20% { opacity:1; transform:scale(1.12); } 35% { transform:scale(1); } 80% { opacity:1; } 100% { opacity:0; transform:scale(1); } }
+/* « Dans mon cahier » : deux problèmes par niveau, à recopier et résoudre ; on corrige ensuite chacun dans l'activité */
+#cahier { position:absolute; left:40px; right:40px; top:160px; bottom:24px; display:none; gap:30px; }
+#cahier.on { display:flex; }
+#cahier .cah-col { flex:1; background:#fff; border-radius:24px; padding:14px 26px; overflow:hidden; border:4px solid #cfd8dc; display:flex; flex-direction:column; gap:18px; }
+#cahier .cah-col h2 { margin:0; font-size:40px; } #cahier .cah-col.c1 h2 { color:#1565c0; } #cahier .cah-col.c2 h2 { color:#6a1b9a; }
+#cahier .cah-pb { border-top:3px dashed #cfd8dc; padding-top:14px; }
+#cahier .cah-enonce { font-size:31px; line-height:1.45; color:#17252b; }
+#cahier .cah-pb button { font:inherit; font-size:24px; font-weight:800; margin-top:4px; padding:6px 20px; border-radius:14px; border:0; background:var(--tout); color:#fff; cursor:pointer; }
+#cahTete { position:absolute; left:0; right:0; top:100px; text-align:center; font-size:30px; font-weight:800; color:#17252b; display:none; }
+#cahTete.on { display:block; }
+#tSuiv { display:none; position:absolute; right:40px; bottom:30px; font-size:36px; padding:14px 30px; border-radius:20px; border:0; background:#7c4dff; color:#fff; font-weight:800; cursor:pointer; }
+</style>
+</head>
+<body>
+<div id="scene">
+  <div id="barre"><h1>📊 Le schéma en barres</h1>
+    <div id="niveaux"><button data-o="tout">Je comprends le tout</button><button data-o="partie">Je cherche une partie : j'enlève</button><button data-o="cahier">Dans mon cahier</button><button data-o="pt">Parties-tout</button><button data-o="cmp">Comparaison</button><button data-o="fois">Fois plus</button><button data-o="defi">Défi</button></div>
+    <div id="coin">Problèmes réussis : <b id="score">0</b> · 🏆 Record : <b id="record">0</b></div></div>
+  <div id="fil"><span data-p="cherche">1. Je cherche</span><span data-p="dessine">2. Je dessine</span><span data-p="place">3. Je place</span><span data-p="calcule">4. Je calcule</span></div>
+  <div id="histoire"></div>
+  <div id="consigne"></div>
+  <div id="schema"></div>
+  <div id="bas"></div>
+  <div id="verdict"></div>
+  <div id="tout" hidden><div id="tHist"></div><div id="tCons"></div><div id="tGrand"><div id="tSegs"></div><div id="tLab"></div></div><div id="tParts"></div><div id="tCalc"></div><button id="tSuiv">Au suivant ▶</button></div>
+  <button id="suivant"></button>
+  <div id="okGrand">✔</div>
+  <div id="cahTete">Dans mon cahier du jour : je recopie mes deux problèmes, je fais le schéma, le calcul et la phrase réponse.</div>
+  <div id="cahier"></div>
+  <button class="rond" id="indice" title="Indice">💡</button>
+  <div id="bulle"></div>
+  <div id="vol" class="etiq"></div>
+</div>
+<script>
+"use strict";
+// les problèmes : les mêmes que dans la version d'avant ({id|texte} : un nombre de l'histoire)
+var PB = {
+  pt: [
+    { src: "fichier recherches P1 CM1, n° 1", t: "Pour son voyage au Portugal, Maxime a dépensé {a|175 euros} pour l'avion, {b|217 euros} pour l'hôtel et {c|165 euros} pour les loisirs. Combien a-t-il dépensé au total ?", e: [{ m: "pt", parts: ["a", "b", "c"], tout: "?" }] },
+    { src: "fichier recherches P1 CM1, n° 2", t: "Stella et Vivien ont ensemble {a|97 cartes} de football. Stella a {b|34 cartes}. Combien de cartes a Vivien ?", e: [{ m: "pt", parts: ["b", "?"], tout: "a" }] },
+    { src: "fichier recherches P1 CM1, n° 3", t: "Isma range les {a|248 maillots} de son gymnase dans deux sacs : un vert et un jaune. Le sac vert contient {b|187 maillots}. Combien de maillots contient le sac jaune ?", e: [{ m: "pt", parts: ["b", "?"], tout: "a" }] },
+    { src: "fichier recherches P1 CM1, n° 4", t: "Chloé et Enzo ont réalisé {a|488 sauts} le mois dernier. Chloé en a réalisé {b|229}. Combien de sauts a réalisés Enzo ?", e: [{ m: "pt", parts: ["b", "?"], tout: "a" }] },
+    { src: "fichier recherches P1 CM1, n° 5", t: "Julie, Nina et Kélycia ont couru un relais de {a|1 896 m}. Julie et Nina ont parcouru {b|1 264 m}. Quelle est la distance parcourue par Kélycia ?", e: [{ m: "pt", parts: ["b", "?"], tout: "a" }] },
+    { src: "fichier recherches P1 CM2, n° 1", t: "Pour son voyage au Cambodge, Naël a dépensé {a|1 650 euros} pour l'avion, {b|857 euros} pour l'hôtel, {c|925 euros} pour se nourrir et {d|1 548 euros} pour les loisirs. Combien a-t-il dépensé au total ?", e: [{ m: "pt", parts: ["a", "b", "c", "d"], tout: "?" }] },
+    { src: "fichier recherches P1 CM2, n° 2", t: "Lucas et Zoé ont dépensé {a|643 euros} au supermarché. Lucas a dépensé {b|349 euros}. Quelle somme Zoé a-t-elle dépensée ?", e: [{ m: "pt", parts: ["b", "?"], tout: "a" }] },
+    { src: "fichier recherches P1 CM2, n° 3", t: "Lors d'un match de handball entre l'équipe violette et l'équipe jaune, {a|421 points} ont été marqués. Les jaunes ont marqué {b|219 points}. Quelle équipe a gagné, et avec quel score ?", e: [{ m: "pt", parts: ["b", "?"], tout: "a" }] },
+    { src: "fichier recherches P1 CM2, n° 5", t: "{a|37 654 personnes} ont assisté à la finale de la coupe du monde de rugby. {b|5 937} ont bénéficié d'une entrée gratuite. Combien de personnes ont payé leur place ?", e: [{ m: "pt", parts: ["b", "?"], tout: "a" }] },
+    { src: "séance 📅 1 (mémo RECH 1)", t: "Grégoire achète des chaussures à {a|69 €} et des lunettes à {b|135 €}. Combien a-t-il dépensé en tout ?", e: [{ m: "pt", parts: ["a", "b"], tout: "?" }] },
+    { src: "séance 📅 1 (Je vérifie)", t: "Emma achète un ordinateur à {a|1 325 €} et une imprimante à {b|279 €}. Combien dépense-t-elle en tout ?", e: [{ m: "pt", parts: ["a", "b"], tout: "?" }] },
+    { src: "séance 📅 2 (Je vérifie)", t: "Un parking a {a|567 voitures} : des rouges, des grises et des vertes. Il y a {b|139 voitures rouges} et {c|317 grises}. Combien y a-t-il de voitures vertes ?", e: [{ m: "pt", parts: ["b", "c", "?"], tout: "a" }] }
+  ],
+  cmp: [
+    { src: "fichier recherches P1 CM1, n° 6", t: "La salle de spectacle de Moulins peut accueillir {a|4 532 spectateurs}. C'est {e|2 318 spectateurs de plus} qu'à Bourbon-Lancy. Combien de spectateurs la salle de Bourbon-Lancy accueille-t-elle ?", e: [{ m: "cmp", grande: "a", petite: "?", ecart: "e" }] },
+    { src: "fichier recherches P1 CM1, n° 7", t: "Monsieur Lunot gagne {a|1 875 euros} par mois. C'est {e|200 euros de plus} que Monsieur Yani. Combien gagne Monsieur Yani ?", e: [{ m: "cmp", grande: "a", petite: "?", ecart: "e" }] },
+    { src: "fichier recherches P1 CM1, n° 8", t: "Le collège Duclos accueille {a|987 élèves}. Le collège Sarrien accueille {b|765 élèves}. Combien le collège Duclos a-t-il d'élèves de plus que le collège Sarrien ?", e: [{ m: "cmp", grande: "a", petite: "b", ecart: "?" }] },
+    { src: "fichier recherches P1 CM2, n° 6", t: "Jade et Arthur collectionnent les cartes postales. Jade en a {a|2 786} et Arthur en a {b|938}. Combien de cartes postales Jade a-t-elle de plus ?", e: [{ m: "cmp", grande: "a", petite: "b", ecart: "?" }] },
+    { src: "fichier recherches P1 CM2, n° 7", t: "Cette année, il y a eu {a|27 654 visiteurs} à l'exposition culinaire. On a vendu {e|5 674 billets de plus} qu'en 2023. Combien y avait-il eu de visiteurs en 2023 ?", e: [{ m: "cmp", grande: "a", petite: "?", ecart: "e" }] },
+    { src: "fichier recherches P1 CM2, n° 8", t: "À La Clusaz, une piste de ski débute à l'altitude de {a|2 735 m} et se termine à l'altitude de {b|1 987 m}. Quel est le dénivelé entre le départ et l'arrivée ?", e: [{ m: "cmp", grande: "a", petite: "b", ecart: "?" }] },
+    { src: "séance 📅 3 (ERMEL, problème 1)", t: "Amélie a {a|153 €} sur son livret A. Elle a {e|78 € de plus} que Frédéric. Quelle somme possède Frédéric ?", e: [{ m: "cmp", grande: "a", petite: "?", ecart: "e" }] },
+    { src: "séance 📅 3 (Je vérifie)", t: "Léa a {a|45 billes}, c'est {e|12 de moins} que Tom. Combien Tom a-t-il de billes ?", e: [{ m: "cmp", grande: "?", petite: "a", ecart: "e" }] },
+    { src: "séance 📅 3 (ERMEL, problème 4)", t: "Dans la cuve de Tokay, il y a {a|1 248 litres}. Cette cuve contient {e|369 litres de moins} que la cuve de Riesling. Combien y a-t-il de litres de Riesling ?", e: [{ m: "cmp", grande: "?", petite: "a", ecart: "e" }] },
+    { src: "séance 📅 3 (ERMEL, problème 1, CM2)", t: "Amélie a {a|153 €}. Élodie a {e|68 € de moins} qu'Amélie. Quelle somme possède Élodie ?", e: [{ m: "cmp", grande: "a", petite: "?", ecart: "e" }] }
+  ],
+  fois: [
+    { src: "fichier recherches P2 CM1, n° 20", t: "Dans la classe de Sarah, il y a {n|5 tables} et {p|4 élèves} à chaque table. Combien d'élèves y a-t-il dans la classe ?", e: [{ m: "fois", part: "p", n: "n", tout: "?" }] },
+    { src: "fichier recherches P2 CM1, n° 21", t: "Un fermier a {n|6 poulaillers} contenant chacun {p|9 poules}. Combien de poules a-t-il en tout ?", e: [{ m: "fois", part: "p", n: "n", tout: "?" }] },
+    { src: "fichier recherches P2 CM1, n° 22", t: "Un paquet de feutres contient {p|8 feutres}. L'école commande {n|7 paquets} identiques. Chaque feutre mesure {x|14 cm} de long et pèse {y|10 grammes}. Combien de feutres l'école reçoit-elle ?", e: [{ m: "fois", part: "p", n: "n", tout: "?" }] },
+    { src: "fichier recherches P2 CM1, n° 23", t: "Nina range ses {a|35 crayons} dans {n|5 boîtes}. Elle met le même nombre de crayons dans chaque boîte. Combien y a-t-il de crayons dans chaque boîte ?", e: [{ m: "fois", part: "?", n: "n", tout: "a" }] },
+    { src: "fichier recherches P2 CM1, n° 24", t: "La maman d'Enzo a prévu {a|48 sucettes} à distribuer aux {n|6 enfants} de l'anniversaire. Combien chaque enfant aura-t-il de sucettes ?", e: [{ m: "fois", part: "?", n: "n", tout: "a" }] },
+    { src: "fichier recherches P2 CM1, n° 25", t: "Jade a {p|7 billes}. Son frère Hugo en a {n|8 fois plus}. Combien de billes Hugo a-t-il ?", e: [{ m: "fois", part: "p", n: "n", tout: "?" }] },
+    { src: "fichier recherches P2 CM1, n° 26", t: "La tour Eiffel mesure environ {a|300 m}. Big Ben mesure environ {p|100 m}. Combien de fois la tour Eiffel est-elle plus grande que Big Ben ?", e: [{ m: "fois", part: "p", n: "?", tout: "a" }] },
+    { src: "fichier recherches P2 CM1, n° 27 (séance 📅 6)", t: "Amina est allée {a|36 fois} en Suède. C'est {n|3 fois plus} que Paolo. Combien de fois Paolo est-il allé en Suède ?", e: [{ m: "fois", part: "?", n: "n", tout: "a" }] },
+    { src: "fichier recherches P2 CM2, n° 20", t: "Une boîte contient {p|24 crayons}. Une école commande {n|6 boîtes}. Combien de crayons l'école reçoit-elle ?", e: [{ m: "fois", part: "p", n: "n", tout: "?" }] },
+    { src: "fichier recherches P2 CM2, n° 21", t: "Un car peut transporter {p|48 élèves}. Pour une sortie scolaire, {n|5 cars} sont remplis. Combien d'élèves partent en sortie ?", e: [{ m: "fois", part: "p", n: "n", tout: "?" }] },
+    { src: "fichier recherches P2 CM2, n° 23", t: "Un camion transporte {a|60 bouteilles} dans {n|5 cartons}. Il y a le même nombre de bouteilles dans chaque carton. Combien y a-t-il de bouteilles dans un carton ?", e: [{ m: "fois", part: "?", n: "n", tout: "a" }] },
+    { src: "fichier recherches P2 CM2, n° 24", t: "Pour faire une brioche, le boulanger découpe {n|8 parts égales} dans une pâte de {a|400 g}. Quelle est la masse d'une part de pâte ?", e: [{ m: "fois", part: "?", n: "n", tout: "a" }] },
+    { src: "fichier recherches P2 CM2, n° 25", t: "Un train transporte {p|125 passagers}. Un avion transporte {n|4 fois plus} de passagers qu'un train. Combien de passagers l'avion transporte-t-il ?", e: [{ m: "fois", part: "p", n: "n", tout: "?" }] },
+    { src: "fichier recherches P2 CM2, n° 27", t: "L'Allemagne compte environ {a|81 millions} d'habitants. Il y a {n|9 fois moins} d'habitants en Autriche. Combien y a-t-il d'habitants en Autriche ?", e: [{ m: "fois", part: "?", n: "n", tout: "a" }] },
+    { src: "séance 📅 6 (Défi CM1)", t: "Dans une boîte, il y a {a|88 cartes} rangées en paquets de {p|11 cartes}. Combien y a-t-il de paquets ?", e: [{ m: "fois", part: "p", n: "?", tout: "a" }] }
+  ],
+  // Jeudi 12/11 (Karim, 11/11 : « on reste sur l'activité, deux problèmes adaptés au niveau, à recopier dans le cahier du jour ») :
+  // les problèmes F et H de la fiche « Complète la modélisation » 2/5, ressources P1 p. 7 (CM1) et p. 12 (CM2) ; corrigés p. 16 et 21.
+  cahier: [
+    { niv: "CM1", src: "ressources P1 p. 7, F", t: "Yann a {a|199 billes}, Karine en a {b|127} et Pierre en a {c|331}. Combien ont-ils de billes en tout ?", e: [{ m: "pt", parts: ["a", "b", "c"], tout: "?" }] },
+    { niv: "CM1", src: "ressources P1 p. 7, H", t: "Steeve, Axelle et Jason ont marqué {a|558 points} au bowling. Steeve a marqué {b|148 points} et Axelle en a marqué {c|224}. Combien de points ont été marqués par Jason ?", e: [{ m: "pt", parts: ["b", "c", "?"], tout: "a" }] },
+    { niv: "CM2", src: "ressources P1 p. 12, F", t: "Voici la capacité d'accueil de 3 stades : stade A : {a|468 spectateurs} ; stade B : {b|256 spectateurs} ; stade C : {c|412 spectateurs}. Combien de spectateurs peuvent être accueillis en tout ?", e: [{ m: "pt", parts: ["a", "b", "c"], tout: "?" }] },
+    { niv: "CM2", src: "ressources P1 p. 12, H", t: "{a|3 214 personnes} sont venues au supermarché en 3 jours. Il y en avait {b|1 312} le lundi, {c|1 125} le mardi. Combien de personnes sont venues au supermarché le mercredi ?", e: [{ m: "pt", parts: ["b", "c", "?"], tout: "a" }] }
+  ],
+  defi: [
+    { src: "fichier recherches P1 CM1, n° 9", t: "L'entreprise de Gino a préparé {a|1 375 pots} de confiture. Elle en vend {b|286} en juin, puis {c|670} en juillet. Combien de pots de confiture reste-t-il ?",
+      e: [{ q: "Combien de pots reste-t-il à la fin du mois de juin ?", m: "pt", parts: ["b", "?"], tout: "a" }, { q: "Combien de pots reste-t-il à la fin du mois de juillet ?", m: "pt", parts: ["c", "?"], tout: "r1" }] },
+    { src: "fichier recherches P1 CM1, n° 11", t: "Pour un mariage, Théa a besoin de {a|2 000 pétales} de roses. Elle en a déjà {b|865} et en trouve {c|530} chez sa fleuriste. Combien de pétales lui manque-t-il encore ?",
+      e: [{ q: "Combien Théa a-t-elle déjà de pétales ?", m: "pt", parts: ["b", "c"], tout: "?" }, { q: "Combien lui en manque-t-il pour en avoir 2 000 ?", m: "pt", parts: ["r1", "?"], tout: "a" }] },
+    { src: "fichier recherches P1 CM1, n° 12", t: "Antonin a {a|18 €} dans sa tirelire. Sa mère lui donne {b|9,50 €}. Puis il s'achète un jouet à {c|8,45 €}. Combien d'argent lui reste-t-il ?",
+      e: [{ q: "Combien a-t-il après le don de sa mère ?", m: "pt", parts: ["a", "b"], tout: "?" }, { q: "Combien lui reste-t-il après l'achat du jouet ?", m: "pt", parts: ["c", "?"], tout: "r1" }] },
+    { src: "fichier recherches P1 CM1, n° 13", t: "Maeva a gagné {a|58,60 €} à la braderie. Son frère a gagné {e|12 € de plus}. Mais il s'achète un hot-dog à {c|2,50 €}. Combien d'argent reste-t-il au frère de Maeva ?",
+      e: [{ q: "Combien a gagné le frère de Maeva ?", m: "cmp", grande: "?", petite: "a", ecart: "e" }, { q: "Combien lui reste-t-il après le hot-dog ?", m: "pt", parts: ["c", "?"], tout: "r1" }] },
+    { src: "fichier recherches P2 CM1, n° 28", t: "La cantine reçoit {n|6 cageots} de {p|8 kg} de pommes. On utilise {c|30 kg} pour faire des compotes. Quelle masse de pommes reste-t-il ?",
+      e: [{ q: "Combien de kg de pommes la cantine reçoit-elle en tout ?", m: "fois", part: "p", n: "n", tout: "?" }, { q: "Quelle masse reste-t-il après les compotes ?", m: "pt", parts: ["c", "?"], tout: "r1" }] },
+    { src: "fichier recherches P2 CM1, n° 29", t: "Un jardinier achète {n|6 arrosoirs} à {p|9 euros} chacun. Il achète aussi un sac de terreau à {t|24,90 €}. Combien dépense-t-il en tout ?",
+      e: [{ q: "Combien coûtent les 6 arrosoirs ?", m: "fois", part: "p", n: "n", tout: "?" }, { q: "Combien coûtent les arrosoirs et le terreau ?", m: "pt", parts: ["r1", "t"], tout: "?" }] },
+    { src: "fichier recherches P2 CM1, n° 30", t: "Pour la fête d'école du {x|20 juin} à {y|16 h 45}, les parents achètent {n|38 chapeaux} à {p|19 €}. Ils achètent aussi des déguisements pour {d|139,90 €}. {z|23 élèves} ne pourront pas venir. Combien les parents ont-ils dépensé en tout ?",
+      e: [{ q: "Combien coûtent les 38 chapeaux ?", m: "fois", part: "p", n: "n", tout: "?" }, { q: "Combien coûtent les chapeaux et les déguisements ?", m: "pt", parts: ["r1", "d"], tout: "?" }] },
+    { src: "fichier recherches P2 CM1, n° 31", t: "Au marché, Lucie a récolté {a|48 pommes} et {b|36 poires}. Son amie Tina a récolté {n|2 fois plus} de fruits. Combien de fruits Tina a-t-elle récoltés ?",
+      e: [{ q: "Combien de fruits Lucie a-t-elle récoltés ?", m: "pt", parts: ["a", "b"], tout: "?" }, { q: "Combien de fruits Tina a-t-elle récoltés ?", m: "fois", part: "r1", n: "n", tout: "?" }] },
+    { src: "fichier recherches P2 CM1, n° 32", t: "La famille de Patricia fait un voyage de {t|248 km} en 3 jours. Le premier jour, elle parcourt {a|120 km}. Le deuxième jour, elle parcourt {n|3 fois moins} de kilomètres que le premier jour. Combien de kilomètres lui reste-t-il pour le 3e jour ?",
+      e: [{ q: "Combien de kilomètres le deuxième jour ?", m: "fois", part: "?", n: "n", tout: "a" }, { q: "Combien de kilomètres le 1er et le 2e jour ?", m: "pt", parts: ["a", "r1"], tout: "?" }, { q: "Combien de kilomètres reste-t-il pour le 3e jour ?", m: "pt", parts: ["r2", "?"], tout: "t" }] },
+    { src: "fichier recherches P2 CM2, n° 28", t: "Pour la sortie au zoo, le coût est de {p|8 euros} pour un enfant et de {q|12 euros} pour un adulte. Il y a {n|25 élèves} et {m|2 adultes}. Quel sera le coût de la sortie ?",
+      e: [{ q: "Quel sera le coût pour les enfants ?", m: "fois", part: "p", n: "n", tout: "?" }, { q: "Quel sera le coût pour les adultes ?", m: "fois", part: "q", n: "m", tout: "?" }, { q: "Quel sera le coût pour tous ?", m: "pt", parts: ["r1", "r2"], tout: "?" }] },
+    { src: "fichier recherches P2 CM2, n° 29", t: "Un club prépare {n|6 bouteilles} d'eau contenant chacune {p|1,25 litre}. Après l'entraînement, il reste {r|3,4 litres} d'eau. Quelle quantité d'eau a été bue ?",
+      e: [{ q: "Quelle quantité dans les 6 bouteilles ?", m: "fois", part: "p", n: "n", tout: "?" }, { q: "Quelle quantité a été bue ?", m: "pt", parts: ["r", "?"], tout: "r1" }] },
+    { src: "séance 📅 7 (Je vérifie) (q. de moi)", t: "Léo achète {n|4 cahiers} à {p|3 €} et une trousse à {t|7 €}. Combien dépense-t-il en tout ?",
+      e: [{ q: "Combien coûtent les 4 cahiers ?", m: "fois", part: "p", n: "n", tout: "?" }, { q: "Combien coûtent les cahiers et la trousse ?", m: "pt", parts: ["r1", "t"], tout: "?" }] }
+  ]
+};
+const $ = id => document.getElementById(id);
+const etat = { o: "pt", i: 0, s: 0, score: 0, phase: "", k: 0, modele: null, pose: {}, choix: null };
+window.BARRES = etat;   // pour le test automatique
+const mem = { lire(k) { try { return +localStorage.getItem(k) || 0; } catch (e) { return 0; } }, ecrire(k, v) { try { localStorage.setItem(k, v); } catch (e) {} } };
+const cle = () => "barres-record-" + etat.o;
+const pb = () => PB[etat.o][etat.i % PB[etat.o].length];
+const et = () => pb().e[etat.s];
+function verdict(t, c) { const v = $("verdict"); v.textContent = t; v.className = c || ""; }
+function bulle(t) { const b = $("bulle"); b.textContent = t; b.style.display = "block"; clearTimeout(bulle.t); bulle.t = setTimeout(() => b.style.display = "none", 8000); }
+function afficheScore() { $("score").textContent = etat.score; $("record").textContent = mem.lire(cle()); }
+function libelle(id) { if (id === "?") return "?"; if (/^r\d$/.test(id)) return "résultat " + id.slice(1); const m = pb().t.match(new RegExp("\\{" + id + "\\|([^}]*)\\}")); return m ? m[1] : id; }
+// ce qu'on cherche, selon le schéma
+const ROLES = { pt: [["tout", "le tout"], ["part", "une partie"]], cmp: [["grande", "le plus grand"], ["petite", "le plus petit"], ["ecart", "l'écart"]], fois: [["tout", "le total"], ["part", "une part"], ["n", "le nombre de parts"]] };
+function cherche(E) { if (E.m === "pt") return E.tout === "?" ? "tout" : "part"; if (E.m === "cmp") return E.grande === "?" ? "grande" : E.petite === "?" ? "petite" : "ecart"; return E.tout === "?" ? "tout" : E.part === "?" ? "part" : "n"; }
+function operation(E) { const c = cherche(E); if (E.m === "pt") return c === "tout" ? "+" : "−"; if (E.m === "cmp") return c === "grande" ? "+" : "−"; return c === "tout" ? "×" : "÷"; }
+const POURQUOI = { "pt+": "je cherche le tout : j'ajoute les parties.", "pt−": "je cherche une partie : j'enlève au tout les parties que je connais.", "cmp+": "je cherche le plus grand : j'ajoute l'écart au plus petit.", "cmp−": "je cherche le plus petit ou l'écart : j'enlève.", "fois×": "je cherche le total : je multiplie une part par le nombre de parts.", "fois÷": "je cherche une part ou le nombre de parts : je partage le total." };
+// les places du schéma et l'étiquette attendue
+function places(E) { if (E.m === "pt") { const P = { tout: E.tout }; for (let j = 0; j < etat.k; j++) P["p" + j] = "partie"; return P; } if (E.m === "cmp") return { grande: E.grande, petite: E.petite, ecart: E.ecart }; return { tout: E.tout, part: E.part, n: E.n }; }
+function etiquettes() {
+  const L = []; pb().t.replace(/\{(\w+)\|([^}]*)\}/g, (_, id) => { L.push(id); return ""; });
+  for (let j = 0; j < etat.s; j++) L.push("r" + (j + 1));
+  L.push("?"); return L.filter(id => !Object.values(etat.pose).includes(id));
+}
+// la valeur d'une étiquette (« 1 312 personnes » → 1312 ; « 3,50 euros » → 3.5) ; la réponse du problème
+function nombre(id) { if (!id || id === "?") return null; if (/^r\d$/.test(id)) return etat.res ? etat.res[+id.slice(1) - 1] : null; const m = libelle(id).replace(/\s/g, "").match(/\d+(,\d+)?/); return m ? parseFloat(m[0].replace(",", ".")) : null; }
+const fmtN = n => n == null ? "?" : (Math.round(n * 100) / 100).toString().replace(".", ",").replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+function reponse(E) { const c = cherche(E), N = k => nombre(etat.pose[k]);
+  if (E.m === "pt") { const parts = Array.from({ length: etat.k }, (_, j) => "p" + j).filter(k => etat.pose[k] !== "?").map(N);
+    return c === "tout" ? parts.reduce((a, b) => a + b, 0) : N("tout") - parts.reduce((a, b) => a + b, 0); }
+  if (E.m === "cmp") return c === "grande" ? N("petite") + N("ecart") : c === "petite" ? N("grande") - N("ecart") : N("grande") - N("petite");
+  return c === "tout" ? N("part") * N("n") : c === "part" ? N("tout") / N("n") : N("tout") / N("part"); }
+function nouveau() { etat.s = 0; etat.res = []; nouvelleEtape(); }
+function nouvelleEtape() { etat.pose = {}; etat.choix = null; etat.k = 0; etat.modele = null; etat.phase = etat.o === "defi" ? "modele" : "cherche"; $("suivant").style.display = "none"; verdict(""); $("bulle").style.display = "none"; dessine(); }
+function case_(cls, cleP, nom, flex, enl) {   // une place : vide (on y pose) ou remplie
+  const v = etat.pose[cleP], fini = etat.phase === "fini" && v === "?";
+  return '<div class="case-s ' + cls + (v ? " pose" : " vide" + (etat.choix ? " cible" : "")) + (fini ? " trouve" : "") + (enl ? " enl" : "") + '" data-c="' + cleP + '"' + (flex ? ' style="flex:' + flex + ' 1 0"' : "") + "><small>" + nom + "</small>"
+    + (v ? (fini ? '<span class="rep">' + fmtN(reponse(et())) + "</span>" : v === "?" ? '<span class="q-s">?</span>' : libelle(v).replace(/^(\d[\d\s,]*)/, "$1")) : "") + "</div>";
+}
+// la largeur d'une partie : son nombre (la partie cherchée : ce qui reste du tout) ; on garde au moins 1/6 pour qu'elle reste lisible
+function largeur(j) { const E = et(), v = etat.pose["p" + j]; let n = nombre(v);
+  if (v === "?" && nombre(etat.pose.tout) != null) { const conn = Array.from({ length: etat.k }, (_, i) => etat.pose["p" + i]).filter(x => x && x !== "?").map(nombre); if (conn.length === etat.k - 1) n = nombre(etat.pose.tout) - conn.reduce((a, b) => a + b, 0); }
+  if (n == null) return 0; const tot = nombre(etat.pose.tout) || Array.from({ length: etat.k }, (_, i) => nombre(etat.pose["p" + i]) || 0).reduce((a, b) => a + b, 0) || 1;
+  return Math.max(n / tot, 1 / 6).toFixed(3); }
+function schemaHtml() {
+  const E = et(), m = etat.modele || E.m; if (etat.phase === "cherche" || etat.phase === "modele") return "";
+  if (m === "pt") { if (!etat.k) return '<div class="barre-s"><div class="case-s tout"><small>le tout</small></div></div>';
+    // Karim, 8/11 : au moment du calcul, le schéma le dit : un « + » entre les parties, un « = » devant le tout ; puis le calcul reste écrit
+    const signes = etat.phase === "op" || etat.phase === "fini";
+    return '<div class="barre-s">' + (signes ? '<div class="sg sg-eq"><b>=</b></div>' : "") + case_("tout", "tout", "le tout") + '</div><div class="barre-s lig2">' + Array.from({ length: etat.k }, (_, j) => (j && signes ? '<div class="sg"><b>+</b></div>' : "") + case_("part", "p" + j, "une partie", largeur(j), etat.phase === "fini" && cherche(E) === "part" && etat.pose["p" + j] !== "?")).join("") + "</div>" + calcHtml(); }
+  if (m === "cmp") return '<div class="barre-s">' + case_("tout", "grande", "le plus grand") + '</div><div class="cmp-l"><div style="flex:6;display:flex">' + case_("part", "petite", "le plus petit") + '</div><div style="flex:4;display:flex">' + case_("ecart", "ecart", "l'écart") + "</div></div>" + calcHtml();
+  return schemaFois() + calcHtml();
+}
+// le calcul, écrit avec les nombres de l'histoire, une fois le signe trouvé (il reste à l'écran jusqu'au problème suivant)
+function calcHtml() {
+  if (etat.phase !== "fini") return "";
+  const E = et(), c = cherche(E), L = k => fmtN(nombre(etat.pose[k]));
+  let t;
+  if (E.m === "pt") { const parts = Array.from({ length: etat.k }, (_, j) => "p" + j).filter(k => etat.pose[k] !== "?");
+    t = c === "tout" ? parts.map(L).join(" + ") : L("tout") + " − " + parts.map(L).join(" − "); }
+  else if (E.m === "cmp") t = c === "grande" ? L("petite") + " + " + L("ecart") : c === "petite" ? L("grande") + " − " + L("ecart") : L("grande") + " − " + L("petite");
+  else t = c === "tout" ? L("part") + " × " + L("n") : c === "part" ? L("tout") + " ÷ " + L("n") : L("tout") + " ÷ " + L("part");
+  return '<div class="calc-s"><span>' + t + " = <b>" + fmtN(reponse(E)) + "</b></span></div>";
+}
+function schemaFois() {
+  const nb = etat.pose.n && etat.pose.n !== "?" ? Math.min(8, Math.round(parseFloat(libelle(etat.pose.n).replace(/\s/g, "")) || 5)) : 5;
+  return '<div class="barre-s">' + case_("tout", "tout", "le total") + '</div><div class="barre-s lig2">' + case_("part", "part", "une part") + Array.from({ length: Math.max(0, nb - 1) }, () => '<div class="case-s part" style="opacity:.55">' + (etat.pose.part && etat.pose.part !== "?" ? libelle(etat.pose.part) : "") + "</div>").join("") + '</div><div class="ligne-n"><b>le nombre de parts :</b>' + case_("ecart", "n", "") + "</div>";
+}
+function fil() { const ordre = ["cherche", "dessine", "place", "calcule"], p = { modele: "dessine", cherche: "cherche", parts: "dessine", place: "place", op: "calcule", fini: "calcule" }[etat.phase], k = ordre.indexOf(p);
+  document.querySelectorAll("#fil span").forEach((s, n) => { s.className = n === k ? (etat.phase === "fini" ? "fait" : "on") : n < k ? "fait" : ""; }); }
+function dessine() {
+  const P = pb(), E = et(); fil();
+  $("histoire").innerHTML = P.t.replace(/\{(\w+)\|([^}]*)\}/g, (_, id, t) => "<b>" + t + "</b>") + (P.e.length > 1 ? '<div id="etape">Étape ' + (etat.s + 1) + " : " + E.q + "</div>" : "");
+  $("schema").innerHTML = schemaHtml(); const B = $("bas"); B.innerHTML = "";
+  const bouton = (t, f, cl) => { const b = document.createElement("button"); b.textContent = t; if (cl) b.className = cl; b.onclick = () => f(b); B.appendChild(b); };
+  if (etat.phase === "modele") { $("consigne").textContent = "Quel schéma pour cette étape ?";
+    [["pt", "Une barre coupée en parties"], ["cmp", "Deux barres qu'on compare"], ["fois", "Des parts égales"]].forEach(([m, t]) => bouton(t, b => { if (m === E.m) { etat.modele = m; etat.phase = "cherche"; verdict(""); dessine(); } else { b.classList.add("mauvais"); verdict("🤪 Relis l'étape : qu'est-ce qu'on sait ?", "ko"); } })); }
+  else if (etat.phase === "cherche") { $("consigne").textContent = "Qu'est-ce qu'on cherche ?";
+    ROLES[E.m].forEach(([r, t]) => bouton(t, b => { if (r === cherche(E)) { etat.phase = E.m === "pt" ? "parts" : "place"; if (E.m !== "pt") etat.modele = E.m; verdict(""); dessine(); } else { b.classList.add("mauvais"); verdict("🤪 Relis la question de l'histoire.", "ko"); } })); }
+  else if (etat.phase === "parts") { $("consigne").textContent = "En combien de parties je coupe la barre ?";
+    [2, 3, 4, 5].forEach(n => bouton(String(n), b => { if (n === E.parts.length) { etat.k = n; etat.phase = "place"; verdict(""); dessine(); } else { b.classList.add("mauvais"); verdict("🤪 Compte les parties dans l'histoire : ce qu'on connaît, et ce qu'on cherche.", "ko"); } }, "op")); }
+  else if (etat.phase === "place") { $("consigne").textContent = "Je place les nombres de l'histoire et le « ? »";
+    etiquettes().forEach(id => { const d = document.createElement("div"); d.className = "etiq" + (id === "?" ? " qq" : "") + (etat.choix === id ? " choisie" : ""); d.textContent = libelle(id); d.dataset.id = id; B.appendChild(d); }); }
+  else if (etat.phase === "op") { $("consigne").textContent = "Je touche le signe du calcul.";
+    ["+", "−", "×", "÷"].forEach(o => bouton(o, b => { if (o === operation(E)) { termine(); } else { b.classList.add("mauvais"); verdict("🤪 Regarde où est le « ? » sur le schéma.", "ko"); } }, "op")); }
+  else { $("consigne").textContent = "Écris ton calcul et ta phrase réponse sur l'ardoise."; }
+}
+function valide() { const o = $("okGrand"); o.classList.remove("vu"); void o.offsetWidth; o.classList.add("vu"); }
+function cahierDessine() {
+  const L = PB.cahier, col = n => '<div class="cah-col ' + (n === "CM1" ? "c1" : "c2") + '"><h2>' + n + "</h2>" + L.map((p, k) => p.niv !== n ? "" : '<div class="cah-pb"><div class="cah-enonce">' + p.t.replace(/\{(\w+)\|([^}]*)\}/g, (_, id, x) => "<b>" + x + "</b>") + '</div><button data-k="' + k + '">▶ On corrige</button></div>').join("") + "</div>";
+  $("cahier").innerHTML = col("CM1") + col("CM2");
+  $("cahier").querySelectorAll("button").forEach(b => b.onclick = () => { etat.retourCahier = true; etat.o = "cahier"; etat.i = +b.dataset.k; montreCahier(false); nouveau(); });
+}
+function montreCahier(on) { $("cahier").classList.toggle("on", on); $("cahTete").classList.toggle("on", on);
+  ["fil", "histoire", "consigne", "schema", "bas", "verdict"].forEach(id => { if ($(id)) $(id).style.visibility = on ? "hidden" : ""; }); if (on) $("suivant").style.display = "none"; }
+function termine() {
+  const E = et(), der = etat.s === pb().e.length - 1; etat.phase = "fini"; etat.res = (etat.res || []).slice(0, etat.s); etat.res[etat.s] = reponse(E); verdict("✅ " + operation(E) + " : " + POURQUOI[E.m + operation(E)], "ok"); dessine(); valide();
+  $("suivant").textContent = der ? (etat.retourCahier ? "▶ Retour aux problèmes" : "▶ Problème suivant") : "▶ Étape " + (etat.s + 2); $("suivant").style.display = "inline-block";
+  if (der) { etat.score++; if (etat.score > mem.lire(cle())) mem.ecrire(cle(), etat.score); afficheScore(); }
+}
+$("suivant").onclick = () => { if (etat.s < pb().e.length - 1) { etat.s++; nouvelleEtape(); } else if (etat.retourCahier) { montreCahier(true); } else { etat.i++; nouveau(); } };
+function deposer(id, c) {
+  const E = et(), P = places(E), att = P[c]; etat.choix = null;
+  let bon;
+  if (att === "partie") { const reste = E.parts.filter(x => !Object.values(etat.pose).includes(x)); bon = reste.includes(id); }
+  else bon = att === id;
+  if (!bon) { const nom = { tout: "le tout", grande: "le plus grand", petite: "le plus petit", ecart: "l'écart", part: "une part", n: "le nombre de parts" }[c] || "une partie";
+    verdict("🤪 " + libelle(id) + ", ce n'est pas " + nom + ". Relis l'histoire.", "ko"); return dessine(); }
+  etat.pose[c] = id; verdict(""); if (Object.keys(P).every(k => etat.pose[k])) etat.phase = "op"; dessine();
+}
+// ---------- glisser, ou toucher puis toucher ----------
+let appui = null;
+const echelle = () => $("scene").getBoundingClientRect().width / 1920;
+document.addEventListener("pointerdown", ev => { const t = ev.target.closest(".etiq"); if (t && t.id !== "vol") appui = { id: t.dataset.id, x: ev.clientX, y: ev.clientY, bouge: false, t }; });
+document.addEventListener("pointermove", ev => { if (!appui) return; if (!appui.bouge && Math.hypot(ev.clientX - appui.x, ev.clientY - appui.y) > 12) { appui.bouge = true; const v = $("vol"); v.textContent = appui.t.textContent; v.className = "etiq" + (appui.id === "?" ? " qq" : ""); v.style.display = "block"; }
+  if (appui.bouge) { const r = $("scene").getBoundingClientRect(), e = echelle(), v = $("vol"); v.style.left = (ev.clientX - r.left) / e - 40 + "px"; v.style.top = (ev.clientY - r.top) / e - 40 + "px"; } });
+document.addEventListener("pointerup", ev => { const a = appui; appui = null; $("vol").style.display = "none";
+  if (a && a.bouge) { const e = document.elementFromPoint(ev.clientX, ev.clientY), c = e && e.closest && e.closest(".case-s.vide"); if (c) deposer(a.id, c.dataset.c); return; }
+  if (a) { etat.choix = etat.choix === a.id ? null : a.id; return dessine(); }
+  const c = ev.target.closest && ev.target.closest(".case-s"); if (!c || !c.dataset.c || etat.phase === "fini" || etat.phase === "op") return;
+  if (c.classList.contains("vide") && etat.choix) deposer(etat.choix, c.dataset.c); else if (c.classList.contains("pose")) { delete etat.pose[c.dataset.c]; dessine(); } });
+$("indice").onclick = () => { const E = et(), p = etat.phase;
+  if (p === "modele") bulle("Une quantité coupée en parties ? Deux quantités qu'on compare ? Des parts toutes pareilles ?");
+  else if (p === "cherche") bulle("Je lis la dernière phrase de l'histoire : c'est elle qui dit ce qu'on cherche.");
+  else if (p === "parts") bulle("Je compte tout ce qui compose le tout : ce que je connais, et ce que je cherche.");
+  else if (p === "place") bulle(E.m === "pt" ? "Le tout, c'est la quantité entière. Les parties la composent. Le « ? » va sur ce que je cherche." : E.m === "cmp" ? "Qui a le plus ? C'est le plus grand. « De plus », « de moins » : c'est l'écart." : "Une part, c'est ce qu'il y a dans un seul paquet. « 8 fois plus » : 8 parts.");
+  else bulle("Je regarde où est le « ? » : le tout → +, une partie → −, le total → ×, une part → ÷."); };
+// ---------- « Je comprends le tout » (11/11) ----------
+// j : je glisse les parties dans le tout ; c : le tout est plein, une partie est cachée. carres : un carré par objet (petits nombres) ; sinon des longueurs.
+const TOUT = [
+  { k: "j", h: "Dans le parking, il y a 5 voitures rouges et 3 voitures bleues.", p: [[5, "rouges", "#e53935"], [3, "bleues", "#1e88e5"]], q: "Combien de voitures en tout ?" },
+  { k: "j", h: "Léa a 4 billes vertes et 6 billes jaunes.", p: [[4, "vertes", "#43a047"], [6, "jaunes", "#f9a825"]], q: "Combien de billes en tout ?" },
+  { k: "j", h: "À la ferme : 2 chats, 3 chiens et 4 lapins.", p: [[2, "chats", "#8e24aa"], [3, "chiens", "#6d4c41"], [4, "lapins", "#00897b"]], q: "Combien d'animaux en tout ?" },
+  { k: "c", h: "Il y a 9 enfants dans le bus : 4 filles et des garçons.", p: [[4, "filles", "#d81b60"], [5, "garçons", "#1e88e5"]], q: "Combien de garçons ?" },
+  { k: "c", h: "Tom a 10 bonbons : 7 à la fraise, les autres au citron.", p: [[7, "fraise", "#e53935"], [3, "citron", "#f9a825"]], q: "Combien au citron ?" },
+  { k: "j", h: "Dans le parking, 259 voitures blanches et 169 voitures noires.", p: [[259, "blanches", "#90a4ae"], [169, "noires", "#37474f"]], q: "Combien de voitures en tout ?", grand: 1 },
+  { k: "c", h: "Fiona a 356 billes. Elle en donne 68 à Anna.", p: [[68, "données", "#1e88e5"], [288, "qui restent", "#43a047"]], q: "Combien lui en reste-t-il ?", grand: 1 }
+];
+// « Je cherche une partie » : [nombre, nom, couleur] ; la dernière partie est celle qu'on cherche. Les deux premiers : le problème G de jeudi (fiche 2/5), pour la mise en commun ; puis des petits nombres en cubes, pour ceux qui viennent avec moi.
+const PARTIE = [
+  { h: "Maëlle, Emma et Nils ont 450 cartes. Maëlle en a 132, Emma 156.", u: "cartes", p: [[132, "Maëlle", "#e53935"], [156, "Emma", "#1e88e5"], [162, "Nils", "#7c4dff"]], q: "Combien de cartes a Nils ?", grand: 1 },
+  { h: "Jeanne, Léon et Kélycia ont marché 3 290 km. Jeanne : 1 345 km, Léon : 769 km.", u: "km", p: [[1345, "Jeanne", "#e53935"], [769, "Léon", "#1e88e5"], [1176, "Kélycia", "#7c4dff"]], q: "Combien de km pour Kélycia ?", grand: 1 },
+  { h: "Il y a 9 enfants dans le bus : 4 filles, et des garçons.", u: "enfants", p: [[4, "filles", "#d81b60"], [5, "garçons", "#7c4dff"]], q: "Combien de garçons ?" },
+  { h: "Tom a 10 bonbons : 7 à la fraise, les autres au citron.", u: "bonbons", p: [[7, "fraise", "#e53935"], [3, "citron", "#7c4dff"]], q: "Combien au citron ?" },
+  { h: "À la ferme, il y a 12 animaux : 3 chats, 4 chiens, et des lapins.", u: "animaux", p: [[3, "chats", "#8e24aa"], [4, "chiens", "#6d4c41"], [5, "lapins", "#7c4dff"]], q: "Combien de lapins ?" },
+  { h: "Fiona avait 356 billes. Elle en a donné 68 à Anna.", u: "billes", p: [[68, "données", "#1e88e5"], [288, "qui restent", "#7c4dff"]], q: "Combien lui en reste-t-il ?", grand: 1 }
+];
+let pi = 0, enleves = [];
+function partieDessine() {
+  const P = PARTIE[pi], tot = P.p.reduce((a, x) => a + x[0], 0), car = !P.grand, n = P.p.length;
+  const larg = x => car ? x * 50 + 28 : Math.max(170, Math.round(x / tot * 1500));
+  const cubes = x => car ? '<span>' + Array(x).fill('<i class="tcar"></i>').join("") + "</span>" : "";
+  enleves = []; $("tSuiv").style.display = "none"; $("tGrand").className = "plein";
+  $("tHist").innerHTML = (P.h + " " + P.q).replace(/(\d[\d ]*\d|\d)/g, "<b>$1</b>");
+  $("tCons").textContent = "La partie que je cherche est DANS le tout. J'enlève du tout ce que je connais : je glisse chaque partie connue hors de la barre.";
+  $("tLab").textContent = "Le tout : " + fmtT(tot) + " " + P.u;
+  $("tGrand").style.width = P.p.reduce((a, x) => a + larg(x[0]), 0) + "px";
+  $("tSegs").innerHTML = P.p.map((x, i) => i < n - 1
+    ? '<div class="tseg tk" data-i="' + i + '" style="width:' + larg(x[0]) + "px;flex:none;background:" + x[2] + '">' + (car ? cubes(x[0]) : fmtT(x[0])) + "<small>" + x[1] + "</small></div>"
+    : '<div class="tseg cache" data-i="' + i + '" style="width:' + larg(x[0]) + 'px;flex:none">?</div>').join("");
+  $("tParts").innerHTML = '<div id="tEnl" style="display:flex;gap:24px;align-items:center;justify-content:center;min-height:90px"></div>';
+  $("tCalc").textContent = fmtT(tot);
+  document.querySelectorAll("#tSegs .tk").forEach(el => {
+    el.onpointerdown = ev => { ev.preventDefault(); el.setPointerCapture(ev.pointerId); const x0 = ev.clientX, y0 = ev.clientY, e = Math.min(innerWidth / 1920, innerHeight / 1080);
+      el.style.position = "relative"; el.style.zIndex = 5;
+      el.onpointermove = m => { el.style.left = (m.clientX - x0) / e + "px"; el.style.top = (m.clientY - y0) / e + "px"; };
+      el.onpointerup = u => { el.onpointermove = el.onpointerup = null; el.style.left = el.style.top = "0px"; el.style.zIndex = "";
+        const g = $("tGrand").getBoundingClientRect(), tap = Math.hypot(u.clientX - x0, u.clientY - y0) < 12;
+        if (tap || u.clientY > g.bottom + 20 || u.clientY < g.top - 20) partieEnleve(+el.dataset.i, el); };
+    };
+  });
+}
+function partieEnleve(i, el) {
+  const P = PARTIE[pi], x = P.p[i], tot = P.p.reduce((a, y) => a + y[0], 0), n = P.p.length;
+  if (enleves.includes(i)) return; enleves.push(i);
+  el.classList.remove("tk"); el.classList.add("vide"); el.onpointerdown = null;
+  $("tEnl").insertAdjacentHTML("beforeend", '<span class="tenl" style="background:' + x[2] + '">− ' + fmtT(x[0]) + " " + x[1] + "</span>");
+  $("tCalc").textContent = fmtT(tot) + enleves.map(j => " − " + fmtT(P.p[j][0])).join("");
+  if (enleves.length === n - 1) setTimeout(() => {
+    const r = $("tSegs").querySelector(".cache"), y = P.p[n - 1];
+    r.classList.remove("cache"); r.classList.add("reste");
+    r.innerHTML = (P.grand ? fmtT(y[0]) : '<span>' + Array(y[0]).fill('<i class="tcar"></i>').join("") + "</span>") + "<small>" + y[1] + "</small>";
+    $("tCalc").textContent = fmtT(tot) + enleves.map(j => " − " + fmtT(P.p[j][0])).join("") + " = " + fmtT(y[0]);
+    $("tSuiv").style.display = "block"; valide();
+  }, 600);
+}
+let ti = 0, tposes = 0;
+function toutDessine() {
+  const P = TOUT[ti], tot = P.p.reduce((a, x) => a + x[0], 0), car = !P.grand;
+  const larg = x => car ? x * 50 + 28 : Math.round(x / tot * 1500);
+  $("tGrand").style.width = P.p.reduce((a, x) => a + larg(x[0]), 0) + "px";
+  $("tHist").innerHTML = (P.h + " " + P.q).replace(/(\d[\d ]*\d|\d)/g, "<b>$1</b>"); $("tSuiv").style.display = "none"; $("tCalc").textContent = ""; $("tGrand").className = ""; tposes = 0;
+  const seg = (x, i) => '<div class="tseg' + (P.k === "c" && i === 1 ? " cache" : "") + '" data-i="' + i + '" style="width:' + larg(x[0]) + "px;flex:none;background:" + x[2] + '">' + (P.k === "c" && i === 1 ? "?" : (car ? '<span>' + Array(x[0]).fill('<i class="tcar"></i>').join("") + "</span>" : fmtT(x[0])) + "<small>" + x[1] + "</small>") + "</div>";
+  if (P.k === "j") {
+    $("tCons").textContent = "Je glisse chaque partie dans la grande barre : c'est le tout.";
+    $("tSegs").innerHTML = ""; $("tLab").textContent = "Le tout : ?";
+    $("tParts").innerHTML = P.p.map((x, i) => '<div class="tpart" data-i="' + i + '" style="background:' + x[2] + ";width:" + larg(x[0]) + 'px;box-sizing:border-box">' + (car ? Array(x[0]).fill('<i class="tcar"></i>').join("") : "") + '<span class="tl">' + x[0] + " " + x[1] + "</span></div>").join("");
+    document.querySelectorAll(".tpart").forEach(toutGlisse);
+  } else {
+    $("tCons").textContent = "Le tout est plein. Une partie est cachée : je touche le « ? ».";
+    $("tGrand").className = "plein"; $("tLab").textContent = "Le tout : " + fmtT(tot) + " " + P.h.match(/\d[\d ]* (\S+)/)[1];
+    $("tSegs").innerHTML = P.p.map(seg).join("");
+    $("tParts").innerHTML = '<div style="font-size:34px;color:#2b2350">La partie connue : <b>' + fmtT(P.p[0][0]) + " " + P.p[0][1] + "</b></div>";
+    const c = $("tSegs").querySelector(".cache");
+    c.onclick = () => { c.classList.remove("cache"); c.innerHTML = (car ? '<span>' + Array(P.p[1][0]).fill('<i class="tcar"></i>').join("") + "</span>" : fmtT(P.p[1][0])) + "<small>" + P.p[1][1] + "</small>";
+      $("tCalc").textContent = "Le tout − la partie connue : " + fmtT(tot) + " − " + fmtT(P.p[0][0]) + " = " + fmtT(P.p[1][0]); $("tSuiv").style.display = "block"; valide(); };
+  }
+}
+const fmtT = n => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+function toutGlisse(el) {
+  el.onpointerdown = ev => { ev.preventDefault(); const r = el.getBoundingClientRect(), dx = ev.clientX - r.left, dy = ev.clientY - r.top;
+    el.setPointerCapture(ev.pointerId); el.style.position = "relative"; let x0 = ev.clientX, y0 = ev.clientY;
+    const e = Math.min(innerWidth / 1920, innerHeight / 1080);
+    el.onpointermove = m => { el.style.left = (m.clientX - x0) / e + "px"; el.style.top = (m.clientY - y0) / e + "px"; };
+    el.onpointerup = u => { el.onpointermove = el.onpointerup = null; const g = $("tGrand").getBoundingClientRect();
+      el.style.left = el.style.top = "0px";
+      if (u.clientY < g.bottom + 40 && u.clientY > g.top - 60) toutPose(+el.dataset.i, el); };
+  };
+}
+function toutPose(i, el) {
+  const P = TOUT[ti], x = P.p[i], car = !P.grand, tot = P.p.reduce((a, y) => a + y[0], 0), larg = v => car ? v * 50 + 28 : Math.round(v / tot * 1500);
+  el.classList.add("posee"); tposes++;
+  $("tSegs").insertAdjacentHTML("beforeend", '<div class="tseg" style="width:' + larg(x[0]) + "px;flex:none;background:" + x[2] + '">' + (car ? '<span>' + Array(x[0]).fill('<i class="tcar"></i>').join("") + "</span>" : fmtT(x[0])) + "<small>" + x[1] + "</small></div>");
+  if (tposes === P.p.length) { $("tGrand").className = "plein";
+    const somme = P.p.map(y => fmtT(y[0])).join(" + ");
+    $("tLab").textContent = "Le tout : " + (car ? somme + " = " + tot : somme);
+    $("tCalc").textContent = car ? "Les parties mises bout à bout font le tout : " + somme + " = " + tot + "." : "Le tout, c'est les parties mises bout à bout : " + somme + " = " + fmtT(tot) + ".";
+    $("tSuiv").style.display = "block"; valide(); }
+}
+$("tSuiv").onclick = () => { if (etat.o === "partie") { pi = (pi + 1) % PARTIE.length; partieDessine(); } else { ti = (ti + 1) % TOUT.length; toutDessine(); } };
+function ouvre(o) { etat.retourCahier = false; montreCahier(false);
+  if (o === "cahier") { const T0 = $("tout"); T0.hidden = true; etat.o = o; document.querySelectorAll("#niveaux button").forEach(b => b.classList.toggle("on", b.dataset.o === o)); cahierDessine(); montreCahier(true); return; }
+  const T = o === "tout" || o === "partie"; $("tout").hidden = !T; ["fil", "histoire", "consigne", "schema", "bas", "verdict"].forEach(id => { if ($(id)) $(id).style.visibility = T ? "hidden" : ""; });
+  if (T) { etat.o = o; document.querySelectorAll("#niveaux button").forEach(b => b.classList.toggle("on", b.dataset.o === o)); if (o === "partie") { pi = 0; partieDessine(); } else { ti = 0; toutDessine(); } return; }
+  etat.o = o; etat.i = 0; etat.score = 0; document.querySelectorAll("#niveaux button").forEach(b => b.classList.toggle("on", b.dataset.o === o)); afficheScore(); nouveau(); }
+document.querySelectorAll("#niveaux button").forEach(b => b.onclick = () => ouvre(b.dataset.o));
+function ajuste() { const e = Math.min(innerWidth / 1920, innerHeight / 1080), s = $("scene"); s.style.transform = "scale(" + e + ")"; s.style.left = ((innerWidth - 1920 * e) / 2) + "px"; s.style.top = ((innerHeight - 1080 * e) / 2) + "px"; }
+addEventListener("resize", ajuste); ajuste();
+function depuisLien() { const m = location.hash.slice(1); ouvre(m === "tout" || m === "partie" || PB[m] ? m : "pt"); }
+addEventListener("hashchange", depuisLien);
+depuisLien();
+</script>
+</body>
+</html>

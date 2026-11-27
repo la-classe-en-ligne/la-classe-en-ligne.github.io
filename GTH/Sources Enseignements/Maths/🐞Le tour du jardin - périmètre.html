@@ -1,0 +1,303 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Le tour du jardin</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect x='6' y='10' width='52' height='40' fill='%23a5d6a7' stroke='%236d4c41' stroke-width='5'/%3E%3Ccircle cx='50' cy='50' r='9' fill='%23e53935'/%3E%3Ccircle cx='47' cy='48' r='2' fill='%23111'/%3E%3Ccircle cx='53' cy='52' r='2' fill='%23111'/%3E%3C/svg%3E">
+<!--
+  🐞 Le tour du jardin — le périmètre d'un polygone, P2 📅 7 (GTH v2 : donnees/seances/maths/ma-s7-mesures.js).
+  Maquette (21/10) ; Karim a demandé de coder toutes les activités (21/10). En plus de la maquette : la clôture se déroule en une
+  seule ligne droite, pour voir que le périmètre est une longueur (et comparer deux tours sans calculer).
+  Univers : le potager vu de dessus, une coccinelle qui fait le tour de la clôture.
+  Onglets : « Je fais le tour » (la coccinelle va de coin en coin ; chaque côté entre dans l'addition ; l'élève écrit le périmètre)
+  · « Je compare » (dérouler les deux clôtures, poser la coupe sur le jardin au plus long tour ; un jardin plus grand n'a pas
+  toujours le plus long tour) · « Défi » (le côté qui manque, le tour étant connu). Liens : #tour, #compare, #defi.
+  Gestes : glisser la coccinelle jusqu'au coin suivant, ou toucher le coin ; toucher un jardin pour dérouler sa clôture ;
+  glisser la coupe (ou la toucher, puis toucher le jardin). L'outil ne calcule jamais le périmètre à la place de l'élève.
+  Contenu : les jardins sont de moi (les figures d'ERMEL, p. 341, sont sur papier, à mesurer à la règle). Hors ligne (ENI, Chromebook).
+-->
+<style>
+:root{--herbe:#e9f3dc;--terre:#6d4c41;--encre:#2f3b1f;--vert:#2e7d32;--rouge:#c62828;--talbot:#1f7a8c}
+html,body{margin:0;height:100%;background:#2f3b1f;overflow:hidden;font-family:Arial,Helvetica,sans-serif;color:var(--encre)}
+#scene{position:absolute;left:0;top:0;width:1920px;height:1080px;transform-origin:0 0;background:var(--herbe);
+  background-image:radial-gradient(rgba(76,120,40,.12) 2px,transparent 2.5px);background-size:28px 28px}
+#barre{height:84px;display:flex;align-items:center;gap:22px;padding:0 28px;background:#4e7a2c;color:#fff}
+#barre h1{margin:0;font-size:34px;display:flex;align-items:center;gap:12px}
+#barre h1 svg{width:52px;height:52px}
+.onglets{display:flex;gap:8px;margin-left:24px}
+.onglets button{font:inherit;font-size:24px;padding:10px 22px;border-radius:10px;border:2px solid #7aa356;background:#5d8a38;color:#fff;cursor:pointer}
+.onglets button.on{background:#fff;color:var(--encre);font-weight:700;border-color:#fff}
+#coin{margin-left:auto;font-size:22px}
+#coin b{font-size:28px;color:#fff59d}
+#consigne{height:100px;display:flex;align-items:center;justify-content:center;font-size:50px;font-weight:700;text-align:center}
+#consigne .q{color:#b23a00}
+#jeu{position:absolute;left:0;right:0;top:188px;bottom:110px}
+#bas{position:absolute;left:0;right:0;bottom:0;height:110px;display:flex;align-items:center;justify-content:center;gap:30px}
+#indice{font:inherit;font-size:24px;padding:12px 26px;border-radius:30px;border:2px solid #d4b106;background:#fff8c4;cursor:pointer}
+#verdict{font-size:38px;font-weight:700;min-width:760px;text-align:center}
+#verdict.ok{color:var(--vert)} #verdict.ko{color:var(--rouge)}
+#bulle{position:absolute;left:50%;bottom:118px;transform:translateX(-50%);max-width:1100px;background:#fff8c4;border:2px solid #d4b106;border-radius:18px;padding:16px 26px;font-size:30px;display:none;box-shadow:0 6px 18px rgba(0,0,0,.15)}
+svg#champ{position:absolute;left:0;top:0;width:1920px;height:782px;touch-action:none}
+.jardin{cursor:pointer}
+.jardin.survol .cloture,.jardin.choisi-cible .cloture{stroke:var(--talbot)}
+#coccinelle{cursor:grab}
+#coccinelle.choisi,#coupe.choisi{filter:drop-shadow(0 0 8px #1f7a8c)}
+.vole{position:fixed;z-index:30;pointer-events:none;opacity:.9}
+#addition{position:absolute;left:80px;right:80px;top:600px;text-align:center;font-size:46px;font-weight:700;min-height:60px}
+#addition b{display:inline-block;color:#b23a00;animation:arrive .5s ease-out}
+#addition i{color:#9e9e9e;font-style:normal}
+@keyframes arrive{from{transform:translateY(-80px) scale(1.6);opacity:0}to{transform:none;opacity:1}}
+#champ text.parcouru{fill:#b23a00;font-size:46px}
+#ecran{position:absolute;display:flex;align-items:center;gap:14px;font-size:44px;font-weight:700}
+#tape{min-width:140px;height:72px;font-size:44px !important;border:5px solid var(--talbot);border-radius:16px;background:#fff;display:flex;align-items:center;justify-content:center;font-size:60px}
+#tape.ko{border-color:var(--rouge);animation:secoue .45s 2}
+#tape.ok{border-color:var(--vert)}
+@keyframes secoue{0%,100%{transform:translateX(0)}25%{transform:translateX(-10px)}75%{transform:translateX(10px)}}
+#pave{position:absolute;display:grid;grid-template-columns:repeat(6,70px);gap:10px}
+#pave button{font:inherit;font-size:30px;font-weight:700;height:58px;border-radius:16px;border:3px solid #a5c48a;background:#fff;color:var(--encre);cursor:pointer}
+#champ rect[style]{transform-box:fill-box;transform-origin:left center;animation:deroule .3s ease-out backwards}
+@keyframes deroule{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+#coupe{position:absolute;left:1790px;top:250px;width:100px;height:110px;cursor:grab;touch-action:none}
+/* 💡 sur le côté (21/10) : l'ampoule seule, au bout de la consigne ; la bulle à côté, jamais sous le jeu */
+#indice{position:absolute;right:26px;top:96px;width:82px;height:82px;padding:0;border-radius:50%;font-size:44px;line-height:1;z-index:20}
+#bulle{left:auto;right:124px;top:100px;bottom:auto;transform:none;max-width:640px;font-size:28px;z-index:20}
+/* 🧮 la calculette (21/10) : petite, sur le côté, on touche les touches */
+#pave{position:absolute !important; left:auto !important; right:40px !important; top:440px !important; bottom:auto !important; grid-template-columns:repeat(3,64px) !important; gap:8px !important;
+  padding:14px; background:#37474f; border-radius:20px; box-shadow:0 6px 0 #263238; z-index:15}
+#pave button{height:52px !important; font-size:26px !important; border-radius:10px !important; border:none !important; background:#eceff1 !important; color:#263238 !important; box-shadow:0 3px 0 #90a4ae; grid-column:auto !important}
+#pave button:active{transform:translateY(2px); box-shadow:none}
+/* ✏️ mes nombres (21/10) */
+#crayon{position:absolute;left:26px;top:96px;width:82px;height:82px;border-radius:50%;border:2px solid #b0bec5;background:#fff;font-size:40px;cursor:pointer;z-index:20}
+#choix{position:absolute;left:0;top:0;right:0;bottom:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;z-index:40}
+#choix > div{background:#fff;border-radius:20px;padding:30px 44px;font-size:36px;font-weight:700;display:flex;flex-direction:column;gap:20px;align-items:center;color:#263238}
+#choix .ligne-choix{display:flex;align-items:center;gap:12px}
+#choix input,#choix select{font:inherit;font-size:40px;width:110px;text-align:center;padding:4px}
+#choix button{font:inherit;font-size:30px;padding:10px 30px;border-radius:30px;border:3px solid #1f7a8c;background:#1f7a8c;color:#fff;cursor:pointer}
+#choix .err{color:#c62828;font-size:24px;min-height:28px}
+/* 🧮 calculette discrète (21/10) : petite, pâle, petits chiffres */
+#pave{padding:8px !important; gap:5px !important; grid-template-columns:repeat(3,46px) !important; background:#eceff1 !important; box-shadow:none !important; border:2px solid #cfd8dc; border-radius:14px !important; opacity:.85}
+#pave button{height:38px !important; font-size:19px !important; border-radius:8px !important; background:#fff !important; color:#607d8b !important; box-shadow:none !important; border:1px solid #cfd8dc !important}
+</style>
+</head>
+<body>
+<div id="scene">
+  <div id="barre">
+    <h1><svg viewBox="0 0 64 64"><rect x="6" y="10" width="52" height="40" fill="#a5d6a7" stroke="#fff" stroke-width="5"/><circle cx="50" cy="50" r="10" fill="#e53935" stroke="#fff" stroke-width="2"/><circle cx="47" cy="48" r="2" fill="#111"/><circle cx="53" cy="52" r="2" fill="#111"/></svg>Le tour du jardin</h1>
+    <div class="onglets"><button data-o="tour">Je fais le tour</button><button data-o="compare">Je compare</button><button data-o="defi">Défi</button></div>
+    <div id="coin"><span id="nom-score">Tours calculés</span> : <b id="score">0</b> · 🏆 Record : <b id="record">0</b></div>
+  </div>
+  <div id="consigne"></div>
+  <div id="jeu"></div>
+  <div id="bulle"></div>
+  <button id="crayon" title="Mes nombres">✏️</button>
+  <div id="choix"><div><div class="ligne-choix">Jardin de <input id="ca" type="number" min="1" max="14" value="9"> m sur <input id="cb" type="number" min="1" max="14" value="4"> m</div><span class="err" id="err"></span><button id="ok">C'est parti</button></div></div>
+  <button id="indice" title="Indice">💡</button><div id="bas"><div id="verdict"></div></div>
+</div>
+<script>
+"use strict";
+// ---------- les jardins : leurs coins sur un quadrillage d'un mètre ----------
+const rect = (a, b) => [[0, 0], [a, 0], [a, b], [0, b]];
+const J = {
+  r64: rect(6, 4), c5: rect(5, 5), t345: [[0, 0], [4, 0], [0, 3]], L: [[0, 0], [7, 0], [7, 3], [4, 3], [4, 6], [0, 6]], r83: rect(8, 3),
+  t6810: [[0, 0], [6, 0], [6, 8]], U: [[0, 0], [8, 0], [8, 5], [5, 5], [5, 2], [3, 2], [3, 5], [0, 5]], c7: rect(7, 7),
+  trap: [[0, 0], [9, 0], [9, 4], [3, 4]], r102: rect(10, 2), c6: rect(6, 6), r121: rect(12, 1), r74: rect(7, 4), r92: rect(9, 2),
+  r96: rect(9, 6), r53: rect(5, 3), t43: [[0, 0], [4, 0], [4, 3]], r112: rect(11, 2)
+};
+const TOUR = ["r64", "c5", "t345", "L", "r83", "t6810", "U", "c7", "trap", "r102"];
+// Je compare : parfois le jardin le plus grand a le plus petit tour (6 × 6 contre 12 × 1)
+const COMPARE = [["c6", "r121"], ["r64", "L"], ["t6810", "r74"], ["c5", "r92"], ["U", "r96"], ["r83", "t345"], ["r102", "c7"], ["L", "c6"], ["r53", "t43"], ["r112", "trap"]];
+// Défi : le côté caché (numéro du côté)
+const DEFI = [["r64", 1], ["L", 3], ["t6810", 2], ["c7", 0], ["U", 4], ["trap", 3], ["r83", 2], ["t345", 1], ["r121", 1], ["r96", 3]];
+const etat = { onglet: "tour", i: 0, score: 0, aide: 0, fait: [], sens: 0, pos: 0, tape: "", reponse: 0, phase: "", deroule: {} };
+window.JARDIN = etat;   // pour le test automatique
+const $ = id => document.getElementById(id);
+const mem = { lire(k) { try { return +localStorage.getItem(k) || 0; } catch (e) { return 0; } }, ecrire(k, v) { try { localStorage.setItem(k, v); } catch (e) {} } };
+const cleRecord = () => "jardin-record-" + etat.onglet;
+function afficheScore() { $("score").textContent = etat.score; $("record").textContent = mem.lire(cleRecord()); $("nom-score").textContent = "Série sans faute"; }
+function marque() { etat.score++; if (etat.score > mem.lire(cleRecord())) mem.ecrire(cleRecord(), etat.score); afficheScore(); }
+function verdict(t, cls) { const v = $("verdict"); v.textContent = t; v.className = cls || ""; if (cls === "ko" && etat.score) { etat.score = 0; afficheScore(); } }   // série sans faute : une erreur la remet à 0
+function consigne(h) { $("consigne").innerHTML = "<span>" + h + "</span>"; }
+function bulle(t) { const b = $("bulle"); b.textContent = t; b.style.display = "block"; clearTimeout(bulle.t); bulle.t = setTimeout(() => b.style.display = "none", 7000); }
+const echelle = () => +($("scene").dataset.ech || 1);
+let minuteur = 0;
+const plusTard = f => { clearTimeout(minuteur); minuteur = setTimeout(f, 1800); };
+const cotes = P => P.map((p, j) => Math.round(Math.hypot(P[(j + 1) % P.length][0] - p[0], P[(j + 1) % P.length][1] - p[1])));
+const perimetre = P => cotes(P).reduce((a, b) => a + b, 0);
+
+// ---------- dessin d'un jardin : centré dans une boîte, k pixels par mètre ----------
+function placeJardin(P, bx, by, bw, bh, kmax) {
+  const xs = P.map(p => p[0]), ys = P.map(p => p[1]), w = Math.max(...xs), h = Math.max(...ys);
+  const k = Math.min(kmax, (bw - 120) / w, (bh - 110) / h), ox = bx + (bw - w * k) / 2, oy = by + (bh - h * k) / 2;
+  return P.map(([x, y]) => [ox + x * k, oy + y * k]);
+}
+function svgJardin(id, P, Q, cache) {
+  const C = cotes(P), pts = Q.map(q => q.join(",")).join(" ");
+  let s = '<g class="jardin" id="' + id + '"><polygon points="' + pts + '" fill="#a5d6a7" stroke="none"/>';
+  s += '<polygon points="' + pts + '" fill="url(#rangs)" stroke="none"/>';
+  s += '<polygon class="cloture" points="' + pts + '" fill="none" stroke="#6d4c41" stroke-width="12" stroke-linejoin="round"/>';
+  s += '<polygon points="' + pts + '" fill="none" stroke="#d7b899" stroke-width="3" stroke-dasharray="6 18" pointer-events="none"/>';
+  Q.forEach((q, j) => {   // la mesure de chaque côté, dehors, au milieu du côté
+    const r = Q[(j + 1) % Q.length], m = [(q[0] + r[0]) / 2, (q[1] + r[1]) / 2], cx = Q.reduce((a, p) => a + p[0], 0) / Q.length, cy = Q.reduce((a, p) => a + p[1], 0) / Q.length;
+    let n = [-(r[1] - q[1]), r[0] - q[0]]; const l = Math.hypot(...n); n = [n[0] / l, n[1] / l]; if ((m[0] - cx) * n[0] + (m[1] - cy) * n[1] < 0) n = [-n[0], -n[1]];
+    s += '<text data-cote="' + j + '" x="' + (m[0] + n[0] * 42) + '" y="' + (m[1] + n[1] * 42 + 14) + '" font-size="38" font-weight="700" text-anchor="middle" fill="' + (cache === j ? "#b23a00" : "#2f3b1f") + '">' + (cache === j ? "?" : C[j] + " m") + '</text>';
+  });
+  return s + "</g>";
+}
+const DEFS = '<defs><pattern id="rangs" width="34" height="34" patternUnits="userSpaceOnUse"><path d="M6 17h22" stroke="#7cb342" stroke-width="5" stroke-linecap="round"/></pattern>' +
+  '<g id="bete"><ellipse cx="0" cy="0" rx="30" ry="34" fill="#e53935" stroke="#7f1d1d" stroke-width="3"/><path d="M0 -34V34" stroke="#7f1d1d" stroke-width="3"/><circle cx="0" cy="-36" r="14" fill="#212121"/><circle cx="-14" cy="-6" r="6" fill="#212121"/><circle cx="14" cy="-6" r="6" fill="#212121"/><circle cx="-12" cy="16" r="6" fill="#212121"/><circle cx="12" cy="16" r="6" fill="#212121"/></g></defs>';
+function nouveauChamp(contenu) { $("jeu").innerHTML = ""; const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg"); svg.id = "champ"; svg.setAttribute("viewBox", "0 0 1920 782"); svg.innerHTML = DEFS + contenu; $("jeu").appendChild(svg); return svg; }
+function versChamp(ev) { const svg = $("champ"), pt = svg.createSVGPoint(); pt.x = ev.clientX; pt.y = ev.clientY; const q = pt.matrixTransform(svg.getScreenCTM().inverse()); return [q.x, q.y]; }
+// la clôture déroulée : une ligne droite faite des côtés mis bout à bout (k px par mètre), à partir de x0
+function deroule(C, x0, y, k, couleur, cache) {
+  let s = "", x = x0;
+  C.forEach((c, j) => { s += '<rect x="' + x + '" y="' + (y - 9) + '" width="' + (c * k) + '" height="18" fill="' + (cache === j ? "none" : j % 2 ? couleur[1] : couleur[0]) + '" stroke="' + (cache === j ? "#b23a00" : "#4e342e") + '" stroke-width="2" ' + (cache === j ? 'stroke-dasharray="8 6"' : "") + ' style="animation-delay:' + (j * 0.3) + 's"/>'; x += c * k; });
+  return s;
+}
+
+// ---------- Je fais le tour ----------
+function tourTour() {
+  etat.aide = 0; etat.fait = []; etat.sens = 0; etat.pos = 0; etat.phase = "tour";
+  const P = J[TOUR[etat.i % 10]], Q = placeJardin(P, 260, 0, 1400, 560, 70); etat.Q = Q; etat.P = P;
+  const svg = nouveauChamp(svgJardin("j0", P, Q) + '<g id="faits"></g><g id="coins"></g><use id="coccinelle" href="#bete"/>');
+  $("jeu").insertAdjacentHTML("beforeend", '<div id="addition">Le tour = <i>…</i></div>');
+  dessineCoins(); placeBete();
+  // glisser la coccinelle, ou toucher un coin
+  const b = $("coccinelle"); let tient = false, bouge = false, sx = 0, sy = 0;
+  b.addEventListener("pointerdown", ev => { ev.preventDefault(); ev.stopPropagation(); tient = true; bouge = false; sx = ev.clientX; sy = ev.clientY; });
+  svg.addEventListener("pointermove", ev => { if (!tient) return; if (Math.hypot(ev.clientX - sx, ev.clientY - sy) > 12) bouge = true; if (bouge) { const [x, y] = versChamp(ev); b.setAttribute("x", x); b.setAttribute("y", y); } });
+  svg.addEventListener("pointerup", ev => {
+    if (tient) { tient = false; if (bouge) { avance(versChamp(ev)); return; } b.classList.toggle("choisi"); return; }
+    if (etat.phase === "tour") { b.classList.remove("choisi"); avance(versChamp(ev)); }
+  });
+  consigne('Fais le <span class="q">tour</span>');
+}
+function placeBete() { const q = etat.Q[etat.pos]; $("coccinelle").setAttribute("x", q[0]); $("coccinelle").setAttribute("y", q[1]); }
+function dessineCoins() { $("coins").innerHTML = etat.Q.map((q, j) => '<circle cx="' + q[0] + '" cy="' + q[1] + '" r="16" fill="#fff" stroke="#6d4c41" stroke-width="5"/>').join(""); }
+// la coccinelle va au coin voisin le plus proche du doigt ; elle garde le sens choisi au premier côté
+function avance(p) {
+  if (etat.phase !== "tour") return;
+  const n = etat.Q.length, voisins = etat.sens ? [etat.sens] : [1, -1];
+  const choix = voisins.map(s => ({ s, j: (etat.pos + s + n) % n })).sort((a, b) => Math.hypot(etat.Q[a.j][0] - p[0], etat.Q[a.j][1] - p[1]) - Math.hypot(etat.Q[b.j][0] - p[0], etat.Q[b.j][1] - p[1]))[0];
+  const q = etat.Q[choix.j];
+  if (Math.hypot(q[0] - p[0], q[1] - p[1]) > 110) { placeBete(); verdict("🤪 Va jusqu'au coin suivant, le long de la clôture.", "ko"); return; }
+  etat.sens = choix.s;
+  const cote = choix.s === 1 ? etat.pos : choix.j, a = etat.Q[etat.pos];
+  $("faits").insertAdjacentHTML("beforeend", '<line x1="' + a[0] + '" y1="' + a[1] + '" x2="' + q[0] + '" y2="' + q[1] + '" stroke="#ffb300" stroke-width="16" stroke-linecap="round"/>');
+  etat.fait.push(cotes(etat.P)[cote]); etat.pos = choix.j; placeBete(); verdict("");
+  const lab = document.querySelector('#j0 text[data-cote="' + cote + '"]'); if (lab) lab.classList.add("parcouru");
+  $("addition").innerHTML = "Le tour = " + etat.fait.map((c, k) => k === etat.fait.length - 1 ? "<b>" + c + " m</b>" : c + " m").join(" + ") + (etat.fait.length < n ? " + <i>…</i>" : "");
+  if (etat.fait.length === n) finTour();
+}
+function finTour() {
+  etat.phase = "calcul"; const C = etat.fait, tot = C.reduce((a, b) => a + b, 0), k = Math.min(36, 1500 / tot);
+  // la clôture se déroule sous le jardin
+  $("champ").insertAdjacentHTML("beforeend", '<g>' + deroule(C, 960 - tot * k / 2, 575, k, ["#8d6e63", "#bcaaa4"]) + "</g>");
+  $("addition").style.top = "600px";
+  consigne('Combien mesure le <span class="q">tour</span> ?');
+  ecranTape(C.map(c => c + " m").join(" + ") + " =", "m", tot);
+}
+// ---------- le pavé ----------
+function ecranTape(avant, apres, juste) {
+  etat.tape = ""; etat.reponse = juste; const a = $("addition"); if (a) a.remove();
+  const e = document.createElement("div"); e.id = "ecran"; Object.assign(e.style, { left: "80px", top: "630px" });
+  e.innerHTML = "<span>" + avant + '</span><div id="tape"></div><span>' + apres + "</span>";
+  const p = document.createElement("div"); p.id = "pave"; Object.assign(p.style, { left: "1290px", top: "600px" });
+  ["7", "8", "9", "4", "5", "6", "1", "2", "3", "0", "⌫"].forEach(t => { const b = document.createElement("button"); b.textContent = t; b.onclick = () => touche(t); p.appendChild(b); });
+  p.style.top = "620px";
+  $("jeu").append(e, p);
+}
+function touche(t) {
+  if (!$("tape") || $("tape").classList.contains("ok")) return;
+  if (t === "⌫") etat.tape = etat.tape.slice(0, -1); else if (etat.tape.length < 3) etat.tape += t;
+  const T = $("tape"), j = String(etat.reponse); T.textContent = etat.tape;
+  if (etat.tape === j) { T.classList.add("ok"); marque(); verdict(etat.onglet === "defi" ? "✅ Le côté caché mesure " + j + " m." : "✅ Le tour du jardin mesure " + j + " m : c'est son périmètre.", "ok"); etat.i++; plusTard(etat.onglet === "defi" ? tourDefi : tourTour); }
+  else if (etat.tape && !j.startsWith(etat.tape)) { T.classList.add("ko"); verdict("🤪 Refais l'addition.", "ko"); setTimeout(() => { T.classList.remove("ko"); etat.tape = ""; T.textContent = ""; }, 1000); }
+}
+
+// ---------- Je compare ----------
+function tourCompare() {
+  etat.aide = 0; etat.phase = "compare"; etat.deroule = {};
+  const [a, b] = COMPARE[etat.i % 10], Pa = J[a], Pb = J[b];
+  etat.paire = [Pa, Pb];
+  const Qa = placeJardin(Pa, 40, 60, 860, 430, 46), Qb = placeJardin(Pb, 900, 60, 860, 430, 46);
+  const svg = nouveauChamp(svgJardin("jA", Pa, Qa) + svgJardin("jB", Pb, Qb) + '<text x="470" y="40" font-size="40" font-weight="700" text-anchor="middle">jardin A</text><text x="1330" y="40" font-size="40" font-weight="700" text-anchor="middle">jardin B</text><g id="lignes"></g>');
+  $("jeu").insertAdjacentHTML("beforeend", '<svg id="coupe" viewBox="0 0 100 110"><path d="M20 10h60v20c0 22-14 36-30 36S20 52 20 30z" fill="#ffca28" stroke="#8d6e00" stroke-width="4"/><path d="M20 18H6c0 18 8 26 18 26M80 18h14c0 18-8 26-18 26" fill="none" stroke="#8d6e00" stroke-width="4"/><path d="M42 66h16v18H42zM28 84h44v16H28z" fill="#ffca28" stroke="#8d6e00" stroke-width="4"/></svg>');
+  for (const [id, j] of [["jA", 0], ["jB", 1]]) $(id).addEventListener("pointerup", () => { if (enGlisse) return; if (choixCoupe) { choixCoupe = false; $("coupe").classList.remove("choisi"); return donneCoupe(j); } derouleJardin(j); });
+  const c = $("coupe"); let sx = 0, sy = 0, bouge = false, f = null;
+  c.addEventListener("pointerdown", ev => {
+    ev.preventDefault(); sx = ev.clientX; sy = ev.clientY; bouge = false; const r0 = c.getBoundingClientRect();
+    const move = e => { if (!bouge && Math.hypot(e.clientX - sx, e.clientY - sy) > 12) { bouge = true; enGlisse = true; f = c.cloneNode(true); f.removeAttribute("id"); f.classList.add("vole"); Object.assign(f.style, { left: r0.left + "px", top: r0.top + "px", width: r0.width + "px", height: r0.height + "px" }); document.body.appendChild(f); } if (bouge) { f.style.left = (r0.left + e.clientX - sx) + "px"; f.style.top = (r0.top + e.clientY - sy) + "px"; } };
+    const up = e => { removeEventListener("pointermove", move); removeEventListener("pointerup", up); setTimeout(() => enGlisse = false, 0); if (f) f.remove(); f = null;
+      if (!bouge) { choixCoupe = !choixCoupe; c.classList.toggle("choisi", choixCoupe); return; }
+      const p = versChamp(e); if (p[1] < 520 && p[1] > 0) donneCoupe(p[0] < 900 ? 0 : 1); };
+    addEventListener("pointermove", move); addEventListener("pointerup", up);
+  });
+  consigne('Quel tour est le <span class="q">plus long</span> ?');
+}
+let choixCoupe = false, enGlisse = false;
+function derouleJardin(j) {
+  if (etat.deroule[j] || etat.phase !== "compare") return; etat.deroule[j] = true;
+  const C = cotes(etat.paire[j]), k = 1500 / Math.max(perimetre(etat.paire[0]), perimetre(etat.paire[1])) * 0.98;
+  $("lignes").insertAdjacentHTML("beforeend", '<text x="70" y="' + (560 + j * 70 + 14) + '" font-size="34" font-weight="700" text-anchor="end">' + "AB"[j] + "</text>" + deroule(C, 100, 560 + j * 70, k, j ? ["#5c6bc0", "#9fa8da"] : ["#8d6e63", "#bcaaa4"]));
+}
+function donneCoupe(j) {
+  if (etat.phase !== "compare") return;
+  const pa = perimetre(etat.paire[0]), pb = perimetre(etat.paire[1]), bon = pa > pb ? 0 : 1;
+  derouleJardin(0); derouleJardin(1);
+  if (j === bon) { marque(); etat.phase = "fini"; verdict("✅ Le jardin " + "AB"[j] + " : " + Math.max(pa, pb) + " m de tour, contre " + Math.min(pa, pb) + " m.", "ok"); etat.i++; plusTard(tourCompare); }
+  else { verdict("🤪 Regarde les deux clôtures déroulées.", "ko"); etat.phase = "fini"; setTimeout(() => { etat.phase = "compare"; }, 1200); }
+}
+
+// ---------- Défi : le côté qui manque ----------
+function tourDefi() {
+  etat.aide = 0; etat.phase = "defi";
+  const [id, cache] = DEFI[etat.i % 10], P = J[id], Q = placeJardin(P, 260, 0, 1400, 520, 64), C = cotes(P), tot = perimetre(P), k = Math.min(36, 1500 / tot);
+  nouveauChamp(svgJardin("j0", P, Q, cache) + "<g>" + deroule(C, 960 - tot * k / 2, 560, k, ["#8d6e63", "#bcaaa4"], cache) + "</g>");
+  consigne('Tour : <span class="q">' + tot + ' m</span>. Côté caché ?');
+  ecranTape("Le côté caché mesure", "m", C[cache]);
+}
+
+
+// ---------- ✏️ mes nombres : le maître tape sa question ; elle remplace la question en cours ----------
+$("crayon").onclick = () => { $("err").textContent = ""; prepareChoix(); $("choix").style.display = "flex"; };
+$("choix").addEventListener("pointerup", ev => { if (ev.target.id === "choix") $("choix").style.display = "none"; });
+const val = id => +String($(id).value).replace(",", ".");
+function prepareChoix() {}
+$("ok").onclick = () => {
+  const a = val("ca"), b = val("cb");
+  if (!(a >= 1 && a <= 14 && b >= 1 && b <= 14 && a % 1 === 0 && b % 1 === 0)) { $("err").textContent = "Des côtés de 1 à 14 m."; return; }
+  const cle = "perso" + a + "x" + b; J[cle] = rect(a, b);
+  $("choix").style.display = "none"; clearTimeout(minuteur); verdict("");
+  if (etat.onglet === "defi") { DEFI.splice(etat.i % 10, 0, [cle, 1]); tourDefi(); }
+  else if (etat.onglet === "compare") { COMPARE.splice(etat.i % 10, 0, [cle, COMPARE[etat.i % 10][1]]); tourCompare(); }
+  else { TOUR.splice(etat.i % 10, 0, cle); tourTour(); }
+};
+// ---------- démarrer ----------
+function ouvre(o) {
+  clearTimeout(minuteur); etat.onglet = o; etat.i = 0; etat.score = 0; choixCoupe = false;
+  document.querySelectorAll(".onglets button").forEach(b => b.classList.toggle("on", b.dataset.o === o));
+  history.replaceState(null, "", "#" + o);
+  afficheScore(); verdict(""); $("bulle").style.display = "none";
+  ({ tour: tourTour, compare: tourCompare, defi: tourDefi })[o]();
+}
+document.querySelectorAll(".onglets button").forEach(b => b.onclick = () => ouvre(b.dataset.o));
+addEventListener("keydown", e => { if ($("choix").style.display === "flex") return; if (/^[0-9]$/.test(e.key)) touche(e.key); else if (e.key === "Backspace") touche("⌫"); });
+// l'indice donne la méthode de la séance, jamais le nombre
+$("indice").onclick = () => {
+  etat.aide++;
+  if (etat.onglet === "tour") bulle(etat.phase === "tour" ? "Pars d'un coin et longe la clôture, coin après coin, jusqu'à revenir au départ." : "Le périmètre, c'est la longueur du tour : additionne tous les côtés, sans en oublier.");
+  else if (etat.onglet === "compare") bulle("Un jardin plus grand n'a pas toujours un tour plus long. Touche chaque jardin pour dérouler sa clôture, puis compare les deux lignes.");
+  else bulle(etat.aide === 1 ? "Additionne les côtés que tu connais. Combien manque-t-il pour faire le tour entier ?" : "Le tour moins la somme des autres côtés : c'est le côté caché.");
+};
+function ajuste() {
+  const e = Math.min(innerWidth / 1920, innerHeight / 1080), s = $("scene");
+  s.style.transform = "scale(" + e + ")"; s.style.left = ((innerWidth - 1920 * e) / 2) + "px"; s.style.top = ((innerHeight - 1080 * e) / 2) + "px"; s.dataset.ech = e;
+}
+addEventListener("resize", ajuste); ajuste();
+function depuisLien() { const m = location.hash.slice(1); ouvre(["tour", "compare", "defi"].includes(m) ? m : "tour"); }
+addEventListener("hashchange", depuisLien);
+depuisLien();
+</script>
+</body>
+</html>

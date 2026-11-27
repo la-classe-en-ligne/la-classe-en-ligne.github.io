@@ -1,0 +1,361 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>La grande bande graduée</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect x='2' y='26' width='60' height='14' fill='%23f6c018' stroke='%23333' stroke-width='2'/%3E%3Cpath d='M8 26v8M14 26v5M20 26v5M26 26v5M32 26v8M38 26v5M44 26v5M50 26v5M56 26v8' stroke='%23333' stroke-width='2'/%3E%3Cpath d='M32 24V6l14 5-14 5' fill='%23e53935' stroke='%23333' stroke-width='2'/%3E%3C/svg%3E">
+<!--
+  🚧 La grande bande graduée — fractions décimales et écriture à virgule, P2 📅 4 (GTH v2 : donnees/seances/maths/ma-s4-nombres.js).
+  ERMEL CM2, « Des fractions aux décimaux », phases 1-2 (p. 78) : la petite bande d'un dixième reportée 10 fois place le nombre 1 ;
+  8/10, 25/10, 137/100, 2,03. Karim a demandé de coder toutes les activités (21/10).
+  Univers : le chantier du géomètre ; un grand ruban jaune posé sur le sable, une latte de bois d'un dixième (puis d'un centième).
+  Onglets : « Je gradue » (reporter la latte 10 fois : 10 dixièmes = 1 ; puis la latte d'un centième dans un dixième),
+  « Je place » (glisser le drapeau ou toucher la graduation), « Je lis » (taper le nombre du piquet, avec la virgule).
+  Coin : Dixièmes · Centièmes. Liens : #gradue, #place-10, #place-100, #lis-10, #lis-100.
+  L'outil ne gradue jamais à la place de l'élève : chaque report de latte est un geste (glisser, ou toucher la latte puis le ruban).
+  Contenu : 8/10, 25/10, 137/100, 2,03, 1,7 viennent d'ERMEL ; les autres nombres sont de moi. Hors ligne (ENI, Chromebook).
+-->
+<style>
+:root{--sable:#f4e6c4;--ruban:#f6c018;--rubanf:#8a6400;--latte:#c98b4a;--lattef:#7a4f1f;--encre:#2d2a26;--vert:#2e7d32;--rouge:#c62828;--talbot:#1f7a8c;--drapeau:#e53935}
+html,body{margin:0;height:100%;background:#2d2a26;overflow:hidden;font-family:Arial,Helvetica,sans-serif;color:var(--encre)}
+#scene{position:absolute;left:0;top:0;width:1920px;height:1080px;transform-origin:0 0;background:var(--sable);
+  background-image:radial-gradient(rgba(140,100,40,.10) 1.5px,transparent 1.6px),radial-gradient(rgba(140,100,40,.07) 1px,transparent 1.2px);background-size:22px 22px,13px 13px;background-position:0 0,7px 9px}
+#barre{height:84px;display:flex;align-items:center;gap:22px;padding:0 28px;background:#2d2a26;color:#fff;border-bottom:8px solid;border-image:repeating-linear-gradient(45deg,#f6c018 0 22px,#2d2a26 22px 44px) 8}
+#barre h1{margin:0;font-size:34px;display:flex;align-items:center;gap:12px;color:#f6c018}
+#barre h1 svg{width:54px;height:54px}
+.onglets{display:flex;gap:8px;margin-left:24px}
+.onglets button{font:inherit;font-size:24px;padding:10px 22px;border-radius:12px;border:2px solid #6b6155;background:#3d3933;color:#eee;cursor:pointer}
+.onglets button.on{background:#f6c018;color:var(--encre);font-weight:700;border-color:#f6c018}
+#coin{margin-left:auto;text-align:right;font-size:20px;line-height:1.45}
+#coin b{font-size:26px;color:#f6c018}
+#niveaux{display:flex;gap:6px;justify-content:flex-end;margin-top:2px}
+#niveaux button{font:inherit;font-size:16px;padding:3px 10px;border-radius:10px;border:1.5px solid #6b6155;background:#3d3933;color:#eee;cursor:pointer}
+#niveaux button.on{background:var(--talbot);border-color:var(--talbot)}
+#consigne{height:100px;display:flex;align-items:center;justify-content:center;font-size:50px;font-weight:700;text-align:center}
+#consigne .q{color:#b23a00}
+#jeu{position:absolute;left:0;right:0;top:192px;bottom:110px}
+#bas{position:absolute;left:0;right:0;bottom:0;height:110px;display:flex;align-items:center;justify-content:center;gap:30px}
+#indice{font:inherit;font-size:24px;padding:12px 26px;border-radius:30px;border:2px solid #d4b106;background:#fff8c4;cursor:pointer}
+#verdict{font-size:38px;font-weight:700;min-width:760px;text-align:center}
+#verdict.ok{color:var(--vert)} #verdict.ko{color:var(--rouge)}
+#bulle{position:absolute;left:50%;bottom:118px;transform:translateX(-50%);max-width:1100px;background:#fff8c4;border:2px solid #d4b106;border-radius:18px;padding:16px 26px;font-size:30px;display:none;box-shadow:0 6px 18px rgba(0,0,0,.15)}
+svg#ligne{position:absolute;left:0;top:0;width:1920px;height:560px;touch-action:none}
+#ligne .zone{cursor:pointer}
+#ligne.survol .ruban,#ligne.choisi .ruban{stroke:var(--talbot);stroke-width:6}
+.latte{position:absolute;height:56px;box-sizing:border-box;border:3px solid var(--lattef);border-radius:4px;cursor:grab;touch-action:none;user-select:none;
+  background:radial-gradient(circle at 10px 50%,#5d3a17 3px,transparent 4px),radial-gradient(circle at calc(100% - 10px) 50%,#5d3a17 3px,transparent 4px),
+  repeating-linear-gradient(0deg,#c98b4a 0 7px,#b97a3c 7px 9px,#d39a5c 9px 14px)}
+.latte.petite{height:30px;margin-top:13px;border:2px solid #9e7a4a;background:repeating-linear-gradient(90deg,#f3dcb4 0 6px,#e6c48f 6px 8px)}
+.latte.choisi{outline:6px solid var(--talbot);outline-offset:4px}
+.latte-nom{position:absolute;font-size:34px;font-weight:700;color:var(--lattef)}
+.vole{position:fixed;z-index:30;pointer-events:none;opacity:.9}
+#drapeau{position:absolute;width:90px;height:150px;cursor:grab;touch-action:none}
+#drapeau.choisi{filter:drop-shadow(0 0 6px var(--talbot)) drop-shadow(0 0 6px var(--talbot))}
+#ecran{position:absolute;display:flex;align-items:center;gap:16px;font-size:44px;font-weight:700}
+#tape{min-width:190px;height:76px;font-size:46px !important;border:5px solid var(--talbot);border-radius:16px;background:#fff;display:flex;align-items:center;justify-content:center;font-size:60px}
+#tape.ko{border-color:var(--rouge);animation:secoue .45s 2}
+@keyframes secoue{0%,100%{transform:translateX(0)}25%{transform:translateX(-10px)}75%{transform:translateX(10px)}}
+#pave{position:absolute;display:grid;grid-template-columns:repeat(6,70px);gap:10px}
+#pave button{font:inherit;font-size:30px;font-weight:700;height:60px;border-radius:16px;border:3px solid #b9a77f;background:#fff;color:var(--encre);cursor:pointer}
+/* 💡 sur le côté (21/10) : l'ampoule seule, au bout de la consigne ; la bulle à côté, jamais sous le jeu */
+#indice{position:absolute;right:26px;top:96px;width:82px;height:82px;padding:0;border-radius:50%;font-size:44px;line-height:1;z-index:20}
+#bulle{left:auto;right:124px;top:100px;bottom:auto;transform:none;max-width:640px;font-size:28px;z-index:20}
+/* 🧮 la calculette (21/10) : petite, sur le côté, on touche les touches */
+#pave{position:absolute !important; left:auto !important; right:40px !important; top:440px !important; bottom:auto !important; grid-template-columns:repeat(3,64px) !important; gap:8px !important;
+  padding:14px; background:#37474f; border-radius:20px; box-shadow:0 6px 0 #263238; z-index:15}
+#pave button{height:52px !important; font-size:26px !important; border-radius:10px !important; border:none !important; background:#eceff1 !important; color:#263238 !important; box-shadow:0 3px 0 #90a4ae; grid-column:auto !important}
+#pave button:active{transform:translateY(2px); box-shadow:none}
+/* ✏️ mes nombres (21/10) */
+#crayon{position:absolute;left:26px;top:96px;width:82px;height:82px;border-radius:50%;border:2px solid #b0bec5;background:#fff;font-size:40px;cursor:pointer;z-index:20}
+#choix{position:absolute;left:0;top:0;right:0;bottom:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;z-index:40}
+#choix > div{background:#fff;border-radius:20px;padding:30px 44px;font-size:36px;font-weight:700;display:flex;flex-direction:column;gap:20px;align-items:center;color:#263238}
+#choix .ligne-choix{display:flex;align-items:center;gap:12px}
+#choix input,#choix select{font:inherit;font-size:40px;width:110px;text-align:center;padding:4px}
+#choix button{font:inherit;font-size:30px;padding:10px 30px;border-radius:30px;border:3px solid #1f7a8c;background:#1f7a8c;color:#fff;cursor:pointer}
+#choix .err{color:#c62828;font-size:24px;min-height:28px}
+/* 🧮 calculette discrète (21/10) : petite, pâle, petits chiffres */
+#pave{padding:8px !important; gap:5px !important; grid-template-columns:repeat(3,46px) !important; background:#eceff1 !important; box-shadow:none !important; border:2px solid #cfd8dc; border-radius:14px !important; opacity:.85}
+#pave button{height:38px !important; font-size:19px !important; border-radius:8px !important; background:#fff !important; color:#607d8b !important; box-shadow:none !important; border:1px solid #cfd8dc !important}
+</style>
+</head>
+<body>
+<div id="scene">
+  <div id="barre">
+    <h1><svg viewBox="0 0 64 64"><rect x="2" y="30" width="60" height="14" fill="#f6c018" stroke="#111" stroke-width="2"/><path d="M8 30v8M14 30v5M20 30v5M26 30v5M32 30v8M38 30v5M44 30v5M50 30v5M56 30v8" stroke="#111" stroke-width="2"/><path d="M32 28V6l16 5-16 5" fill="#e53935" stroke="#111" stroke-width="2"/></svg>La grande bande graduée</h1>
+    <div class="onglets"><button data-o="gradue">Je gradue</button><button data-o="place">Je place</button><button data-o="lis">Je lis</button></div>
+    <div id="coin"><div><span id="nom-score">Graduations</span> : <b id="score">0</b> · 🏆 Record : <b id="record">0</b></div><div id="niveaux"><button data-n="10">Dixièmes</button><button data-n="100">Centièmes</button></div></div>
+  </div>
+  <div id="consigne"></div>
+  <div id="jeu"></div>
+  <div id="bulle"></div>
+  <button id="crayon" title="Mes nombres">✏️</button>
+  <div id="choix"><div><div class="ligne-choix">Nombre : <input id="cn" type="text" value="2,35" style="width:160px"></div><span class="err" id="err"></span><button id="ok">C'est parti</button></div></div>
+  <button id="indice" title="Indice">💡</button><div id="bas"><div id="verdict"></div></div>
+</div>
+<script>
+"use strict";
+// ---------- les nombres (en centièmes) ----------
+// Je place / Je lis, dixièmes : la demi-droite de 0 à 3 ; ERMEL : 8/10, 25/10, 1,7
+const PLACE10 = [{ v: 80, m: "8/10" }, { v: 250, m: "25/10" }, { v: 170, m: "1,7" }, { v: 230, m: "2,3" }, { v: 140, m: "1 + 4/10" }, { v: 50, m: "0,5" }, { v: 290, m: "2,9" }, { v: 130, m: "13/10" }, { v: 260, m: "2 + 6/10" }, { v: 110, m: "1,1" }];
+// centièmes : la demi-droite d'une unité à la suivante ; ERMEL : 137/100, 2,03
+const PLACE100 = [{ v: 137, m: "137/100" }, { v: 203, m: "2,03" }, { v: 235, m: "2,35" }, { v: 170, m: "1,70" }, { v: 248, m: "2,48" }, { v: 143, m: "1 + 4/10 + 3/100" }, { v: 253, m: "253/100" }, { v: 207, m: "2,07" }, { v: 195, m: "1,95" }, { v: 160, m: "1 + 6/10" }];
+const LIS10 = [170, 80, 230, 120, 290, 40, 210, 160, 270, 10];
+const LIS100 = [235, 137, 203, 148, 260, 115, 209, 172, 251, 190];
+const etat = { onglet: "gradue", n: 10, i: 0, score: 0, aide: 0, reports: 0, tape: "", phase: "" };
+window.BANDE = etat;   // pour le test automatique
+const $ = id => document.getElementById(id);
+const mem = { lire(k) { try { return +localStorage.getItem(k) || 0; } catch (e) { return 0; } }, ecrire(k, v) { try { localStorage.setItem(k, v); } catch (e) {} } };
+const cleRecord = () => "bande-graduee-record-" + etat.onglet + (etat.onglet === "gradue" ? "" : "-" + etat.n);
+function afficheScore() { $("score").textContent = etat.score; $("record").textContent = mem.lire(cleRecord()); $("nom-score").textContent = "Série sans faute"; }
+function marque() { etat.score++; if (etat.score > mem.lire(cleRecord())) mem.ecrire(cleRecord(), etat.score); afficheScore(); }
+function verdict(t, cls) { const v = $("verdict"); v.textContent = t; v.className = cls || ""; if (cls === "ko" && etat.score) { etat.score = 0; afficheScore(); } }   // série sans faute : une erreur la remet à 0
+function consigne(h) { $("consigne").innerHTML = "<span>" + h + "</span>"; }
+function bulle(t) { const b = $("bulle"); b.textContent = t; b.style.display = "block"; clearTimeout(bulle.t); bulle.t = setTimeout(() => b.style.display = "none", 7000); }
+let minuteur = 0;   // le passage à la question suivante, annulé si on change d'onglet
+const plusTard = f => { clearTimeout(minuteur); minuteur = setTimeout(f, 1800); };
+const echelle = () => +($("scene").dataset.ech || 1);
+const virgule = c => { const e = Math.floor(c / 100), r = c % 100; return r ? e + "," + (r % 10 ? String(r).padStart(2, "0") : r / 10) : String(e); };
+const decompose = c => { const e = Math.floor(c / 100), d = Math.floor(c % 100 / 10), u = c % 10; return [e ? String(e) : "", d ? d + "/10" : "", u ? u + "/100" : ""].filter(Boolean).join(" + "); };
+
+// ---------- la demi-droite (SVG) : de a à b (en centièmes), graduée tous les « pas » centièmes ----------
+const X0 = 160, X1 = 1760, Y = 300;
+let vue = null;
+function dessineLigne(a, b, pas, opts = {}) {
+  vue = { a, b, pas };
+  const px = c => X0 + (c - a) / (b - a) * (X1 - X0);
+  let s = '<rect class="ruban" x="' + (X0 - 30) + '" y="' + (Y - 20) + '" width="' + (X1 - X0 + 60) + '" height="40" fill="#f6c018" stroke="#8a6400" stroke-width="3" rx="4"/>';
+  if (!opts.vide) for (let c = a; c <= b; c += pas) {
+    const unite = c % 100 === 0, dix = c % 10 === 0;
+    const h = unite ? 46 : dix ? 32 : 18;
+    s += '<line x1="' + px(c) + '" y1="' + (Y - 20) + '" x2="' + px(c) + '" y2="' + (Y - 20 + h) + '" stroke="#2d2a26" stroke-width="' + (unite ? 5 : dix ? 3 : 2) + '"/>';
+    if (unite) s += '<text x="' + px(c) + '" y="' + (Y + 90) + '" font-size="56" font-weight="700" text-anchor="middle" fill="#2d2a26">' + c / 100 + '</text>';
+  }
+  if (opts.vide) opts.vide.forEach((nom, k) => { const x = k ? X1 : X0; s += '<line x1="' + x + '" y1="' + (Y - 20) + '" x2="' + x + '" y2="' + (Y + 26) + '" stroke="#2d2a26" stroke-width="5"/><text x="' + x + '" y="' + (Y + 90) + '" font-size="56" font-weight="700" text-anchor="middle">' + nom + "</text>"; });
+  s += '<g id="marques"></g><rect class="zone" x="' + (X0 - 40) + '" y="' + (Y - 140) + '" width="' + (X1 - X0 + 80) + '" height="260" fill="transparent"/>';
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.id = "ligne"; svg.setAttribute("viewBox", "0 0 1920 560"); svg.innerHTML = s;
+  $("jeu").appendChild(svg); vue.px = px;
+  return svg;
+}
+// la position d'un clic sur la demi-droite → la graduation la plus proche
+function graduation(clientX) {
+  const r = $("ligne").getBoundingClientRect(), x = (clientX - r.left) / r.width * 1920;
+  const c = vue.a + (x - X0) / (X1 - X0) * (vue.b - vue.a);
+  return Math.max(vue.a, Math.min(vue.b, Math.round(c / vue.pas) * vue.pas));
+}
+
+// ---------- les deux gestes ----------
+const choix = { el: null, f: null };
+let enGlisse = false;   // pendant un glisser, le lâcher ne compte pas comme un toucher
+function rendGlissable(el, cibles, quandDepose, garde) {
+  el.addEventListener("pointerdown", ev => {
+    ev.preventDefault();
+    const sx = ev.clientX, sy = ev.clientY, r0 = el.getBoundingClientRect();
+    let bouge = false, survol = null, fantome = null;
+    const move = e => {
+      if (!bouge && Math.hypot(e.clientX - sx, e.clientY - sy) > 12) {
+        bouge = true; enGlisse = true; if (choix.el) { choix.el.classList.remove("choisi"); choix.el = null; }
+        fantome = el.cloneNode(true); fantome.classList.add("vole"); fantome.classList.remove("choisi"); fantome.removeAttribute("id");
+        Object.assign(fantome.style, { left: r0.left + "px", top: r0.top + "px", width: (r0.width / echelle()) + "px", transform: "scale(" + echelle() + ")", transformOrigin: "0 0" });
+        document.body.appendChild(fantome);
+      }
+      if (!bouge) return;
+      fantome.style.left = (r0.left + e.clientX - sx) + "px"; fantome.style.top = (r0.top + e.clientY - sy) + "px";
+      const c = cibles().find(t => { const r = t.getBoundingClientRect(); return e.clientX > r.left && e.clientX < r.right && e.clientY > r.top && e.clientY < r.bottom; }) || null;
+      if (c !== survol) { survol && survol.classList.remove("survol"); survol = c; survol && survol.classList.add("survol"); }
+    };
+    const up = e => {
+      removeEventListener("pointermove", move); removeEventListener("pointerup", up);
+      setTimeout(() => enGlisse = false, 0);
+      survol && survol.classList.remove("survol"); fantome && fantome.remove();
+      if (!bouge) { el.classList.toggle("choisi"); choix.el = el.classList.contains("choisi") ? el : null; choix.f = quandDepose; choix.garde = garde; return; }
+      if (survol) quandDepose(survol, e.clientX);
+    };
+    addEventListener("pointermove", move); addEventListener("pointerup", up);
+  });
+}
+function cibleTouchable(t) { t.addEventListener("pointerup", ev => { if (enGlisse || !choix.el) return; const f = choix.f; if (!choix.garde) { choix.el.classList.remove("choisi"); choix.el = null; } f(t, ev.clientX); }); }
+
+// ---------- Je gradue : la latte d'un dixième (10 fois), puis celle d'un centième dans un dixième ----------
+function tourGradue() {
+  $("jeu").innerHTML = ""; etat.reports = 0; etat.phase = "report"; etat.aide = 0; choix.el = null;
+  const centiemes = etat.i % 2 === 1;
+  const a = centiemes ? 230 : 0;   // le dixième de 2,3 à 2,4, vu à la loupe
+  const svg = dessineLigne(a, a + (centiemes ? 10 : 100), centiemes ? 1 : 10, { vide: centiemes ? ["2,3", "2,4"] : ["0", "1"] });
+  vue.loupe = centiemes;
+  if (centiemes) {   // en haut, la bande de 2 à 3 et ses dixièmes ; le dixième de 2,3 à 2,4 en couleur ; deux traits de loupe jusqu'à l'agrandissement
+    const u = (X1 - X0) / 10, x3 = X0 + 3 * u, y0 = 70;
+    let s = '<rect x="' + X0 + '" y="' + (y0 - 12) + '" width="' + (X1 - X0) + '" height="24" fill="#f6c018" stroke="#8a6400" stroke-width="2" rx="3"/>';
+    for (let k = 0; k <= 10; k++) s += '<line x1="' + (X0 + k * u) + '" y1="' + (y0 - 12) + '" x2="' + (X0 + k * u) + '" y2="' + (y0 + (k % 10 ? 4 : 14)) + '" stroke="#2d2a26" stroke-width="' + (k % 10 ? 2 : 4) + '"/>';
+    for (let k = 0; k < 10; k++) s += '<rect x="' + (X0 + k * u + 1) + '" y="' + (y0 - 10) + '" width="' + (u - 2) + '" height="20" fill="' + (k % 2 ? "#c98b4a" : "#e0b07a") + '" opacity=".55"/>';
+    s += '<rect x="' + x3 + '" y="' + (y0 - 14) + '" width="' + u + '" height="28" fill="#ff7043" fill-opacity=".35" stroke="#e64a19" stroke-width="4"/>';
+    s += '<text x="' + X0 + '" y="' + (y0 + 44) + '" font-size="30" font-weight="700" text-anchor="middle">2</text><text x="' + X1 + '" y="' + (y0 + 44) + '" font-size="30" font-weight="700" text-anchor="middle">3</text>';
+    s += '<path d="M' + x3 + ' ' + (y0 + 14) + 'L' + X0 + ' ' + (Y - 22) + 'M' + (x3 + u) + ' ' + (y0 + 14) + 'L' + X1 + ' ' + (Y - 22) + '" stroke="#e64a19" stroke-width="3" stroke-dasharray="10 8" fill="none"/>';
+    svg.insertAdjacentHTML("afterbegin", s);
+  }
+  const lat = document.createElement("div"); lat.className = "latte" + (centiemes ? " petite" : ""); lat.id = "latte";
+  Object.assign(lat.style, { left: X0 + "px", top: "470px", width: ((X1 - X0) / 10) + "px" });
+  const nom = document.createElement("div"); nom.className = "latte-nom"; nom.textContent = centiemes ? "1 petite latte" : "1 latte";   // le mot « dixième » vient après le comptage
+  Object.assign(nom.style, { left: (X0 + (X1 - X0) / 10 + 24) + "px", top: "476px" });
+  $("jeu").append(lat, nom);
+  rendGlissable(lat, () => [svg], reporte, true); cibleTouchable(svg);
+  consigne(centiemes ? 'Remplis de <span class="q">2,3 à 2,4</span>' : 'Remplis de <span class="q">0 à 1</span>');
+}
+function reporte() {
+  if (etat.onglet !== "gradue" || etat.phase !== "report") return;
+  etat.reports++;
+  const w = (X1 - X0) / 10, x = X0 + (etat.reports - 1) * w, g = $("marques");
+  // une petite latte (centièmes) : fine et claire, à rayures ; une latte de parquet (dixièmes) : bois, deux veines, deux clous
+  if (vue.loupe) { g.insertAdjacentHTML("beforeend", '<rect x="' + x + '" y="' + (Y - 9) + '" width="' + w + '" height="18" fill="' + (etat.reports % 2 ? "#f3dcb4" : "#e6c48f") + '" stroke="#9e7a4a" stroke-width="1.5"/>' +
+    '<line x1="' + (x + w) + '" y1="' + (Y - 20) + '" x2="' + (x + w) + '" y2="' + (Y + 12) + '" stroke="#2d2a26" stroke-width="2"/>'); }
+  else g.insertAdjacentHTML("beforeend", '<rect x="' + x + '" y="' + (Y - 18) + '" width="' + w + '" height="36" fill="' + (etat.reports % 2 ? "#c98b4a" : "#e0b07a") + '" stroke="#7a4f1f" stroke-width="2"/>' +
+    '<path d="M' + (x + 8) + ' ' + (Y - 6) + 'q' + (w / 3) + ' -5 ' + (w - 16) + ' 2M' + (x + 8) + ' ' + (Y + 7) + 'q' + (w / 2) + ' 5 ' + (w - 16) + ' -1" fill="none" stroke="#8d5a2b" stroke-width="1.5" opacity=".7"/>' +
+    '<circle cx="' + (x + 7) + '" cy="' + Y + '" r="2.5" fill="#4e2e12"/><circle cx="' + (x + w - 7) + '" cy="' + Y + '" r="2.5" fill="#4e2e12"/>' +
+    '<line x1="' + (x + w) + '" y1="' + (Y - 20) + '" x2="' + (x + w) + '" y2="' + (Y + 12) + '" stroke="#2d2a26" stroke-width="3"/>');
+  verdict("");
+  if (etat.reports === 10) {
+    etat.phase = "question"; $("latte").remove(); document.querySelector(".latte-nom").remove();
+    const loupe = vue.loupe;
+    consigne('Combien de <span class="q">lattes</span> ?');
+    ecranTape(loupe ? "De 2,3 à 2,4 :" : "De 0 à 1 :", "lattes");
+  }
+}
+
+// ---------- le pavé (Je gradue, Je lis) ----------
+function ecranTape(avant, apres) {
+  etat.tape = "";
+  const e = document.createElement("div"); e.id = "ecran"; Object.assign(e.style, { left: "200px", top: "500px" });
+  e.innerHTML = "<span>" + avant + '</span><div id="tape"></div><span>' + (apres || "") + "</span>";
+  const p = document.createElement("div"); p.id = "pave"; Object.assign(p.style, { left: "1300px", top: "470px" });
+  ["7", "8", "9", "4", "5", "6", "1", "2", "3", "0", ",", "⌫"].forEach(t => { const b = document.createElement("button"); b.textContent = t; b.onclick = () => touche(t); p.appendChild(b); });
+  $("jeu").append(e, p);
+}
+function touche(t) {
+  if (!$("tape")) return;
+  if (t === "⌫") etat.tape = etat.tape.slice(0, -1);
+  else if (etat.tape.length < 6 && !(t === "," && (etat.tape.includes(",") || !etat.tape))) etat.tape += t;
+  $("tape").textContent = etat.tape;
+  verifieTape();
+}
+// on vérifie dès que le nombre tapé ne peut plus devenir la réponse (2,30 = 2,3 : le zéro de trop est accepté)
+function verifieTape() {
+  const t = etat.tape; if (!t) return;
+  const juste = etat.onglet === "gradue" ? "10" : virgule((etat.n === 10 ? LIS10 : LIS100)[etat.i % 10]);
+  const ok = [juste].concat(juste.includes(",") ? [juste + "0"] : []);
+  if (ok.includes(t)) return reussi();
+  if (!ok.some(j => j.startsWith(t))) rate();
+}
+function rate() {
+  const T = $("tape"); T.classList.add("ko");
+  verdict(etat.onglet === "gradue" ? "🤪 Compte les lattes." : "🤪 Relis : unités, puis dixièmes, puis centièmes.", "ko");
+  setTimeout(() => { T.classList.remove("ko"); etat.tape = ""; T.textContent = ""; }, 1000);
+}
+function reussi() {
+  marque();
+  if (etat.onglet === "gradue") verdict(vue.loupe ? "✅ 10 petites lattes dans 1 dixième : 1 petite latte = 1 centième" : "✅ 10 lattes dans 1 unité : 1 latte = 1 dixième", "ok");
+  else { const c = (etat.n === 10 ? LIS10 : LIS100)[etat.i % 10]; verdict("✅ " + virgule(c) + " = " + decompose(c), "ok"); }
+  $("tape").style.borderColor = "#2e7d32";
+  etat.i++; plusTard(etat.onglet === "gradue" ? tourGradue : tourLis);
+}
+
+// ---------- Je place : glisser le drapeau sur la graduation, ou toucher la graduation ----------
+function intervalle(c) { return etat.n === 10 ? [0, 300, 10] : [Math.floor(c / 100) * 100, Math.floor(c / 100) * 100 + 100, 1]; }
+function tourPlace() {
+  $("jeu").innerHTML = ""; etat.aide = 0; etat.phase = "place";
+  const q = (etat.n === 10 ? PLACE10 : PLACE100)[etat.i % 10], [a, b, pas] = intervalle(q.v);
+  const svg = dessineLigne(a, b, pas);
+  const d = document.createElement("div"); d.id = "drapeau";
+  d.innerHTML = '<svg viewBox="0 0 90 150"><path d="M45 148V10" stroke="#5d4037" stroke-width="7"/><path d="M45 10l42 16-42 16z" fill="#e53935" stroke="#7f1d1d" stroke-width="3"/></svg>';
+  Object.assign(d.style, { left: "1700px", top: "430px" });
+  $("jeu").appendChild(d);
+  rendGlissable(d, () => [svg], (t, x) => pose(graduation(x)));
+  svg.addEventListener("pointerup", ev => { if (enGlisse) return; if (choix.el === d) { d.classList.remove("choisi"); choix.el = null; } if (etat.phase === "place") pose(graduation(ev.clientX)); });
+  consigne('Place <span class="q">' + q.m + "</span>");
+}
+function reperes(c) {
+  const g = $("marques"); g.querySelectorAll(".rep").forEach(e => e.remove());
+  const { a, b } = vue, txt = (v, x, col, taille) => '<text class="rep" x="' + x + '" y="' + (Y + 64) + '" font-size="' + taille + '" font-weight="700" text-anchor="middle" fill="' + col + '">' + virgule(v) + '</text>';
+  let s = "";
+  if (etat.n === 10) {   // les dixièmes, de l'entier juste avant jusqu'au drapeau
+    for (let v = Math.floor(c / 100) * 100 + 10; v <= c; v += 10) if (v % 100) s += txt(v, vue.px(v), v === c ? "#b23a00" : "#5d4037", v === c ? 34 : 26);
+  } else {   // tous les dixièmes, puis les centièmes comptés depuis le dixième juste avant
+    for (let v = a + 10; v < b; v += 10) s += txt(v, vue.px(v), "#5d4037", 26);
+    const d0 = Math.floor(c / 10) * 10;
+    for (let v = d0 + 1; v <= c; v++) s += '<circle class="rep" cx="' + vue.px(v) + '" cy="' + (Y - 30) + '" r="6" fill="#b23a00"/>';
+    if (c % 10) s += '<text class="rep" x="' + vue.px(c) + '" y="' + (Y + 104) + '" font-size="30" font-weight="700" text-anchor="middle" fill="#b23a00">' + virgule(c) + "</text>";
+  }
+  g.insertAdjacentHTML("beforeend", s);
+}
+function pose(c) {
+  if (etat.phase !== "place") return;
+  const q = (etat.n === 10 ? PLACE10 : PLACE100)[etat.i % 10], d = $("drapeau");
+  reperes(c);
+  d.style.left = (vue.px(c) - 45) + "px"; d.style.top = (Y - 168) + "px";
+  if (c === q.v) {
+    marque(); etat.phase = "fini"; verdict("✅ " + q.m + " = " + (/^\d+,\d+$/.test(q.m) ? decompose(c) : virgule(c)), "ok");
+    etat.i++; plusTard(tourPlace);
+  } else {
+    verdict("🤪 Là, c'est " + virgule(c) + ".", "ko");
+    setTimeout(() => { if (etat.phase === "place") { d.style.left = "1700px"; d.style.top = "430px"; $("marques").querySelectorAll(".rep").forEach(e => e.remove()); } }, 2200);
+  }
+}
+
+// ---------- Je lis : un piquet sur la demi-droite, l'élève tape son nombre ----------
+function tourLis() {
+  $("jeu").innerHTML = ""; etat.aide = 0;
+  const c = (etat.n === 10 ? LIS10 : LIS100)[etat.i % 10], [a, b, pas] = intervalle(c);
+  dessineLigne(a, b, pas);
+  $("marques").innerHTML = '<path d="M' + vue.px(c) + ' ' + (Y - 24) + 'l-22 -60h44z" fill="#e53935" stroke="#7f1d1d" stroke-width="3"/><circle cx="' + vue.px(c) + '" cy="' + (Y - 100) + '" r="22" fill="#e53935" stroke="#7f1d1d" stroke-width="3"/>';
+  consigne('Quel <span class="q">nombre</span> ?');
+  ecranTape("", "");
+}
+
+
+// ---------- ✏️ mes nombres : le maître tape sa question ; elle remplace la question en cours ----------
+$("crayon").onclick = () => { $("err").textContent = ""; prepareChoix(); $("choix").style.display = "flex"; };
+$("choix").addEventListener("pointerup", ev => { if (ev.target.id === "choix") $("choix").style.display = "none"; });
+const val = id => +String($(id).value).replace(",", ".");
+function prepareChoix() { $("cn").value = etat.n === 10 ? "1,7" : "2,35"; }
+$("ok").onclick = () => {
+  const s = String($("cn").value).trim(), v = Math.round(val("cn") * 100), dec = (s.split(/[,.]/)[1] || "").length;
+  if (etat.onglet === "gradue") { $("choix").style.display = "none"; return; }
+  if (isNaN(v)) { $("err").textContent = "Écris un nombre, par exemple 2,35."; return; }
+  if (etat.n === 10 && (dec > 1 || v < 0 || v > 300)) { $("err").textContent = "Dixièmes : un chiffre après la virgule, de 0 à 3."; return; }
+  if (etat.n === 100 && (dec > 2 || v < 100 || v >= 300)) { $("err").textContent = "Centièmes : de 1,00 à 2,99."; return; }
+  $("choix").style.display = "none"; clearTimeout(minuteur); verdict("");
+  if (etat.onglet === "place") { const L = etat.n === 10 ? PLACE10 : PLACE100; L.splice(etat.i % 10, 0, { v, m: virgule(v) }); tourPlace(); }
+  else { const L = etat.n === 10 ? LIS10 : LIS100; L.splice(etat.i % 10, 0, v); tourLis(); }
+};
+// ---------- démarrer ----------
+function ouvre(o, n) {
+  clearTimeout(minuteur);
+  etat.onglet = o; if (n) etat.n = n; etat.i = 0; etat.score = 0; choix.el = null;
+  document.querySelectorAll(".onglets button").forEach(b => b.classList.toggle("on", b.dataset.o === o));
+  document.querySelectorAll("#niveaux button").forEach(b => b.classList.toggle("on", +b.dataset.n === etat.n));
+  $("niveaux").style.visibility = o === "gradue" ? "hidden" : "visible";
+  history.replaceState(null, "", "#" + o + (o === "gradue" ? "" : "-" + etat.n));
+  afficheScore(); verdict(""); $("bulle").style.display = "none";
+  ({ gradue: tourGradue, place: tourPlace, lis: tourLis })[o]();
+}
+document.querySelectorAll(".onglets button").forEach(b => b.onclick = () => ouvre(b.dataset.o));
+document.querySelectorAll("#niveaux button").forEach(b => b.onclick = () => ouvre(etat.onglet, +b.dataset.n));
+addEventListener("keydown", e => { if ($("choix").style.display === "flex") return; if (/^[0-9,]$/.test(e.key)) touche(e.key); else if (e.key === ".") touche(","); else if (e.key === "Backspace") touche("⌫"); });
+// l'indice donne la méthode de la séance, jamais le nombre
+$("indice").onclick = () => {
+  etat.aide++;
+  if (etat.onglet === "gradue") { bulle("Comme un parquet : chaque latte touche la précédente, sans trou ni chevauchement. Puis compte les lattes."); return; }
+  if (etat.n === 10) bulle(etat.aide === 1 ? "Entre deux nombres entiers, il y a 10 dixièmes. Pars de l'entier juste avant, puis avance de dixième en dixième." : "13/10, c'est 10 dixièmes (1 unité) et encore 3 dixièmes : 1 + 3/10, on l'écrit 1,3.");
+  else bulle(etat.aide === 1 ? "Les grands traits sont les dixièmes, les petits sont les centièmes. Trouve d'abord le bon dixième, puis compte les centièmes." : "137/100, c'est 100 centièmes (1 unité), 3 dixièmes et 7 centièmes : 1 + 3/10 + 7/100, on l'écrit 1,37.");
+};
+function ajuste() {
+  const e = Math.min(innerWidth / 1920, innerHeight / 1080), s = $("scene");
+  s.style.transform = "scale(" + e + ")"; s.style.left = ((innerWidth - 1920 * e) / 2) + "px"; s.style.top = ((innerHeight - 1080 * e) / 2) + "px"; s.dataset.ech = e;
+}
+addEventListener("resize", ajuste); ajuste();
+function depuisLien() { const m = location.hash.slice(1).match(/^(gradue|place|lis)(?:-(10|100))?$/); ouvre(m ? m[1] : "gradue", m && m[2] ? +m[2] : 10); }
+addEventListener("hashchange", depuisLien);
+depuisLien();
+</script>
+</body>
+</html>

@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>📍 La droite graduée - placer des nombres</title>
+<!--
+  📍 La droite graduée (Karim, 7/11 : « une activité pour placer des nombres sur une droite, il faut pouvoir choisir les graduations »).
+  Onglets : « Je place » (je pose le drapeau sur la droite) · « Je lis » (quel nombre montre le drapeau ?).
+  ⚙ Les graduations : le départ, l'écart entre deux graduations, combien de graduations, quels nombres sont écrits, et si le nombre peut tomber entre deux graduations.
+  ✏️ : je tape moi-même le nombre à placer. Glisser le drapeau ou toucher la droite : les deux marchent ; la réponse est prise quand on lâche.
+  Liens : #dizaines #centaines #milliers #grands #dixiemes #centiemes #quarts ; #lis- devant pour ouvrir « Je lis » (#lis-milliers).
+  Les nombres sont tirés au hasard : ajout, rien ne vient de la banque.
+-->
+<style>
+:root { --ciel:#d9f0f7; --herbe:#8cc152; --encre:#17303a; --talbot:#1f7a8c; --drap:#d32f2f; }
+* { box-sizing:border-box; }
+html,body { margin:0; height:100%; overflow:hidden; background:#10242c; font-family:"Segoe UI",Calibri,Arial,sans-serif; color:var(--encre); touch-action:none; user-select:none; -webkit-user-select:none; }
+#scene { position:absolute; width:1920px; height:1080px; transform-origin:0 0; background:linear-gradient(#d9f0f7 0,#eef8fb 52%,#a8d672 52%,#8cc152 100%); overflow:hidden; }
+#barre { height:92px; display:flex; align-items:center; gap:18px; padding:0 26px; background:#17303a; color:#fff; }
+#barre h1 { font-size:34px; margin:0; white-space:nowrap; }
+.onglets { display:flex; gap:8px; margin-left:12px; }
+.onglets button { font:inherit; font-size:25px; padding:9px 24px; border-radius:12px; border:2px solid #5b7480; background:#27444f; color:#eee; cursor:pointer; }
+.onglets button.on { background:#f6c018; color:#17303a; font-weight:700; border-color:#f6c018; }
+#coin { margin-left:auto; text-align:right; font-size:21px; white-space:nowrap; }
+#coin b { color:#f6c018; }
+#niveaux { display:flex; gap:6px; justify-content:flex-end; margin-top:4px; }
+#niveaux button { font:inherit; font-size:15px; padding:2px 9px; border-radius:9px; border:1.5px solid #5b7480; background:#27444f; color:#eee; cursor:pointer; }
+#niveaux button.on { background:var(--talbot); border-color:var(--talbot); }
+#consigne { text-align:center; font-size:56px; font-weight:700; padding:40px 40px 0; min-height:150px; }
+#consigne .q { display:inline-block; background:#fff; color:var(--drap); border:4px solid var(--drap); border-radius:18px; padding:2px 30px; margin:0 8px; }
+#dessin { position:absolute; left:0; top:250px; width:1920px; height:560px; touch-action:none; cursor:pointer; }
+#choix { position:absolute; left:0; right:0; top:800px; display:flex; justify-content:center; gap:40px; }
+#choix button { font:inherit; font-size:64px; font-weight:800; min-width:280px; padding:18px 40px; border-radius:22px; border:5px solid #17303a; background:#fff; color:#17303a; cursor:pointer; }
+#verdict { position:absolute; left:0; right:0; bottom:40px; text-align:center; font-size:44px; font-weight:700; color:#17303a; }
+#verdict.ok { color:#14662c; } #verdict.ko { color:#b71c1c; }
+.rond { position:absolute; width:84px; height:84px; border-radius:50%; font-size:42px; border:3px solid #17303a; background:#fff; cursor:pointer; }
+#indice { right:28px; bottom:28px; } #crayon { right:128px; bottom:28px; } #reglage { right:228px; bottom:28px; }
+#bulle { position:absolute; right:28px; bottom:128px; width:760px; font-size:32px; line-height:1.3; background:#fffde7; border:3px solid #f6c018; border-radius:18px; padding:16px 24px; display:none; }
+.voile { position:absolute; inset:0; background:rgba(16,36,44,.72); display:none; align-items:center; justify-content:center; z-index:5; }
+.boite { background:#fff; border-radius:24px; padding:30px 44px; width:1320px; font-size:30px; }
+.boite h2 { margin:0 0 18px; font-size:42px; color:var(--talbot); }
+.ligne { display:flex; align-items:center; flex-wrap:wrap; gap:10px; margin:15px 0; }
+.ligne > span:first-child { width:300px; font-weight:700; }
+.ligne button { font:inherit; font-size:28px; padding:8px 18px; border-radius:12px; border:2px solid #90a4ae; background:#eceff1; cursor:pointer; }
+.ligne button.on { background:var(--talbot); border-color:var(--talbot); color:#fff; font-weight:700; }
+.boite input { font:inherit; font-size:34px; width:290px; padding:6px 14px; border:3px solid #90a4ae; border-radius:12px; }
+.go { font:inherit; font-size:34px; font-weight:700; padding:12px 40px; border-radius:14px; border:0; background:var(--talbot); color:#fff; cursor:pointer; margin-top:14px; }
+#apercu { color:#455a64; font-size:26px; margin-top:6px; }
+</style>
+</head>
+<body>
+<div id="scene">
+  <div id="barre">
+    <h1>📍 La droite graduée</h1>
+    <div class="onglets"><button data-o="place">Je place</button><button data-o="lis">Je lis</button></div>
+    <div id="coin"><div><span id="nom-score">Nombres bien placés</span> : <b id="score">0</b> · 🏆 Record : <b id="record">0</b></div>
+      <div id="niveaux"></div></div>
+  </div>
+  <div id="consigne"></div>
+  <svg id="dessin" viewBox="0 0 1920 560"></svg>
+  <div id="choix"></div>
+  <div id="verdict"></div>
+  <button class="rond" id="reglage" title="Les graduations">⚙</button>
+  <button class="rond" id="crayon" title="Je choisis le nombre">✏️</button>
+  <button class="rond" id="indice" title="Indice">💡</button>
+  <div id="bulle"></div>
+  <div class="voile" id="vR"><div class="boite">
+    <h2>⚙ Les graduations</h2>
+    <div class="ligne"><span>Le départ</span><input id="rDep" inputmode="decimal"></div>
+    <div class="ligne" id="rPas"><span>Entre 2 graduations</span></div>
+    <div class="ligne" id="rNb"><span>Combien de graduations</span></div>
+    <div class="ligne" id="rEcr"><span>Les nombres écrits</span></div>
+    <div class="ligne" id="rEntre"><span>Le nombre à placer</span></div>
+    <div id="apercu"></div>
+    <button class="go" id="rOk">C'est parti</button>
+  </div></div>
+  <div class="voile" id="vC"><div class="boite" style="width:900px">
+    <h2>✏️ Je choisis le nombre</h2>
+    <div class="ligne"><input id="cN" inputmode="decimal" style="width:400px"> <button class="go" id="cOk" style="margin:0">Le placer</button></div>
+    <div id="cMsg" style="color:#b71c1c"></div>
+  </div></div>
+</div>
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+// un écart : sa valeur et sa façon de s'écrire (den : en fractions ; dec : chiffres après la virgule)
+const PAS = [["1", 1], ["2", 2], ["5", 5], ["10", 10], ["20", 20], ["25", 25], ["50", 50], ["100", 100], ["200", 200], ["250", 250], ["500", 500], ["1 000", 1000], ["10 000", 10000], ["100 000", 100000], ["0,5", .5], ["0,1", .1], ["0,01", .01], ["1/2", .5, 2], ["1/4", .25, 4], ["1/8", .125, 8], ["1/10", .1, 10]];
+const NIVEAUX = {   // nom, écart, graduations, un nombre écrit toutes les k graduations, départs possibles
+  dizaines:  { nom: "Dizaines", pas: "10", nb: 10, k: 5, dep: [0, 100, 200, 300, 500, 700] },
+  centaines: { nom: "Centaines", pas: "100", nb: 10, k: 5, dep: [0, 1000, 2000, 3000, 5000, 7000] },
+  milliers:  { nom: "Milliers", pas: "1 000", nb: 10, k: 5, dep: [0, 10000, 20000, 40000] },
+  grands:    { nom: "Grands nombres", pas: "100 000", nb: 10, k: 5, dep: [0, 1000000, 2000000, 5000000] },
+  dixiemes:  { nom: "Dixièmes", pas: "0,1", nb: 10, k: 5, dep: [0, 1, 2, 3, 5] },
+  centiemes: { nom: "Centièmes", pas: "0,01", nb: 10, k: 5, dep: [0, 1, 2.5, 3.2, 4.7] },
+  quarts:    { nom: "Quarts", pas: "1/4", nb: 12, k: 4, dep: [0] }
+};
+const etat = { onglet: "place", niv: "centaines", pasK: "100", nb: 10, k: 5, dep: 0, depFixe: false, entre: false, cible: 0, i: 0, phase: "", score: 0, x: -1, derniers: [], aide: 0, tape: false };
+window.DROITE = etat;   // pour le test automatique
+const X0 = 150, X1 = 1770, Y = 330;
+const mem = { lire(k) { try { return +localStorage.getItem(k) || 0; } catch (e) { return 0; } }, ecrire(k, v) { try { localStorage.setItem(k, v); } catch (e) {} } };
+const cle = () => "droite-graduee-record-" + etat.onglet + "-" + etat.niv;
+const infoPas = () => PAS.find(p => p[0] === etat.pasK);
+const pasV = () => infoPas()[1], den = () => infoPas()[2];
+function decimales() { const v = pasV(), d = etat.dep; let n = 0; while (n < 4 && (Math.abs(Math.round(v * 10 ** n) / 10 ** n - v) > 1e-9 || Math.abs(Math.round(d * 10 ** n) / 10 ** n - d) > 1e-9)) n++; return n; }
+function ecrit(v) {   // 3 450 ; 2,75 ; 7/4
+  if (den()) { const n = Math.round(v * den()); return n % den() === 0 ? String(n / den()) : n + "/" + den(); }
+  const s = v.toFixed(decimales()), [e, d] = s.split(".");
+  return e.replace(/\B(?=(\d{3})+(?!\d))/g, " ") + (d ? "," + d : "");
+}
+const valeur = g => etat.dep + g * pasV();   // la valeur de la graduation g
+const xDe = g => X0 + (X1 - X0) * g / etat.nb;
+function afficheScore() { $("score").textContent = etat.score; $("record").textContent = mem.lire(cle()); $("nom-score").textContent = etat.onglet === "place" ? "Nombres bien placés" : "Nombres bien lus"; }
+function marque() { etat.score++; if (etat.score > mem.lire(cle())) mem.ecrire(cle(), etat.score); afficheScore(); }
+function verdict(t, c) { const v = $("verdict"); v.textContent = t; v.className = c || ""; if (c === "ko" && etat.score) { etat.score = 0; afficheScore(); } }
+function bulle(t) { const b = $("bulle"); b.textContent = t; b.style.display = "block"; clearTimeout(bulle.t); bulle.t = setTimeout(() => b.style.display = "none", 8000); }
+let attente = 0; const plusTard = f => { clearTimeout(attente); attente = setTimeout(f, 1500); };
+
+// ---------- la droite ----------
+function drapeau(x, couleur) { return '<g id="drap" transform="translate(' + x + ',0)"><line x1="0" y1="' + (Y - 150) + '" x2="0" y2="' + (Y + 2) + '" stroke="#17303a" stroke-width="7"/><path d="M0,' + (Y - 150) + ' L84,' + (Y - 122) + ' L0,' + (Y - 94) + ' Z" fill="' + (couleur || "#d32f2f") + '" stroke="#17303a" stroke-width="3"/></g>'; }
+function dessine(xDrapeau) {
+  let h = '<rect x="' + (X0 - 70) + '" y="' + (Y - 7) + '" width="' + (X1 - X0 + 140) + '" height="14" rx="7" fill="#37474f"/><path d="M' + (X1 + 70) + ',' + (Y - 22) + ' L' + (X1 + 108) + ',' + Y + ' L' + (X1 + 70) + ',' + (Y + 22) + ' Z" fill="#37474f"/>';
+  const large = (X1 - X0) / etat.nb, taille = etat.k === 1 && large < 150 ? Math.max(24, Math.min(40, large / (ecrit(valeur(etat.nb)).length * .62))) : 42;
+  for (let g = 0; g <= etat.nb; g++) {
+    const x = xDe(g), grand = g % etat.k === 0;
+    h += '<line x1="' + x + '" y1="' + (Y - (grand ? 34 : 22)) + '" x2="' + x + '" y2="' + (Y + (grand ? 34 : 22)) + '" stroke="#17303a" stroke-width="' + (grand ? 7 : 4) + '"/>';
+    if (grand) h += '<text x="' + x + '" y="' + (Y + 90) + '" text-anchor="middle" font-size="' + taille + '" font-weight="700" fill="#17303a">' + ecrit(valeur(g)) + '</text>';
+  }
+  h += drapeau(xDrapeau != null ? xDrapeau : X0 - 90, etat.phase === "bon" ? "#2e7d32" : "");
+  $("dessin").innerHTML = h;
+}
+function sur() {   // le drapeau : là où on a posé le doigt ; il s'accroche à une graduation (sauf « entre deux » : au demi-écart)
+  return etat.entre ? .5 : 1;
+}
+
+// ---------- un tour ----------
+function tireDepart() { const N = NIVEAUX[etat.niv]; if (!etat.depFixe && N && N.dep.length > 1) etat.dep = N.dep[Math.floor(Math.random() * N.dep.length)]; }
+function tireCible() {   // jamais une graduation où le nombre est déjà écrit, jamais les 6 derniers
+  const possibles = []; for (let g = 1; g < etat.nb; g += etat.entre && etat.onglet === "place" ? .5 : 1) if (etat.entre ? g % 1 !== 0 : g % etat.k !== 0) possibles.push(g);
+  const L = possibles.filter(g => !etat.derniers.includes(g)), P = L.length ? L : possibles.length ? possibles : [1];
+  const g = P[Math.floor(Math.random() * P.length)]; etat.derniers.push(g); if (etat.derniers.length > Math.min(6, possibles.length - 1)) etat.derniers.shift(); return g;
+}
+function tour() {
+  clearTimeout(attente); tireDepart(); etat.aide = 0; $("bulle").style.display = "none"; verdict(""); $("choix").innerHTML = "";
+  if (!etat.tape) etat.cible = tireCible();
+  etat.tape = false;
+  if (etat.onglet === "place") {
+    etat.phase = "place"; etat.x = -1;
+    $("consigne").innerHTML = 'Place le nombre <span class="q">' + ecrit(valeur(etat.cible)) + '</span>';
+    dessine(null);
+  } else {
+    etat.phase = "lis";
+    $("consigne").innerHTML = 'Quel nombre montre le <span class="q" style="color:#17303a;border-color:#17303a">drapeau</span> ?';
+    dessine(xDe(etat.cible));
+    const juste = etat.cible, autres = [juste - 1, juste + 1, juste - 2, juste + 2, juste + etat.k, juste - etat.k].filter(g => g >= 0 && g <= etat.nb && g % etat.k !== 0);
+    const L = [juste, ...[...new Set(autres)].sort(() => Math.random() - .5).slice(0, 2)].sort((a, b) => a - b);
+    L.forEach(g => { const b = document.createElement("button"); b.textContent = ecrit(valeur(g)); b.onclick = () => repondre(g, b); $("choix").appendChild(b); });
+  }
+}
+function repondre(g, b) {
+  if (etat.phase !== "lis") return;
+  if (g === etat.cible) { etat.phase = "bon"; b.style.background = "#c8e6c9"; marque(); verdict("✅ " + ecrit(valeur(g)), "ok"); etat.i++; plusTard(tour); }
+  else { b.style.background = "#ffcdd2"; b.disabled = true; verdict("🤪 Pars du nombre écrit le plus proche, et compte de " + etat.pasK + " en " + etat.pasK + ".", "ko"); }
+}
+function pose(x) {   // le drapeau suit le doigt, accroché à la graduation (ou à la demi-graduation) la plus proche
+  const c = Math.min(etat.nb, Math.max(0, Math.round((x - X0) / (X1 - X0) * etat.nb / sur()) * sur()));
+  etat.x = c; dessine(xDe(c));
+}
+function valide() {
+  if (etat.x < 0) return;
+  if (Math.abs(etat.x - etat.cible) < 1e-9) { etat.phase = "bon"; dessine(xDe(etat.cible)); marque(); verdict("✅ " + ecrit(valeur(etat.cible)), "ok"); etat.i++; plusTard(tour); }
+  else { const v = valeur(etat.x); verdict(etat.entre ? "🤪 Ton drapeau est à " + ecrit(v) + ". Cherche les deux graduations qui l'entourent." : "🤪 Ton drapeau est sur " + ecrit(v) + ".", "ko"); }
+}
+const svgX = ev => { const r = $("dessin").getBoundingClientRect(); return (ev.clientX - r.left) * 1920 / r.width; };
+let tient = false;
+$("dessin").addEventListener("pointerdown", ev => { if (etat.phase !== "place") return; tient = true; try { $("dessin").setPointerCapture(ev.pointerId); } catch (e) {} pose(svgX(ev)); });
+$("dessin").addEventListener("pointermove", ev => { if (tient && etat.phase === "place") pose(svgX(ev)); });
+$("dessin").addEventListener("pointerup", () => { if (!tient) return; tient = false; if (etat.phase === "place") valide(); });
+
+// ---------- 💡 : l'écart et la méthode, jamais la réponse ----------
+$("indice").onclick = () => { etat.aide++; const k = etat.k;
+  if (etat.aide === 1) bulle("Entre deux graduations, l'écart est de " + etat.pasK + ". Je le vérifie : du nombre écrit au suivant, il y a " + k + " graduation" + (k > 1 ? "s" : "") + ".");
+  else bulle("Je pars du nombre écrit juste avant, et je compte de " + etat.pasK + " en " + etat.pasK + " en avançant de graduation en graduation."); };
+
+// ---------- ⚙ les graduations ----------
+function boutons(zone, L, actif, choisir) {
+  const Z = $(zone); Z.querySelectorAll("button").forEach(b => b.remove());
+  L.forEach(([t, v]) => { const b = document.createElement("button"); b.textContent = t; b.classList.toggle("on", v === actif); b.onclick = () => { choisir(v); ouvreReglages(); }; Z.appendChild(b); });
+}
+function ouvreReglages() {
+  boutons("rPas", PAS.map(p => [p[0], p[0]]), etat.pasK, v => { lireDepart(); etat.pasK = v; });
+  boutons("rNb", [["5", 5], ["10", 10], ["12", 12], ["20", 20]], etat.nb, v => { lireDepart(); etat.nb = v; if (etat.k > v) etat.k = v; });
+  boutons("rEcr", [["tous", 1], ["1 sur 2", 2], ["1 sur 4", 4], ["1 sur 5", 5], ["1 sur 10", 10], ["début et fin", etat.nb]], etat.k, v => { lireDepart(); etat.k = v; });
+  boutons("rEntre", [["sur une graduation", false], ["entre deux graduations", true]], etat.entre, v => { lireDepart(); etat.entre = v; });
+  if (document.activeElement !== $("rDep")) $("rDep").value = String(etat.dep).replace(".", ",");
+  let t = []; for (let g = 0; g <= Math.min(etat.nb, 3); g++) t.push(ecrit(valeur(g)));
+  $("apercu").textContent = "La droite : " + t.join(" · ") + " … " + ecrit(valeur(etat.nb));
+  $("vR").style.display = "flex";
+}
+function lireDepart() { const v = parseFloat(String($("rDep").value).replace(/\s/g, "").replace(",", ".")); if (!isNaN(v)) etat.dep = v; }
+$("reglage").onclick = ouvreReglages;
+$("rDep").addEventListener("input", () => { lireDepart(); let t = []; for (let g = 0; g <= Math.min(etat.nb, 3); g++) t.push(ecrit(valeur(g))); $("apercu").textContent = "La droite : " + t.join(" · ") + " … " + ecrit(valeur(etat.nb)); });
+$("rOk").onclick = () => { lireDepart(); etat.depFixe = true; etat.niv = "libre"; etat.derniers = []; etat.score = 0; $("vR").style.display = "none"; marqueNiveau(); afficheScore(); tour(); };
+$("vR").addEventListener("pointerdown", ev => { if (ev.target.id === "vR") $("vR").style.display = "none"; });
+
+// ---------- ✏️ je choisis le nombre ----------
+$("crayon").onclick = () => { $("cMsg").textContent = ""; $("cN").value = ""; $("vC").style.display = "flex"; setTimeout(() => $("cN").focus(), 30); };
+$("vC").addEventListener("pointerdown", ev => { if (ev.target.id === "vC") $("vC").style.display = "none"; });
+function lireNombre(t) { t = String(t).replace(/\s/g, ""); const f = /^(\d+)\/(\d+)$/.exec(t); return f ? +f[1] / +f[2] : parseFloat(t.replace(",", ".")); }
+function placerChoisi() {
+  const v = lireNombre($("cN").value); if (isNaN(v)) { $("cMsg").textContent = "Écris un nombre."; return; }
+  const g = (v - etat.dep) / pasV(), arrondi = Math.round(g * 2) / 2;
+  if (Math.abs(g - arrondi) > 1e-6 || arrondi < 0 || arrondi > etat.nb) { $("cMsg").textContent = "Ce nombre n'est pas sur cette droite : elle va de " + ecrit(valeur(0)) + " à " + ecrit(valeur(etat.nb)) + ", de " + etat.pasK + " en " + etat.pasK + ". Change les graduations avec ⚙."; return; }
+  if (arrondi % 1 !== 0) etat.entre = true;
+  etat.cible = arrondi; etat.tape = true; etat.depFixe = true; $("vC").style.display = "none"; tour();
+}
+$("cOk").onclick = placerChoisi;
+$("cN").addEventListener("keydown", ev => { if (ev.key === "Enter") placerChoisi(); });
+
+// ---------- onglets, niveaux, liens ----------
+function marqueNiveau() {
+  document.querySelectorAll(".onglets button").forEach(b => b.classList.toggle("on", b.dataset.o === etat.onglet));
+  document.querySelectorAll("#niveaux button").forEach(b => b.classList.toggle("on", b.dataset.n === etat.niv));
+}
+function ouvre(o, n) {
+  etat.onglet = o; if (n && NIVEAUX[n]) { const N = NIVEAUX[n]; etat.niv = n; etat.pasK = N.pas; etat.nb = N.nb; etat.k = N.k; etat.dep = N.dep[0]; etat.depFixe = false; etat.entre = false; }
+  if (etat.onglet === "lis") etat.entre = false;
+  etat.score = 0; etat.i = 0; etat.derniers = []; marqueNiveau(); afficheScore(); tour();
+}
+Object.keys(NIVEAUX).forEach(n => { const b = document.createElement("button"); b.dataset.n = n; b.textContent = NIVEAUX[n].nom; b.onclick = () => ouvre(etat.onglet, n); $("niveaux").appendChild(b); });
+document.querySelectorAll(".onglets button").forEach(b => b.onclick = () => ouvre(b.dataset.o));
+function ajuste() { const e = Math.min(innerWidth / 1920, innerHeight / 1080), s = $("scene"); s.style.transform = "scale(" + e + ")"; s.style.left = ((innerWidth - 1920 * e) / 2) + "px"; s.style.top = ((innerHeight - 1080 * e) / 2) + "px"; }
+addEventListener("resize", ajuste); ajuste();
+function depuisLien() { const m = /^(lis-)?(.*)$/.exec(location.hash.slice(1)); ouvre(m[1] ? "lis" : "place", NIVEAUX[m[2]] ? m[2] : "centaines"); }
+addEventListener("hashchange", depuisLien);
+depuisLien();
+</script>
+</body>
+</html>

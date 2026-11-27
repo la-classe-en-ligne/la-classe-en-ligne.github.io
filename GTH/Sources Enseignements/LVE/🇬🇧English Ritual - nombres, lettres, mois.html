@@ -1,0 +1,984 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>English Ritual</title>
+<style>
+  :root {
+    --ink: #1c2b3a;
+    --accent: #2b6cb0;
+    --accent-dark: #1d4e80;
+    --accent2: #e8792a;
+    --muted: #63758a;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    height: 100%;
+    margin: 0;
+  }
+  body {
+    font-family: "Segoe UI", Verdana, sans-serif;
+    background: linear-gradient(160deg, #dff2ff 0%, #fff4d9 100%);
+    color: var(--ink);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    overflow: hidden;
+  }
+  h1 {
+    position: fixed;
+    top: 22px;
+    font-size: clamp(1.8rem, 4.4vw, 2.8rem);
+    margin: 0;
+    z-index: 2;
+    text-shadow: 0 2px 4px rgba(255,255,255,0.6);
+  }
+  .bg-scene {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    z-index: 0;
+    pointer-events: none;
+    opacity: 0.5;
+  }
+  #menuBtn {
+    position: fixed;
+    top: 18px;
+    right: 18px;
+    border: none;
+    background: rgba(255,255,255,0.7);
+    color: var(--ink);
+    border-radius: 10px;
+    width: 42px;
+    height: 42px;
+    font-size: 1.3rem;
+    cursor: pointer;
+    z-index: 21;
+  }
+  #menuPanel {
+    display: none;
+    position: fixed;
+    top: 64px;
+    right: 18px;
+    background: white;
+    border-radius: 14px;
+    box-shadow: 0 10px 30px rgba(20,40,70,0.2);
+    padding: 16px;
+    z-index: 20;
+    width: 270px;
+  }
+  #menuPanel.open { display: block; }
+  #menuPanel .row { margin-bottom: 12px; }
+  #menuPanel label { font-size: 0.85rem; color: var(--muted); display: block; margin-bottom: 4px; }
+  #menuPanel select { width: 100%; padding: 6px; border-radius: 8px; border: 1px solid #cbd8e6; }
+  #menuPanel .help { font-size: 0.78rem; color: var(--muted); line-height: 1.4; }
+  #menuPanel .mode-choice { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }   /* 6 modes : deux lignes de trois (11/10) */
+  #menuPanel .mode-choice button {
+    flex: 1; border: none; border-radius: 8px; padding: 8px 4px; font-size: 0.74rem; cursor: pointer;
+    background: #eef2f7; color: var(--ink);
+  }
+  #menuPanel .mode-choice button.active { background: var(--accent); color: white; }
+
+  .stage {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 18px;
+    position: relative;
+    z-index: 1;
+  }
+  .board {
+    background: linear-gradient(160deg, #17324a, #0e2033);
+    border-radius: 26px;
+    padding: 40px 50px;
+    min-width: 320px;
+    min-height: 220px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    box-shadow: inset 0 0 0 6px #0a1826, 0 10px 30px rgba(0,0,0,0.25);
+  }
+  .word-display {
+    font-size: clamp(2.4rem, 8vw, 4.4rem);
+    font-weight: 800;
+    color: #ffd27a;
+    text-shadow: 0 2px 0 rgba(0,0,0,.25);
+  }
+  .digit-display {
+    font-size: clamp(4.6rem, 17vw, 9rem);
+    font-weight: 900;
+    color: #ffffff;
+    min-height: 1.2em;
+  }
+  .digit-display.hidden-answer, .word-display.hidden-answer {
+    color: transparent;
+    background: repeating-linear-gradient(45deg, #26445e, #26445e 12px, #1c3549 12px, #1c3549 24px);
+    border-radius: 18px;
+    -webkit-background-clip: text;
+    background-clip: text;
+    padding: 0 20px;
+  }
+  .word-display.reveal-pop { animation: revealPop .3s ease; }
+  .board.pop { animation: boardPop .45s cubic-bezier(.34,1.56,.64,1); }
+  @keyframes boardPop {
+    0% { transform: scale(0.85) rotate(-2deg); opacity: 0.3; }
+    60% { transform: scale(1.05) rotate(1deg); opacity: 1; }
+    100% { transform: scale(1) rotate(0); }
+  }
+  .digit-display.reveal-pop { animation: revealPop .3s ease; }
+  @keyframes revealPop {
+    0% { transform: scale(0.6); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+
+  .voice-warning {
+    font-size: 0.78rem;
+    color: #ffb3b3;
+    max-width: 260px;
+    text-align: center;
+    margin-top: 4px;
+    display: none;
+  }
+
+  .guess-feedback { text-align: center; }
+  .guess-feedback-en {
+    font-size: clamp(1.7rem, 6vw, 3rem);
+    font-weight: 900;
+    color: #ffd27a;
+    min-height: 1.3em;
+  }
+  .guess-feedback-fr {
+    font-size: clamp(.9rem, 2.2vw, 1.15rem);
+    color: rgba(255,255,255,0.75);
+  }
+  .guess-count {
+    color: rgba(255,255,255,0.55);
+    font-size: 0.85rem;
+    margin-top: 2px;
+    text-align: center;
+  }
+  .guess-grid {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 7px;
+    margin-top: 10px;
+  }
+  .guess-grid button {
+    width: 42px;
+    height: 42px;
+    border-radius: 10px;
+    border: none;
+    background: rgba(255,255,255,0.9);
+    color: var(--ink);
+    font-weight: 700;
+    font-size: 0.95rem;
+    cursor: pointer;
+    box-shadow: 0 3px 8px rgba(20,40,70,0.18);
+    transition: transform .1s ease, opacity .2s ease;
+  }
+  .guess-grid button:active { transform: scale(0.9); }
+  .guess-grid button.toolow { outline: 3px solid var(--accent2); }
+  .guess-grid button.toohigh { outline: 3px solid #4d9de0; }
+  .guess-grid button.correct {
+    background: linear-gradient(135deg,#5fd97a,#2fa84f);
+    color: white;
+    outline: none;
+    animation: revealPop .3s ease;
+  }
+
+  .months-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 7px;
+    margin-top: 10px;
+  }
+  .months-grid button {
+    padding: 10px 6px;
+    border-radius: 10px;
+    border: none;
+    background: rgba(255,255,255,0.9);
+    color: var(--ink);
+    font-weight: 700;
+    font-size: 0.82rem;
+    cursor: pointer;
+    box-shadow: 0 3px 8px rgba(20,40,70,0.18);
+    transition: transform .1s ease, opacity .2s ease;
+  }
+  .months-grid button:active { transform: scale(0.9); }
+  .months-grid button.toolow { outline: 3px solid var(--accent2); }
+  .months-grid button.toohigh { outline: 3px solid #4d9de0; }
+  .months-grid button.correct {
+    background: linear-gradient(135deg,#5fd97a,#2fa84f);
+    color: white;
+    outline: none;
+    animation: revealPop .3s ease;
+  }
+
+  /* Écrans larges (vidéoprojecteur, grand moniteur) : grilles et tableau plus grands pour
+     utiliser l'espace disponible sur les côtés. */
+  @media (min-width: 1200px){
+    .board{ padding: 56px 70px; min-width: 440px; }
+    .guess-grid{ gap: 10px; }
+    .guess-grid button{ width: 58px; height: 58px; font-size: 1.15rem; }
+    .months-grid{ gap: 10px; }
+    .months-grid button{ padding: 16px 10px; font-size: 1rem; }
+  }
+  @media (min-width: 1700px){
+    .guess-grid button{ width: 70px; height: 70px; font-size: 1.3rem; }
+    .months-grid button{ padding: 20px 12px; font-size: 1.15rem; }
+  }
+
+  .taps {
+    display: flex;
+    gap: 22px;
+  }
+  .tap {
+    background: rgba(255,255,255,0.75);
+    border: none;
+    border-radius: 50%;
+    width: 62px;
+    height: 62px;
+    font-size: 1.7rem;
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(20,40,70,0.18);
+    transition: transform .1s ease;
+  }
+  .tap:active { transform: scale(0.9); }
+  .tap.main { background: linear-gradient(135deg, #4d9de0, var(--accent-dark)); color: white; width: 78px; height: 78px; font-size: 2.1rem; }
+
+  /* ---- Bingo : machine de loto (sphère transparente, boules qui tournent, une boule sort) ---- */
+  #bingoStage { display: none; flex-direction: row; align-items: center; gap: 46px; }
+  .loto { position: relative; width: 300px; height: 330px; }
+  .globe { position: absolute; left: 10px; top: 0; width: 280px; height: 280px; border-radius: 50%;
+    background: radial-gradient(circle at 32% 28%, rgba(255,255,255,.55), rgba(255,255,255,.08) 38%, rgba(160,210,255,.10) 70%, rgba(255,255,255,.22));
+    border: 5px solid rgba(220,235,255,.75); box-shadow: inset 0 -18px 30px rgba(0,0,0,.25), 0 10px 26px rgba(0,0,0,.35); overflow: hidden; }
+  .globe.tourne { animation: globeTourne .35s linear infinite; }
+  @keyframes globeTourne { 0% { transform: rotate(-3deg); } 50% { transform: rotate(3deg); } 100% { transform: rotate(-3deg); } }
+  .pied { position: absolute; left: 110px; top: 272px; width: 80px; height: 58px; background: linear-gradient(#c9a24a, #8a6a22);
+    clip-path: polygon(22% 0, 78% 0, 100% 100%, 0 100%); border-radius: 6px; }
+  .bille { position: absolute; width: 38px; height: 38px; border-radius: 50%; transition: left .16s ease, top .16s ease;
+    box-shadow: inset -5px -6px 8px rgba(0,0,0,.28), inset 4px 4px 6px rgba(255,255,255,.55); }
+  .c1 { background: #e5484d; } .c2 { background: #f5b83d; } .c3 { background: #3e8ed0; } .c4 { background: #3fb36b; }
+  .sortie { display: flex; flex-direction: column; align-items: center; gap: 14px; width: 380px; }
+  .grosse-boule { width: 250px; height: 250px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    box-shadow: inset -18px -22px 30px rgba(0,0,0,.28), inset 12px 12px 22px rgba(255,255,255,.55), 0 14px 26px rgba(0,0,0,.35); }
+  .grosse-boule.vide { background: rgba(255,255,255,.08); box-shadow: inset 0 0 0 4px rgba(255,255,255,.25); }
+  .grosse-boule .rond { width: 70%; height: 70%; border-radius: 50%; background: #fff; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; color: #1c2b3a; box-shadow: inset 0 3px 8px rgba(0,0,0,.15); text-align: center; }
+  .grosse-boule .mot { font-size: 2.1rem; font-weight: 900; line-height: 1.05; padding: 0 8px; word-break: break-word; }
+  .grosse-boule .chiffre { font-size: 1.5rem; font-weight: 800; color: #63758a; min-height: 1.2em; }
+  .grosse-boule.arrive { animation: bouleArrive .75s cubic-bezier(.34,1.3,.64,1); }
+  @keyframes bouleArrive { 0% { transform: translate(-260px, 40px) scale(.15) rotate(-200deg); } 70% { transform: translate(0,0) scale(1.08) rotate(10deg); } 100% { transform: scale(1) rotate(0); } }
+  .sortis { display: flex; flex-wrap: wrap; gap: 8px; max-width: 380px; justify-content: center; min-height: 150px; align-content: flex-start; }
+  .sortis .mini { min-width: 42px; height: 42px; padding: 0 8px; border-radius: 21px; color: #fff; font-weight: 800; font-size: .95rem;
+    display: flex; align-items: center; justify-content: center; box-shadow: inset -3px -4px 6px rgba(0,0,0,.25); }
+  .restant { color: #9fc3e0; font-size: 1rem; font-weight: 700; }
+  /* 📅 La date (11/10, refait sobre : pas de cadres blancs, des mots en couleur sur le fond sombre, des traits à remplir) */
+  #dateStage { grid-template-columns: auto 1fr auto; align-items: center; gap: 30px; width: min(1500px, 90vw); }
+  .date-centre { display: flex; flex-direction: column; align-items: center; gap: 18px; min-width: 0; }
+  .date-cote { display: flex; flex-direction: column; gap: 6px; align-items: stretch; min-width: 0; }
+  .date-cote .date-tuile { text-align: center; }
+  #dDroite { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  body.mode-date { justify-content: flex-start; padding-top: 96px; }
+  body.mode-date .board { padding: 26px 30px; max-width: 94vw; }
+  .date-fr { font-size: 1.25rem; font-weight: 700; color: #b8c6d6; }
+  .date-ligne { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: center; gap: 10px; font-size: clamp(1.6rem, 2.6vw, 2.4rem); font-weight: 800; min-height: 64px; color: #fff; }
+  .date-ligne .fixe { color: #ffffff; }
+  .date-case { min-width: 90px; height: 1.3em; padding: 0 4px; border: none; border-bottom: 3px dashed rgba(255,255,255,.55); display: inline-flex; align-items: flex-end; justify-content: center; color: #fff; background: none; }
+  .date-case.petite { min-width: 54px; }
+  .date-case.survol { border-bottom-color: #f4c430; background: rgba(244,196,48,.12); }
+  .date-case.pleine { border-bottom: none; min-width: 0; padding: 0 2px; }
+  .date-case.pleine.petite { min-width: 0; }
+  .date-ligne .colle { margin-left: -10px; }   /* la virgule et le point collés au mot */
+  .date-case.pleine.colle-si-plein { margin-left: -16px; }   /* 12th : la terminaison collée au nombre */
+  .date-tuiles { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 10px; max-width: 1300px; }
+  .date-tuiles.groupes { flex-direction: column; align-items: center; gap: 14px; }
+  .date-groupe { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 10px; }
+  .date-colonnes { display: grid; grid-template-columns: 1fr 1.6fr; gap: 40px; width: 100%; }
+  .date-colonne { padding: 0; } .date-colonne h4 { display: none; }
+  .date-tuile { font-size: clamp(1.05rem, 1.5vw, 1.4rem); font-weight: 800; padding: 4px 12px; border-radius: 10px; background: rgba(255,255,255,.08); border: none; color: #e9eef5; cursor: grab; touch-action: none; user-select: none; }
+  /* les couleurs (11/10) : les jours en bleu ; les mois selon leur saison ; the / of gris clair ; le nombre blanc ; la terminaison rose */
+  .date-tuile.jour { color: #9cc7ff; } .date-tuile.the, .date-tuile.of { color: #d5dbe3; } .date-tuile.nombre { color: #ffffff; } .date-tuile.suffixe { color: #ff9ad0; }
+  .date-tuile.mois.hiver { color: #bfeaff; } .date-tuile.mois.printemps { color: #9be59b; } .date-tuile.mois.ete { color: #ffd966; } .date-tuile.mois.automne { color: #ffa25a; }
+  .date-tuile:hover { background: rgba(255,255,255,.16); }
+  .date-tuile.parti, .date-tuile.posee { visibility: hidden; }
+  .date-tuile.choisie { outline: 3px solid #f4c430; outline-offset: 2px; }
+  .date-tuile.secoue { animation: secoueDate .4s ease; }
+  @keyframes secoueDate { 0%,100% { transform: none } 25% { transform: translateX(-8px) } 75% { transform: translateX(8px) } }
+  .date-vol { position: fixed; z-index: 99; pointer-events: none; transform: scale(1.05); }
+  .date-msg { font-size: 1.4rem; font-weight: 800; min-height: 2rem; color: #fff; }
+  .date-msg.bien { color: #ffffff; } .date-msg.faux { color: #ff9a9a; }
+  #dateExemple { position: fixed; inset: 0; z-index: 500; background: rgba(13,27,45,.94); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 28px; color: #fff; cursor: pointer; }
+  #dateExemple .ex-titre { font-size: 1.6rem; font-weight: 800; color: #f4c430; }
+  #dateExemple .ex-ligne { font-size: clamp(2rem, 4.2vw, 3.8rem); font-weight: 800; text-align: center; }
+  #dateExemple .j { color: #9cc7ff; } #dateExemple .o { color: #d5dbe3; } #dateExemple .n { color: #ffffff; } #dateExemple .s { color: #ff9ad0; }
+  #dateExemple .m.hiver { color: #bfeaff; } #dateExemple .m.printemps { color: #9be59b; } #dateExemple .m.ete { color: #ffd966; } #dateExemple .m.automne { color: #ffa25a; }
+  #dateExemple .ex-fermer { font-size: 1.1rem; color: #b8c6d6; }
+  .date-tuile.secoue { animation: secoueDate .4s ease; }
+  @keyframes secoueDate { 0%,100% { transform: none } 25% { transform: translateX(-10px) } 75% { transform: translateX(10px) } }
+  .date-vol { position: fixed; z-index: 99; pointer-events: none; transform: rotate(-4deg) scale(1.05); }
+  @media (max-width: 900px) { #bingoStage { flex-direction: column; gap: 10px; } .loto { transform: scale(.75); margin: -40px 0; } }
+</style>
+</head>
+<body>
+
+  <h1>
+    <svg class="icone-uk" viewBox="0 0 60 36" width="34" height="20" style="vertical-align:-4px" aria-hidden="true">
+      <rect width="60" height="36" fill="#00247d"/>
+      <path d="M0,0 L60,36 M60,0 L0,36" stroke="#fff" stroke-width="6"/>
+      <path d="M0,0 L60,36 M60,0 L0,36" stroke="#cf142b" stroke-width="2"/>
+      <path d="M30,0 V36 M0,18 H60" stroke="#fff" stroke-width="10"/>
+      <path d="M30,0 V36 M0,18 H60" stroke="#cf142b" stroke-width="6"/>
+    </svg>
+    <span id="titreMode">English Ritual</span>
+  </h1>
+  <button id="menuBtn">☰</button>
+  <div id="menuPanel">
+    <div class="row mode-choice">
+      <button data-mode="listen">🔊 Écoute</button>
+      <button data-mode="spell">🔤 Lettres</button>
+      <button class="active" data-mode="guess">🎯 Devine</button>
+      <button data-mode="months">🗓️ Mois mystère</button>
+      <button data-mode="bingo">🎱 Bingo</button>
+      <button data-mode="date">📅 La date</button>
+    </div>
+    <div class="row">
+      <label>Voix anglaise (mode Écoute)</label>
+      <select id="voiceSelect"></select>
+    </div>
+    <div class="row help" id="helpText"></div>
+  </div>
+
+  <div class="stage">
+    <div class="board" id="board">
+      <div id="listenStage" style="display:none;">
+        <div class="speaker" id="speakerIcon">🔊</div>
+        <div class="digit-display hidden-answer" id="listenAnswer">?</div>
+        <div class="voice-warning" id="voiceWarning">🔇 Cette voix a besoin d'internet — indisponible hors connexion. Choisissez une voix 🔌 (locale) dans le menu, ou passez au mode 🎯 Devine (aucun son requis).</div>
+      </div>
+      <div id="spellStage" style="display:none;">
+        <div class="digit-display" id="spellPromptDigit">27</div>
+        <div class="word-display hidden-answer" id="spellAnswer">?</div>
+      </div>
+      <div id="guessStage" style="display:flex; flex-direction:column; align-items:center;">
+        <div class="guess-feedback">
+          <div class="guess-feedback-en" id="guessFeedbackEn">🤔 ?</div>
+          <div class="guess-feedback-fr" id="guessFeedbackFr">Devine un nombre entre 0 et 31 !</div>
+        </div>
+        <div class="guess-count" id="guessCount">Essais : 0</div>
+        <div class="guess-grid" id="guessGrid"></div>
+      </div>
+      <div id="monthsStage" style="display:none; flex-direction:column; align-items:center;">
+        <div class="guess-feedback">
+          <div class="guess-feedback-en" id="monthsFeedbackEn">🤔 ?</div>
+          <div class="guess-feedback-fr" id="monthsFeedbackFr">Devine le mois mystère !</div>
+        </div>
+        <div class="guess-count" id="monthsCount">Essais : 0</div>
+        <div class="months-grid" id="monthsGrid"></div>
+      </div>
+      <!-- 📅 La date (11/10, Karim) : la question à remettre dans l'ordre, puis la réponse à compléter (jour, mois, nombre, st/nd/rd/th) -->
+      <div id="dateStage" style="display:none;">
+        <div class="date-cote" id="dGauche"></div>
+        <div class="date-centre">
+          <div class="date-fr" id="dateFr"></div>
+          <div class="date-ligne" id="qLigne"></div>
+          <div class="date-tuiles" id="qTuiles"></div>
+          <div class="date-ligne" id="rLigne" hidden></div>
+          <div class="date-tuiles groupes" id="rTuiles" hidden></div>
+          <div class="date-msg" id="dateMsg"></div>
+        </div>
+        <div class="date-cote" id="dDroite"></div>
+      </div>
+      <div id="bingoStage">
+        <div class="loto"><div class="globe" id="globe"></div><div class="pied"></div></div>
+        <div class="sortie">
+          <div class="grosse-boule vide" id="grosseBoule"></div>
+          <div class="restant" id="restant"></div>
+          <div class="sortis" id="sortis"></div>
+        </div>
+      </div>
+    </div>
+    <div class="taps">
+      <button class="tap" id="btnReplay" title="Réécouter" style="display:none;">🔊</button>
+      <button class="tap main" id="btnNew" title="Nouveau">🎲</button>
+      <button class="tap" id="btnReveal" title="Afficher la réponse" style="display:none;">👁️</button>
+      <button class="tap" id="btnExemple" title="Voir un exemple avec une autre date" style="display:none;">💡</button>
+      <button class="tap" id="btnBingoNouveau" title="Nouvelle partie : toutes les boules reviennent" style="display:none;">🔁</button>
+    </div>
+  </div>
+
+<script>
+  const WORDS = ["zero","one","two","three","four","five","six","seven","eight","nine","ten",
+    "eleven","twelve","thirteen","fourteen","fifteen","sixteen","seventeen","eighteen","nineteen","twenty",
+    "twenty-one","twenty-two","twenty-three","twenty-four","twenty-five","twenty-six","twenty-seven",
+    "twenty-eight","twenty-nine","thirty","thirty-one"];
+
+  const MONTHS = ["January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"];
+
+  const MODE_TITRE = {
+    listen: "🔊 Listen",
+    spell: "🔤 Spell",
+    guess: "🎯 Guess",
+    months: "🗓️ Mystery Month",
+    date: "📅 Quelle est la date aujourd'hui ?",   // en français : le titre ne donne pas la question à remettre dans l'ordre (Karim, 11/10)
+    bingo: "🎱 Bingo"
+  };
+
+  const HELP = {
+    date: "La date → d'abord, remettre dans l'ordre les mots de la question « What's the date today? » (glisser chaque mot dans sa case, dans l'ordre qu'on veut, ou toucher le mot puis sa case). Puis compléter la réponse « Today is Monday, the 12th of October. » : le jour, le nombre et sa terminaison (st, nd, rd, th), le mois. Au départ, la date du jour ; 🎲 tire une autre date pour s'entraîner.",
+    listen: "Écoute → un nombre est prononcé, les élèves écrivent le chiffre sur l'ardoise. 🎲 tire un nouveau nombre, 👁️ affiche/masque la réponse. ⚠️ Nécessite une voix anglaise qui fonctionne hors connexion (voir menu Voix ci-dessus, préférez une voix marquée 🔌).",
+    spell: "Lettres → un chiffre est affiché, les élèves écrivent le nombre en toutes lettres en anglais. 🎲 tire un nouveau nombre, 👁️ affiche/masque l'orthographe attendue. Aucun son requis.",
+    guess: "Devine → un nombre secret entre 0 et 31 est tiré. Un élève propose un nombre à l'oral en anglais (\"Is it fifteen?\"), vous tapez ce nombre dans la grille : l'appli répond Higher/Lower jusqu'à la bonne réponse. 🎲 lance une nouvelle partie. Fonctionne sans son et sans connexion internet.",
+    months: "Mois mystère → un mois secret de l'année est tiré parmi les 12. Un élève propose un mois à l'oral en anglais (\"Is it April?\"), vous tapez ce mois dans la grille : l'appli répond Earlier/Later (avant/après dans l'année) jusqu'à la bonne réponse. 🎲 lance une nouvelle partie. Fonctionne sans son et sans connexion internet."
+  };
+
+  HELP.bingo = "Bingo → 🎲 fait tourner la machine : une boule sort, avec le nombre écrit en anglais (et dit à voix haute si une voix anglaise marche). Les élèves cherchent le nombre sur leur grille. 👁️ affiche aussi les chiffres, pour vérifier la grille d'un gagnant. 🔊 redit le nombre, 🔁 remet les 20 boules dans la machine.";
+  let mode = "guess";
+  let current = null;
+  let lastNumber = null;
+  let revealed = false;
+  let voices = [];
+
+  const board = document.getElementById("board");
+  const listenStage = document.getElementById("listenStage");
+  const spellStage = document.getElementById("spellStage");
+  const guessStage = document.getElementById("guessStage");
+  const listenAnswer = document.getElementById("listenAnswer");
+  const spellAnswer = document.getElementById("spellAnswer");
+  const spellPromptDigit = document.getElementById("spellPromptDigit");
+  const speakerIcon = document.getElementById("speakerIcon");
+  const voiceWarning = document.getElementById("voiceWarning");
+  const btnReveal = document.getElementById("btnReveal");
+  const btnReplay = document.getElementById("btnReplay");
+  const voiceSelect = document.getElementById("voiceSelect");
+  const menuBtn = document.getElementById("menuBtn");
+  const menuPanel = document.getElementById("menuPanel");
+  const helpText = document.getElementById("helpText");
+  const guessGrid = document.getElementById("guessGrid");
+  const guessFeedbackEn = document.getElementById("guessFeedbackEn");
+  const guessFeedbackFr = document.getElementById("guessFeedbackFr");
+  const guessCount = document.getElementById("guessCount");
+  const monthsStage = document.getElementById("monthsStage");
+  const monthsGrid = document.getElementById("monthsGrid");
+  const monthsFeedbackEn = document.getElementById("monthsFeedbackEn");
+  const monthsFeedbackFr = document.getElementById("monthsFeedbackFr");
+  const monthsCount = document.getElementById("monthsCount");
+
+  menuBtn.addEventListener("click", () => menuPanel.classList.toggle("open"));
+  document.addEventListener("click", (e) => {
+    if (!menuPanel.contains(e.target) && e.target !== menuBtn) menuPanel.classList.remove("open");
+  });
+
+  document.querySelectorAll("#menuPanel .mode-choice button").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll("#menuPanel .mode-choice button").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      mode = btn.dataset.mode;
+      listenStage.style.display = mode === "listen" ? "flex" : "none";
+      spellStage.style.display = mode === "spell" ? "flex" : "none";
+      guessStage.style.display = mode === "guess" ? "flex" : "none";
+      monthsStage.style.display = mode === "months" ? "flex" : "none";
+      document.getElementById("bingoStage").style.display = mode === "bingo" ? "flex" : "none";
+      document.getElementById("dateStage").style.display = mode === "date" ? "grid" : "none";
+      document.body.classList.toggle("mode-date", mode === "date");
+      try { window.speechSynthesis.cancel(); } catch (e) {}
+      document.getElementById("btnExemple").style.display = mode === "date" ? "inline-block" : "none";
+      document.getElementById("btnBingoNouveau").style.display = mode === "bingo" ? "inline-block" : "none";
+      btnReplay.style.display = (mode === "listen" || mode === "bingo") ? "inline-block" : "none";
+      btnReveal.style.display = (mode === "guess" || mode === "months" || mode === "date") ? "none" : "inline-block";
+      helpText.textContent = HELP[mode];
+      document.getElementById("titreMode").textContent = MODE_TITRE[mode];
+      if (mode === "guess") startGuessGame();
+      else if (mode === "months") startMonthsGame();
+      else if (mode === "bingo") { if (!bingo.billes.length && !bingo.sortis.length) nouvellePartieBingo(); else rendreBingo(); }
+      else if (mode === "date") lancerDate(new Date());
+      else pickNumber();
+    });
+  });
+  helpText.textContent = HELP[mode];
+  document.getElementById("titreMode").textContent = MODE_TITRE[mode];
+
+  // ---- 📅 La date ----
+  const JOURS_EN = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  const JOURS_FR = ["dimanche", "lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi"];
+  const MOIS_FR = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"];
+  const QUESTION = ["What's", "the", "date", "today", "?"];
+  function saison(k) { return [11, 0, 1].indexOf(k) !== -1 ? "hiver" : k <= 4 ? "printemps" : k <= 7 ? "ete" : "automne"; }   // déc.-fév., mars-mai, juin-août, sept.-nov.
+  function suffixe(n) { if (n % 100 >= 11 && n % 100 <= 13) return "th"; return n % 10 === 1 ? "st" : n % 10 === 2 ? "nd" : n % 10 === 3 ? "rd" : "th"; }
+  function dateAuHasard() { const d = new Date(2026, 8 + Math.floor(Math.random() * 10), 1); d.setDate(1 + Math.floor(Math.random() * 28)); return d; }
+  let dateCible = null, dateEtape = "question", dateQ = 0;
+  const elD = id => document.getElementById(id);
+  function melangerDate(t) { t = t.slice(); for (let i = t.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [t[i], t[j]] = [t[j], t[i]]; } return t; }
+  function msgDate(t, c) { const m = elD("dateMsg"); m.textContent = t; m.className = "date-msg" + (c ? " " + c : ""); }
+  function tuileDate(texte, classe, valeur) {
+    const t = document.createElement("div"); t.className = "date-tuile " + (classe || ""); t.textContent = texte; t.dataset.v = valeur || texte; if (classe) t.dataset.type = classe; glisserDate(t); return t; }
+  function lancerDate(d) {
+    try { window.speechSynthesis.cancel(); } catch (e) {}
+    dateCible = d; dateEtape = "question"; dateQ = 0; msgDate("");
+    elD("dateFr").textContent = JOURS_FR[d.getDay()] + " " + d.getDate() + " " + MOIS_FR[d.getMonth()] + " " + d.getFullYear();
+    elD("qLigne").innerHTML = QUESTION.map((w, i) => '<span class="date-case' + (w === "?" ? " petite" : "") + '" data-i="' + i + '"></span>').join("");
+    elD("qTuiles").innerHTML = ""; elD("qTuiles").hidden = false;
+    melangerDate(QUESTION).forEach(w => elD("qTuiles").appendChild(tuileDate(w, "", w)));
+    elD("rLigne").hidden = true; elD("rTuiles").hidden = true; elD("dGauche").innerHTML = ""; elD("dDroite").innerHTML = "";
+  }
+  function lancerReponse() {
+    dateEtape = "reponse"; elD("qTuiles").hidden = true;
+    elD("rLigne").innerHTML = '<span class="fixe">Today is</span><span class="date-case" data-type="jour"></span><span class="fixe colle">,</span><span class="date-case petite" data-type="the"></span>' +
+      '<span class="date-case petite" data-type="nombre"></span><span class="date-case petite colle-si-plein" data-type="suffixe"></span><span class="date-case petite" data-type="of"></span><span class="date-case" data-type="mois"></span><span class="fixe colle">.</span>';
+    elD("rLigne").hidden = false; const box = elD("rTuiles"); box.innerHTML = ""; box.hidden = false;
+    const d = dateCible.getDate();
+    elD("dGauche").innerHTML = ""; ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"].forEach(j => elD("dGauche").appendChild(tuileDate(j, "jour")));
+    elD("dDroite").innerHTML = ""; [0, 6, 1, 7, 2, 8, 3, 9, 4, 10, 5, 11].forEach(k => { const t = tuileDate(MONTHS[k], "mois"); t.classList.add(saison(k)); elD("dDroite").appendChild(t); });   // deux colonnes : janvier → juin | juillet → décembre
+    const groupe = items => { const g = document.createElement("div"); g.className = "date-groupe"; items.forEach(x => g.appendChild(x)); box.appendChild(g); };
+    const nombres = [d]; while (nombres.length < 4) { const x = 1 + Math.floor(Math.random() * 31); if (nombres.indexOf(x) === -1) nombres.push(x); }
+    groupe([tuileDate("the", "the"), tuileDate("of", "of")].concat(nombres.sort((a, b) => a - b).map(x => tuileDate(String(x), "nombre")), ["st", "nd", "rd", "th"].map(x => tuileDate(x, "suffixe"))));
+    msgDate("");   // Karim (11/10) : pas de consigne à l'écran
+  }
+  function bonne(type) { const d = dateCible; if (type === "the" || type === "of") return type; return type === "jour" ? JOURS_EN[d.getDay()] : type === "mois" ? MONTHS[d.getMonth()] : type === "nombre" ? String(d.getDate()) : suffixe(d.getDate()); }
+  // poser une tuile dans une case (glisser), ou toucher la tuile : elle va dans la case qui l'attend
+  function poserDate(t, caseVisee) {
+    if (dateEtape === "question") {
+      const c = caseVisee;   // le mot va dans la case choisie, dans n'importe quel ordre ; il faut que ce soit SA case
+      if (!c || c.classList.contains("pleine") || t.dataset.v !== QUESTION[+c.dataset.i]) { t.classList.remove("secoue"); void t.offsetWidth; t.classList.add("secoue"); msgDate("🤪", "faux"); return; }
+      c.textContent = t.dataset.v; c.style.color = getComputedStyle(t).color; c.classList.add("pleine"); t.remove(); dateQ++; msgDate("");
+      if (dateQ === QUESTION.length && dateEtape === "question") { dateEtape = "pause"; msgDate("✅ What's the date today?", "bien"); try { speakPhrase("What's the date today?"); } catch (e) {} setTimeout(lancerReponse, 1200); }
+      return;
+    }
+    const type = t.dataset.type, c = elD("rLigne").querySelector('.date-case[data-type="' + type + '"]');
+    if (!c || c.classList.contains("pleine") || (caseVisee && caseVisee !== c) || t.dataset.v !== bonne(type)) {
+      t.classList.remove("secoue"); void t.offsetWidth; t.classList.add("secoue");
+      msgDate(type === "suffixe" ? "🤪 1 → st, 2 → nd, 3 → rd, les autres → th (11, 12, 13 → th)" : "🤪", "faux"); return; }
+    c.textContent = t.dataset.v; c.style.color = getComputedStyle(t).color; c.classList.add("pleine"); t.classList.add("posee"); msgDate("");   // la place reste vide : les colonnes ne bougent pas
+    if (elD("rLigne").querySelectorAll(".date-case.pleine").length === elD("rLigne").querySelectorAll(".date-case").length) {
+      const phrase = "Today is " + bonne("jour") + ", the " + bonne("nombre") + bonne("suffixe") + " of " + bonne("mois") + ".";
+      msgDate("✅ " + phrase, "bien"); try { speakPhrase(phrase); } catch (e) {}
+    }
+  }
+  // question : un mot choisi (entouré), puis toucher sa case
+  document.addEventListener("click", e => {
+    const c = e.target.closest && e.target.closest("#qLigne .date-case"); if (!c || dateEtape !== "question") return;
+    const t = document.querySelector("#qTuiles .date-tuile.choisie"); if (!t) return;
+    t.classList.remove("choisie"); poserDate(t, c);
+  });
+  function glisserDate(t) {
+    t.addEventListener("pointerdown", ev => {
+      ev.preventDefault(); const r = t.getBoundingClientRect(), vol = t.cloneNode(true); vol.classList.add("date-vol"); vol.style.width = r.width + "px"; document.body.appendChild(vol); t.classList.add("parti");
+      const x0 = ev.clientX, y0 = ev.clientY, dx = x0 - r.left, dy = y0 - r.top; let bouge = false, survol = null;
+      const pose = (x, y) => { vol.style.left = (x - dx) + "px"; vol.style.top = (y - dy) + "px"; }; pose(x0, y0);
+      const sous = (x, y) => { const e = document.elementFromPoint(x, y); return e && e.closest ? e.closest(".date-case") : null; };
+      const mv = e => { pose(e.clientX, e.clientY); if (Math.hypot(e.clientX - x0, e.clientY - y0) > 12) bouge = true; const c = sous(e.clientX, e.clientY);
+        if (survol && survol !== c) survol.classList.remove("survol"); if (c) c.classList.add("survol"); survol = c; };
+      const up = e => { document.removeEventListener("pointermove", mv); document.removeEventListener("pointerup", up); vol.remove(); t.classList.remove("parti"); if (survol) survol.classList.remove("survol");
+        if (!bouge) {
+          if (dateEtape === "question") { document.querySelectorAll(".date-tuile.choisie").forEach(x => { if (x !== t) x.classList.remove("choisie"); }); t.classList.toggle("choisie"); return; }
+          poserDate(t, null); return; }   // réponse : la tuile va dans la case de sa sorte
+        const c = sous(e.clientX, e.clientY); if (c) poserDate(t, c); };
+      document.addEventListener("pointermove", mv); document.addEventListener("pointerup", up);
+    });
+  }
+  // 💡 un exemple avec une autre date (Karim, 11/10) : la question et la réponse en entier, en couleurs ; un toucher pour revenir
+  function montrerExemple() {
+    let d; do { d = dateAuHasard(); } while (dateCible && d.getDate() === dateCible.getDate());
+    const n = d.getDate(), v = document.createElement("div"); v.id = "dateExemple";
+    v.innerHTML = '<div class="ex-titre">Example · ' + JOURS_FR[d.getDay()] + " " + n + " " + MOIS_FR[d.getMonth()] + '</div>' +
+      '<div class="ex-ligne">What\'s the date today?</div>' +
+      '<div class="ex-ligne">Today is <b class="j">' + JOURS_EN[d.getDay()] + '</b>, <b class="o">the</b> <b class="n">' + n + '</b><b class="s">' + suffixe(n) + '</b> <b class="o">of</b> <b class="m ' + saison(d.getMonth()) + '">' + MONTHS[d.getMonth()] + '</b>.</div>' +
+      '<div class="ex-fermer">Touche pour revenir</div>';
+    v.addEventListener("click", () => v.remove()); document.body.appendChild(v);
+    try { speakPhrase("Today is " + JOURS_EN[d.getDay()] + ", the " + n + suffixe(n) + " of " + MONTHS[d.getMonth()] + "."); } catch (e) {}
+  }
+  document.getElementById("btnExemple").addEventListener("click", montrerExemple);
+  window.__date = { etat: () => ({ etape: dateEtape, q: dateQ, cible: dateCible && dateCible.toISOString(), reponse: dateCible && [bonne("jour"), bonne("mois"), bonne("nombre"), bonne("suffixe")] }), suffixe: suffixe, lancer: d => lancerDate(new Date(d)) };
+
+  // ---- Modes Écoute / Lettres (dictée) ----
+  function pickNumber() {
+    let n;
+    do { n = Math.floor(Math.random() * 32); } while (n === lastNumber);
+    lastNumber = n;
+    current = n;
+    revealed = false;
+    updateAnswerDisplays();
+    board.classList.remove("pop");
+    void board.offsetWidth;
+    board.classList.add("pop");
+    if (mode === "listen") {
+      speak(n);
+    } else {
+      spellPromptDigit.textContent = n;
+    }
+  }
+
+  function updateAnswerDisplays() {
+    listenAnswer.textContent = revealed ? current : "?";
+    listenAnswer.classList.toggle("hidden-answer", !revealed);
+    spellAnswer.textContent = revealed ? WORDS[current] : "?";
+    spellAnswer.classList.toggle("hidden-answer", !revealed);
+    btnReveal.textContent = revealed ? "🙈" : "👁️";
+    if (revealed) {
+      const el = mode === "listen" ? listenAnswer : spellAnswer;
+      el.classList.remove("reveal-pop");
+      void el.offsetWidth;
+      el.classList.add("reveal-pop");
+    }
+  }
+
+  function speak(n) {
+    if (!("speechSynthesis" in window)) { voiceWarning.style.display = "block"; return; }
+    window.speechSynthesis.cancel();
+    const utter = new SpeechSynthesisUtterance(WORDS[n]);
+    utter.lang = "en-GB";
+    utter.rate = 0.85;
+    const chosen = voices.find(v => v.voiceURI === voiceSelect.value);
+    if (chosen) utter.voice = chosen;
+    utter.onstart = () => { speakerIcon.classList.add("speaking"); voiceWarning.style.display = "none"; };
+    utter.onend = () => speakerIcon.classList.remove("speaking");
+    utter.onerror = () => { speakerIcon.classList.remove("speaking"); voiceWarning.style.display = "block"; };
+    window.speechSynthesis.speak(utter);
+  }
+
+  function speakPhrase(text) {
+    if (!("speechSynthesis" in window)) return;
+    try {
+      window.speechSynthesis.cancel();   // 11/10 : une phrase coupe la précédente (sinon elles s'empilent et se répètent)
+      const utter = new SpeechSynthesisUtterance(text);
+      utter.lang = "en-GB";
+      utter.rate = 0.9;
+      const chosen = voices.find(v => v.voiceURI === voiceSelect.value);
+      if (chosen) utter.voice = chosen;
+      window.speechSynthesis.speak(utter);
+    } catch (e) { /* mode Devine fonctionne sans son : on ignore silencieusement */ }
+  }
+
+  // ---- Retour sonore garanti hors ligne (oscillateur Web Audio, aucune voix ni réseau requis) ----
+  // Complète speakPhrase (qui peut échouer silencieusement sans voix locale) : ces bips fonctionnent
+  // toujours, sur n'importe quelle machine, même sans connexion internet.
+  let audioCtx = null;
+  function getAudioCtx() {
+    if (!audioCtx) {
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) return null;
+      audioCtx = new Ctx();
+    }
+    if (audioCtx.state === "suspended") audioCtx.resume();
+    return audioCtx;
+  }
+  function jouerBip(frequence, duree, decalage) {
+    const ctx = getAudioCtx();
+    if (!ctx) return;
+    try {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.value = frequence;
+      const debut = ctx.currentTime + (decalage || 0);
+      gain.gain.setValueAtTime(0.0001, debut);
+      gain.gain.exponentialRampToValueAtTime(0.2, debut + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, debut + duree);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(debut);
+      osc.stop(debut + duree + 0.02);
+    } catch (e) { /* silencieux : le texte affiché reste le retour principal */ }
+  }
+  function jouerBipHaut() { jouerBip(720, 0.16, 0); }
+  function jouerBipBas() { jouerBip(260, 0.22, 0); }
+  function jouerCarillonCorrect() {
+    jouerBip(523, 0.14, 0);      // do
+    jouerBip(659, 0.14, 0.12);   // mi
+    jouerBip(784, 0.22, 0.24);   // sol
+  }
+
+  // Les voix "locales" (localService === true) tournent sans internet ;
+  // beaucoup de voix anglaises listées par Chrome/Edge sont en réalité
+  // distantes (localService === false) et échouent silencieusement hors connexion.
+  function voiceScore(v) {
+    const lang = (v.lang || "").toLowerCase();
+    const localPenalty = v.localService ? 0 : 10;
+    let langScore = lang.startsWith("en-gb") ? 0 : (lang.startsWith("en") ? 1 : 5);
+    return localPenalty + langScore;
+  }
+
+  function loadVoices() {
+    voices = window.speechSynthesis.getVoices()
+      .filter(v => v.lang && v.lang.toLowerCase().startsWith("en"))
+      .sort((a, b) => voiceScore(a) - voiceScore(b));
+    voiceSelect.innerHTML = "";
+    if (voices.length === 0) {
+      const opt = document.createElement("option");
+      opt.textContent = "Voix par défaut";
+      voiceSelect.appendChild(opt);
+      return;
+    }
+    voices.forEach(v => {
+      const opt = document.createElement("option");
+      opt.value = v.voiceURI;
+      opt.textContent = `${v.localService ? "🔌" : "☁️"} ${v.name} (${v.lang})`;
+      voiceSelect.appendChild(opt);
+    });
+    voiceSelect.selectedIndex = 0;
+    if (!voices.some(v => v.localService)) {
+      voiceWarning.textContent = "🔇 Aucune voix anglaise locale détectée sur cet ordinateur — le mode Écoute ne fonctionnera probablement pas sans internet. Utilisez plutôt le mode 🎯 Devine (aucun son requis), ou installez une voix anglaise Windows (Paramètres > Heure et langue > Voix).";
+      if (mode === "listen") voiceWarning.style.display = "block";
+    }
+  }
+  if ("speechSynthesis" in window) {
+    loadVoices();
+    window.speechSynthesis.onvoiceschanged = loadVoices;
+  }
+
+  btnReplay.addEventListener("click", () => {
+    if (mode === "bingo") { if (bingo.courant !== null) speakPhrase(WORDS[bingo.courant]); return; }
+    if (current !== null) speak(current);
+  });
+  btnReveal.addEventListener("click", () => {
+    if (mode === "bingo") { bingo.chiffres = !bingo.chiffres; btnReveal.textContent = bingo.chiffres ? "🙈" : "👁️"; rendreBingo(); return; }
+    revealed = !revealed; updateAnswerDisplays();
+  });
+  voiceSelect.addEventListener("change", () => { if (mode === "listen" && current !== null) speak(current); });
+
+  // ---- Mode Devine (Higher / Lower) — 100% visuel, aucun son requis ----
+  let secret = null;
+  let lowBound = -1;   // le secret est > lowBound
+  let highBound = 32;  // le secret est < highBound
+  let solved = false;
+  let tries = 0;
+
+  function buildGuessGrid() {
+    guessGrid.innerHTML = "";
+    for (let n = 0; n <= 31; n++) {
+      const b = document.createElement("button");
+      b.textContent = n;
+      b.dataset.n = n;
+      b.addEventListener("click", () => guessNumber(n));
+      guessGrid.appendChild(b);
+    }
+  }
+  if (guessGrid.children.length === 0) buildGuessGrid();
+
+  function refreshGuessGrid() {
+    // Ne raye/désactive plus les nombres devenus impossibles : les élèves doivent
+    // repérer eux-mêmes, à partir des Higher/Lower déjà obtenus, quels nombres restent
+    // possibles — l'appli ne doit pas faire ce raisonnement à leur place.
+    Array.from(guessGrid.children).forEach(b => {
+      const n = Number(b.dataset.n);
+      b.classList.remove("correct");
+      if (solved && n === secret) b.classList.add("correct");
+    });
+  }
+
+  function startGuessGame() {
+    let n;
+    do { n = Math.floor(Math.random() * 32); } while (n === secret);
+    secret = n;
+    lowBound = -1;
+    highBound = 32;
+    solved = false;
+    tries = 0;
+    guessFeedbackEn.textContent = "🤔 ?";
+    guessFeedbackFr.textContent = "Devine un nombre entre 0 et 31 !";
+    guessCount.textContent = "Essais : 0";
+    board.classList.remove("pop");
+    void board.offsetWidth;
+    board.classList.add("pop");
+    Array.from(guessGrid.children).forEach(b => b.classList.remove("toolow", "toohigh", "correct"));
+    refreshGuessGrid();
+  }
+
+  function guessNumber(n) {
+    if (solved) return;
+    tries++;
+    guessCount.textContent = `Essais : ${tries}`;
+    const btn = guessGrid.querySelector(`button[data-n="${n}"]`);
+    if (n === secret) {
+      solved = true;
+      guessFeedbackEn.textContent = "🎉 CORRECT!";
+      guessFeedbackFr.textContent = `Bravo, c'était ${n} !`;
+      speakPhrase("Correct! Well done!");
+      jouerCarillonCorrect();
+    } else if (n < secret) {
+      if (n > lowBound) lowBound = n;
+      guessFeedbackEn.textContent = "⬆️ HIGHER!";
+      guessFeedbackFr.textContent = "Plus grand !";
+      if (btn) btn.classList.add("toolow");
+      speakPhrase("Higher!");
+      jouerBipHaut();
+    } else {
+      if (n < highBound) highBound = n;
+      guessFeedbackEn.textContent = "⬇️ LOWER!";
+      guessFeedbackFr.textContent = "Plus petit !";
+      if (btn) btn.classList.add("toohigh");
+      speakPhrase("Lower!");
+      jouerBipBas();
+    }
+    refreshGuessGrid();
+  }
+
+  // ---- Mode Mois mystère (Earlier / Later) — même mécanique que Devine, adaptée à l'ordre des 12 mois ----
+  let monthSecret = null;
+  let monthLowBound = -1;   // le mois secret est plus tard que ce rang (0-11)
+  let monthHighBound = 12;  // le mois secret est plus tôt que ce rang
+  let monthSolved = false;
+  let monthTries = 0;
+
+  function buildMonthsGrid() {
+    monthsGrid.innerHTML = "";
+    MONTHS.forEach((name, i) => {
+      const b = document.createElement("button");
+      b.textContent = name;
+      b.dataset.i = i;
+      b.addEventListener("click", () => guessMonth(i));
+      monthsGrid.appendChild(b);
+    });
+  }
+  if (monthsGrid.children.length === 0) buildMonthsGrid();
+
+  function refreshMonthsGrid() {
+    // Comme en mode Devine : on ne raye/désactive pas les mois devenus impossibles,
+    // les élèves doivent raisonner eux-mêmes à partir des indices Earlier/Later déjà obtenus.
+    Array.from(monthsGrid.children).forEach(b => {
+      const i = Number(b.dataset.i);
+      b.classList.remove("correct");
+      if (monthSolved && i === monthSecret) b.classList.add("correct");
+    });
+  }
+
+  function startMonthsGame() {
+    let i;
+    do { i = Math.floor(Math.random() * 12); } while (i === monthSecret);
+    monthSecret = i;
+    monthLowBound = -1;
+    monthHighBound = 12;
+    monthSolved = false;
+    monthTries = 0;
+    monthsFeedbackEn.textContent = "🤔 ?";
+    monthsFeedbackFr.textContent = "Devine le mois mystère !";
+    monthsCount.textContent = "Essais : 0";
+    board.classList.remove("pop");
+    void board.offsetWidth;
+    board.classList.add("pop");
+    Array.from(monthsGrid.children).forEach(b => b.classList.remove("toolow", "toohigh", "correct"));
+    refreshMonthsGrid();
+  }
+
+  function guessMonth(i) {
+    if (monthSolved) return;
+    monthTries++;
+    monthsCount.textContent = `Essais : ${monthTries}`;
+    const btn = monthsGrid.querySelector(`button[data-i="${i}"]`);
+    if (i === monthSecret) {
+      monthSolved = true;
+      monthsFeedbackEn.textContent = "🎉 CORRECT!";
+      monthsFeedbackFr.textContent = `Bravo, c'était ${MONTHS[i]} !`;
+      speakPhrase("Correct! Well done!");
+      jouerCarillonCorrect();
+    } else if (i < monthSecret) {
+      if (i > monthLowBound) monthLowBound = i;
+      monthsFeedbackEn.textContent = "➡️ LATER!";
+      monthsFeedbackFr.textContent = "Plus tard dans l'année !";
+      if (btn) btn.classList.add("toolow");
+      speakPhrase("Later!");
+      jouerBipHaut();
+    } else {
+      if (i < monthHighBound) monthHighBound = i;
+      monthsFeedbackEn.textContent = "⬅️ EARLIER!";
+      monthsFeedbackFr.textContent = "Plus tôt dans l'année !";
+      if (btn) btn.classList.add("toohigh");
+      speakPhrase("Earlier!");
+      jouerBipBas();
+    }
+    refreshMonthsGrid();
+  }
+
+  // ---- Mode Bingo : machine de loto, 20 boules (1 à 20), tirées sans remise ----
+  const bingo = { billes: [], sortis: [], courant: null, chiffres: false, enCours: false };
+  function couleurBoule(n) { return "c" + Math.ceil(n / 5); }
+  function placerAuHasard(b, fond) {
+    // centre de la sphère (140, 140), rayon utile 118 pour le centre d'une boule de 38 px
+    let cx, cy;
+    if (fond) {   // au repos : les boules reposent en tas au fond de la sphère
+      cx = 50 + Math.random() * 180;
+      const bas = 140 + Math.sqrt(Math.max(0, 118 * 118 - (cx - 140) * (cx - 140)));
+      cy = bas - Math.random() * 55;
+    } else {      // pendant le brassage : partout dans la sphère
+      const a = Math.random() * Math.PI * 2, d = Math.sqrt(Math.random()) * 118;
+      cx = 140 + d * Math.cos(a); cy = 140 + d * Math.sin(a);
+    }
+    b.style.left = (cx - 19) + "px"; b.style.top = (cy - 19) + "px";
+  }
+  function nouvellePartieBingo() {
+    bingo.sortis = []; bingo.courant = null; bingo.chiffres = false; bingo.enCours = false;
+    btnReveal.textContent = "👁️";
+    const globe = document.getElementById("globe"); globe.innerHTML = "";
+    bingo.billes = [];
+    for (let n = 1; n <= 20; n++) {
+      const b = document.createElement("div"); b.className = "bille " + couleurBoule(n); b.dataset.n = n;
+      globe.appendChild(b); placerAuHasard(b, true); bingo.billes.push(b);
+    }
+    rendreBingo();
+  }
+  function rendreBingo() {
+    const g = document.getElementById("grosseBoule");
+    if (bingo.courant === null) { g.className = "grosse-boule vide"; g.innerHTML = ""; }
+    else {
+      g.className = "grosse-boule " + couleurBoule(bingo.courant);
+      g.innerHTML = '<div class="rond"><div class="mot">' + WORDS[bingo.courant] + '</div><div class="chiffre">' + (bingo.chiffres ? bingo.courant : "") + "</div></div>";
+    }
+    const sortis = document.getElementById("sortis"); sortis.innerHTML = "";
+    bingo.sortis.slice(0, -1).forEach(n => {
+      const m = document.createElement("div"); m.className = "mini " + couleurBoule(n);
+      m.textContent = bingo.chiffres ? n : WORDS[n]; sortis.appendChild(m);
+    });
+    document.getElementById("restant").textContent = bingo.billes.length ? bingo.billes.length + " balls left" : "🏁 No more balls!";
+  }
+  function tirerBoule() {
+    if (bingo.enCours || !bingo.billes.length) return;
+    bingo.enCours = true;
+    const globe = document.getElementById("globe");
+    globe.classList.add("tourne");
+    const debut = Date.now();
+    const brasse = setInterval(() => {
+      bingo.billes.forEach(b => placerAuHasard(b, false));
+      jouerBip(180 + Math.random() * 260, 0.05, 0);
+    }, 140);
+    setTimeout(() => {
+      clearInterval(brasse);
+      globe.classList.remove("tourne");
+      const i = Math.floor(Math.random() * bingo.billes.length);
+      const b = bingo.billes.splice(i, 1)[0];
+      b.remove();
+      bingo.billes.forEach(x => placerAuHasard(x, true));
+      bingo.courant = Number(b.dataset.n);
+      bingo.sortis.push(bingo.courant);
+      rendreBingo();
+      const g = document.getElementById("grosseBoule");
+      g.classList.remove("arrive"); void g.offsetWidth; g.classList.add("arrive");
+      jouerBip(520, 0.12, 0.55); jouerBip(780, 0.2, 0.68);
+      setTimeout(() => { speakPhrase(WORDS[bingo.courant]); bingo.enCours = false; }, 800);
+    }, 1900);
+  }
+  document.getElementById("btnBingoNouveau").addEventListener("click", nouvellePartieBingo);
+
+  document.getElementById("btnNew").addEventListener("click", () => {
+    if (mode === "bingo") { tirerBoule(); return; }
+    if (mode === "date") { lancerDate(dateAuHasard()); return; }   // 🎲 : une autre date, pour s'entraîner
+    if (mode === "guess") startGuessGame();
+    else if (mode === "months") startMonthsGame();
+    else pickNumber();
+  });
+
+  startGuessGame();
+
+  // un lien Class Flow peut ouvrir un mode : …html#date
+  (function () { const m = (location.hash || "").slice(1); const b = document.querySelector('#menuPanel .mode-choice button[data-mode="' + m + '"]'); if (b) b.click(); })();
+  window.addEventListener("pagehide", () => { try { window.speechSynthesis.cancel(); } catch (e) {} });   // on quitte la page : la voix se tait
+</script>
+</body>
+</html>

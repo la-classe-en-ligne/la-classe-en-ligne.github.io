@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>✖️ Multiplier par 10, 20, 300</title>
+<!--
+  ✖️ Multiplier par 10, 20, 300, dans le tableau de numération (Karim, 9/11 : « pour multiplier par 20, il faut les bases de × 10
+  et comprendre pourquoi c'est facile » ; la version « en deux temps » était « inondée de chiffres, pas visuelle »).
+  Un seul dessin : le tableau (milliers, centaines, dizaines, unités) avec le matériel (cubes, barres de 10, plaques de 100, gros cubes de 1 000).
+  × 10 : je touche « × 10 » : chaque objet devient 10 fois plus grand et passe dans la colonne de gauche (36 → 360). C'est la leçon de la semaine 1.
+  × 20 : 20 = 2 × 10 ; je touche « × 2 » (le matériel double ; 10 cubes s'échangent contre 1 barre, au toucher), puis « × 10 » (36 → 72 → 720).
+  × 300 : 300 = 3 × 100 ; « × 3 », puis « × 100 » (deux colonnes d'un coup).
+  L'élève fait chaque geste ; l'outil ne calcule pas à sa place : le nombre se lit dans le tableau.
+  Niveaux (#x10, #x20, #x300) dans ☰. Exemples : 36 × 20 et 13 × 300 (leçon MENTAL 5), 7 × 20 (manuel p. 51), 6 × 20, 9 × 20, 4 × 300, 3 × 400, 7 × 300 (diaporama P2 S2) ; les autres sont de moi.
+-->
+<style>
+* { box-sizing:border-box; }
+html,body { margin:0; height:100%; overflow:hidden; background:#fff; font-family:"Segoe UI",Calibri,Arial,sans-serif; color:#17252b; user-select:none; -webkit-user-select:none; touch-action:manipulation; }
+#scene { position:absolute; width:1920px; height:1080px; transform-origin:0 0; background:#fff; overflow:hidden; }
+#haut { position:absolute; top:16px; left:30px; right:24px; display:flex; align-items:center; font-size:24px; color:#90a4ae; }
+#menu { margin-left:12px; width:56px; height:56px; border:0; background:none; font-size:38px; color:#90a4ae; cursor:pointer; }
+#niveaux { position:absolute; top:76px; right:24px; z-index:9; display:none; flex-direction:column; gap:10px; background:#fff; padding:16px; border-radius:18px; box-shadow:0 12px 40px #0002; }
+#niveaux.ouvert { display:flex; }
+#niveaux button { font:inherit; font-size:28px; padding:10px 22px; border-radius:12px; border:2px solid #cfd8dc; background:#fff; cursor:pointer; text-align:left; }
+#perso { margin-left:auto; font:inherit; font-size:30px; width:56px; height:56px; padding:0; border:0; background:none; opacity:.45; cursor:pointer; }   /* Karim, 21/11 : discret, pas un gros bouton */
+#perso + #menu { margin-left:12px; }
+#clavier { position:absolute; inset:0; z-index:20; background:rgba(23,37,43,.45); display:flex; align-items:center; justify-content:center; }
+#clavier[hidden] { display:none; }
+#cl-boite { background:#fff; border-radius:30px; padding:34px 46px; width:900px; text-align:center; box-shadow:0 20px 60px #0004; }
+#cl-calc { display:flex; justify-content:center; align-items:center; gap:24px; font-size:90px; font-weight:800; color:#17252b; }
+#cl-calc span.champ { min-width:260px; padding:4px 20px; border:4px solid #cfd8dc; border-radius:20px; cursor:pointer; }
+#cl-calc span.champ.on { border-color:#1e88e5; background:#e3f2fd; }
+#cl-msg { min-height:50px; font-size:30px; color:#c62828; margin:12px 0; }
+#cl-touches { display:grid; grid-template-columns:repeat(5, 1fr); gap:14px; }
+#cl-touches button { font:inherit; font-size:52px; font-weight:700; padding:12px 0; border-radius:18px; border:3px solid #cfd8dc; background:#fff; cursor:pointer; }
+#cl-touches .ok { background:#43a047; border-color:#43a047; color:#fff; grid-column:span 2; }
+#cl-touches .non { color:#78909c; }
+#niveaux button.on { background:#1e88e5; border-color:#1e88e5; color:#fff; font-weight:700; }
+#consigne { position:absolute; top:62px; left:0; right:0; text-align:center; font-size:80px; font-weight:800; }   /* Karim, 21/11 : le calcul seul, pas d'explication */
+#consigne b { color:#ef6c00; }
+#fin { display:none !important; }
+#tableau { position:absolute; top:232px; left:100px; width:1720px; height:570px; display:grid; grid-template-columns:repeat(4, 1fr); border:3px solid #b0bec5; border-radius:16px; overflow:hidden; }
+.col { position:relative; border-left:3px solid #b0bec5; display:flex; flex-direction:column; }
+.col:first-child { border-left:0; }
+.col h3 { margin:0; padding:8px 0; text-align:center; font-size:30px; font-weight:600; color:#546e7a; background:#f5f7f8; border-bottom:2px solid #e0e0e0; }
+.objets { flex:1; min-height:0; overflow:hidden; display:flex; flex-wrap:wrap; align-content:flex-start; justify-content:center; gap:6px; padding:12px; }
+.chiffre { height:110px; text-align:center; font-size:96px; font-weight:800; line-height:110px; border-top:2px solid #e0e0e0; }
+.col.trop { background:#fff8e1; cursor:pointer; } .col.trop .objets { outline:5px dashed #ffb300; outline-offset:-8px; border-radius:12px; }
+/* 14/11 (Karim : « les cubes sont différents selon les activités, il faut garder les mêmes couleurs ») : le matériel du 🔨 marteau des nombres,
+   unités jaunes, dizaines bleues, centaines vertes, milliers rouges ; une barre = 10 cases, une plaque = 10 × 10 cases */
+.u { width:26px; height:26px; background:#f2c230; border:2px solid rgba(0,0,0,.4); border-radius:4px; box-shadow:inset -4px -4px 0 rgba(0,0,0,.15); }
+.b { width:20px; height:124px; background-color:#3a86d4; border:2px solid rgba(0,0,0,.45); border-radius:3px; background-image:repeating-linear-gradient(180deg, transparent 0 11px, rgba(0,0,0,.35) 11px 12px); }
+.p { width:124px; height:124px; background-color:#3fae5a; border:2px solid rgba(0,0,0,.45); border-radius:4px; background-image:repeating-linear-gradient(90deg, transparent 0 11px, rgba(0,0,0,.25) 11px 12px), repeating-linear-gradient(180deg, transparent 0 11px, rgba(0,0,0,.25) 11px 12px); }
+.m { width:100px; height:100px; } .m svg { width:100%; height:100%; display:block; }
+/* × 10 : tout le contenu glisse d'une colonne vers la gauche, puis le 0 apparaît */
+.glisse { transition:transform .9s ease-in-out; transform:translateX(calc(-100% - 3px)); }
+.chiffre.zero { color:#ef6c00; animation:zero .6s ease; } @keyframes zero { 0% { transform:scale(.2); opacity:0; } 70% { transform:scale(1.3); } 100% { transform:none; opacity:1; } }
+.neuf { animation:grandit .5s; } @keyframes grandit { from { transform:scale(.25); opacity:.2; } }
+#boutons { position:absolute; top:818px; left:0; right:0; display:flex; justify-content:center; gap:40px; flex-wrap:wrap; }
+#boutons .accolade { flex-basis:100%; display:flex; justify-content:center; }
+#boutons .accolade span { border:5px solid #90caf9; border-top:0; border-radius:0 0 26px 26px; padding:4px 40px 2px; font-size:46px; font-weight:800; color:#1e88e5; margin-top:-6px; }
+#boutons button { font:inherit; font-size:64px; font-weight:800; min-width:250px; padding:10px 40px; border-radius:24px; border:4px solid #1e88e5; background:#fff; color:#1e88e5; cursor:pointer; }
+#boutons button.fait { border-color:#cfd8dc; color:#cfd8dc; cursor:default; }
+#fin { position:absolute; top:930px; left:0; right:0; text-align:center; font-size:58px; font-weight:800; }
+#fin b { color:#ef6c00; }
+/* 💡 Pourquoi ça décale ? (Karim, 21/11 : « ils vont au tableau et disent : par 10 je déplace tout. Pourquoi ? ») :
+   dix fois le nombre ; 10 cubes se collent en 1 barre, 10 barres en 1 plaque ; tout avance d'une colonne */
+#pourquoi { position:absolute; left:30px; bottom:26px; font:inherit; font-size:20px; padding:6px 14px; border-radius:14px; border:2px solid #ffe082; background:#fffdf5; color:#a1887f; cursor:pointer; }
+#pq { position:absolute; inset:0; background:#fff; z-index:20; }
+#pq[hidden] { display:none; }
+#pq-texte { position:absolute; top:40px; left:60px; right:60px; text-align:center; font-size:44px; font-weight:600; min-height:120px; }
+#pq-tab { position:absolute; top:190px; left:100px; width:1720px; height:640px; display:grid; grid-template-columns:repeat(4, 1fr); border:3px solid #b0bec5; border-radius:16px; overflow:hidden; }
+#pq-tab .col .objets { align-content:center; }
+#pq-calc { position:absolute; top:860px; left:0; right:0; text-align:center; font-size:70px; font-weight:800; }
+#pq-calc b { color:#ef6c00; }
+#pq-suite { position:absolute; right:40px; bottom:34px; font:inherit; font-size:56px; font-weight:800; width:150px; padding:6px 0; border-radius:20px; border:0; background:#1e88e5; color:#fff; cursor:pointer; }
+#pq-fermer { position:absolute; right:30px; top:24px; font:inherit; font-size:40px; width:70px; height:70px; border-radius:50%; border:2px solid #cfd8dc; background:#fff; color:#78909c; cursor:pointer; }
+.grille { display:grid; gap:5px; justify-content:center; }
+.mu { width:22px; height:22px; background:#f2c230; border:2px solid rgba(0,0,0,.4); border-radius:3px; }
+.mb { width:98px; height:16px; background-color:#3a86d4; border:2px solid rgba(0,0,0,.45); border-radius:3px; background-image:repeating-linear-gradient(90deg, transparent 0 8px, rgba(0,0,0,.35) 8px 9.5px); }
+.fil { outline:5px solid #ef6c00; outline-offset:2px; border-radius:6px; }
+.pile { display:flex; flex-direction:column; gap:5px; padding:4px; border-radius:8px; transition:background .4s; }
+.pile.allume { background:#ffe0b2; }
+.pile.part { animation:part 1s 1.2s forwards; } @keyframes part { to { transform:translateX(-430px) scaleY(.1); opacity:0; } }
+.vide { opacity:.25; }
+.etroit #tableau, .etroit #pq-tab { left:40px; width:1120px; } .etroit #consigne { font-size:36px; padding:0 30px; } .etroit #pq-texte { font-size:34px; } .etroit .chiffre { font-size:80px; } .etroit #fin { font-size:46px; } .etroit #boutons button { font-size:54px; min-width:200px; } .etroit .p { width:88px; height:88px; } .etroit #pourquoi { font-size:26px; }
+#suivant { position:absolute; right:40px; bottom:34px; font:inherit; font-size:36px; font-weight:700; padding:12px 34px; border-radius:18px; border:0; background:#1e88e5; color:#fff; cursor:pointer; }
+
+/* 21/11 : le pourquoi refait, du plus simple au plus grand */
+.gr-pq { display:flex; flex-wrap:wrap; gap:10px; justify-content:center; align-content:center; }
+.dix-u { display:grid; grid-template-columns:repeat(5, auto); gap:3px; padding:5px; border:3px dashed #ef6c00; border-radius:8px; animation:pop .5s ease-out; }
+.dix-d { display:flex; flex-direction:column; gap:3px; padding:5px; border:3px dashed #ef6c00; border-radius:8px; animation:pop .5s ease-out; }
+.dix-d .mb { width:70px; height:10px; }
+.colle { animation:colle .7s ease-out; box-shadow:0 0 0 5px #ffb300; }
+@keyframes colle { from { transform:scale(.3); opacity:.2; } 60% { transform:scale(1.15); } }
+@keyframes pop { from { transform:scale(.6); opacity:0; } }
+.avance, .avance-c { display:inline-block; animation:avance 1.1s ease-out; }
+@keyframes avance { from { transform:translateX(var(--colw, 430px)); } }
+.zero-pq { color:#ef6c00; display:inline-block; animation:pop .6s .9s both; }
+#pq-tab.regle { display:flex; align-items:center; justify-content:center; border:0; }
+.regle-pq { font-size:90px; font-weight:800; line-height:1.4; text-align:center; } .regle-pq b { color:#ef6c00; }
+.etroit #pq-tab { --colw:280px; }
+#explic { position:absolute; top:160px; left:0; right:0; text-align:center; font-size:48px; font-weight:600; color:#37474f; min-height:60px; }
+#explic b { color:#ef6c00; }
+.col.cible { background:#fff3e0; }
+</style>
+</head>
+<body>
+<div id="scene">
+  <div id="haut"><button id="perso" title="Mon calcul">✏️</button><button id="menu" title="Niveaux">☰</button></div>
+  <div id="clavier" hidden><div id="cl-boite"><div id="cl-calc"><span class="champ on" data-c="a"></span>×<span class="champ" data-c="b"></span></div><div id="cl-msg"></div><div id="cl-touches"></div></div></div>
+  <div id="niveaux"></div>
+  <div id="consigne"></div>
+  <div id="tableau"></div>
+  <div id="boutons"></div>
+  <div id="fin"></div>
+  <button id="pourquoi" title="Pourquoi ça décale ?">💡 Pourquoi ?</button>
+  <div id="explic"></div>
+  <div id="pq" hidden><div id="pq-texte"></div><div id="pq-tab"></div><div id="pq-calc"></div>
+    <button id="pq-suite">▶</button><button id="pq-fermer">✕</button></div>
+  <button id="suivant" hidden>▶ Suivant</button>
+</div>
+<script>
+"use strict";
+// [nombre, multiplicateur]
+const NIVEAUX = {
+  x10: { nom: "× 10", L: [[36, 10], [47, 10], [25, 10], [8, 10], [120, 10], [305, 10], [64, 10], [13, 10], [92, 10], [450, 10]] },
+  x20: { nom: "× 20, × 30", L: [[36, 20], [7, 20], [6, 20], [9, 20], [12, 30], [25, 20], [13, 30], [8, 20], [14, 20], [21, 30]] },
+  x300: { nom: "× 300, × 400", L: [[13, 300], [9, 300], [4, 300], [3, 400], [7, 300], [12, 300], [2, 400], [21, 300], [6, 200], [11, 500]] },
+  // 21/11 (Karim) : les CM2 « pourraient déjà apprendre × 300, × 4 000 »
+  x4000: { nom: "× 3 000, × 4 000", L: [[2, 4000], [3, 3000], [2, 3000], [4, 2000], [3, 2000], [1, 5000], [2, 2000], [3, 1000], [4, 1000], [1, 7000]] }
+};
+const COLS = [["m", "milliers", "gros cubes de 1 000"], ["c", "centaines", "plaques de 100"], ["d", "dizaines", "barres de 10"], ["u", "unités", "cubes"]];
+const NOMS = { u: ["cube", "cubes"], d: ["barre", "barres"], c: ["plaque", "plaques"], m: ["gros cube", "gros cubes"] };
+const CUBE = '<svg viewBox="0 0 100 100"><path d="M10 30 L40 10 H90 L60 30 Z" fill="#f08a6b"/><path d="M60 30 L90 10 V70 L60 90 Z" fill="#b8401f"/><rect x="10" y="30" width="50" height="60" fill="#e4572e"/>' +
+  '<path d="M15 30 V90 M20 30 V90 M25 30 V90 M30 30 V90 M35 30 V90 M40 30 V90 M45 30 V90 M50 30 V90 M55 30 V90 M10 36 H60 M10 42 H60 M10 48 H60 M10 54 H60 M10 60 H60 M10 66 H60 M10 72 H60 M10 78 H60 M10 84 H60" stroke="rgba(0,0,0,.25)" stroke-width=".8"/>' +
+  '<path d="M10 30 L40 10 H90 L60 30 Z M60 30 L90 10 V70 L60 90 Z M10 30 H60 V90 H10 Z" fill="none" stroke="#5a1d0b" stroke-width="2.5" stroke-linejoin="round"/></svg>';   // le gros cube du marteau des nombres
+const $ = id => document.getElementById(id), nb = n => n.toLocaleString("fr-FR").replace(/ | /g, " ");
+let niv = "x10", k = 0, N = {}, ops = [], fait = [], ligne = [], neuf = "", zeros = 0, anim = false, glisseMsg = "";
+function coupe(b) { let p = 1; while (b % (p * 10) === 0) p *= 10; return [b / p, p]; }   // 300 → [3, 100]
+function valeur() { return N.m * 1000 + N.c * 100 + N.d * 10 + N.u; }
+function trop() { return ["u", "d", "c"].find(x => N[x] >= 10); }
+function depart() {
+  const [a, b] = NIVEAUX[niv].L[k], [d, p] = coupe(b);
+  N = { m: Math.floor(a / 1000), c: Math.floor(a / 100) % 10, d: Math.floor(a / 10) % 10, u: a % 10 };
+  ops = d > 1 ? [["×", d], ["×", p]] : [["×", p]]; fait = []; if ($("explic")) $("explic").innerHTML = ""; ligne = [nb(a)]; neuf = ""; zeros = 0; anim = false; glisseMsg = ""; dessine();
+}
+function dessine() {
+  const [a, b] = NIVEAUX[niv].L[k], [d, p] = coupe(b), t = trop();
+  $("tableau").innerHTML = COLS.map(([x, nom], i) => {
+    const n = N[x], objets = '<span class="' + { m: "m", c: "p", d: "b", u: "u" }[x] + (neuf ? " neuf" : "") + '">' + (x === "m" ? CUBE : "") + '</span>';
+    const chiffre = valeur() >= { m: 1000, c: 100, d: 10, u: 1 }[x] || x === "u" ? n : "";
+    const z = 3 - i < zeros && n === 0;   // un 0 arrivé par le glissement
+    return '<div class="col' + (t === x ? " trop" : "") + '" data-c="' + x + '"><h3>' + nom + '</h3><div class="objets">' + objets.repeat(n) + '</div><div class="chiffre' + (z ? " zero" : "") + '">' + chiffre + "</div></div>";
+  }).join("");
+  if (t) $("tableau").querySelector('[data-c="' + t + '"]').onclick = echange;
+  const reste = ops.filter((o, i) => !fait.includes(i));
+  $("boutons").innerHTML = ops.map((o, i) => '<button data-i="' + i + '" class="' + (fait.includes(i) ? "fait" : "") + '">× ' + nb(o[1]) + "</button>").join("")
+    + (ops.length > 1 ? '<div class="accolade"><span>× ' + d + ' × ' + nb(p) + ' = × ' + nb(b) + '</span></div>' : "");   // Karim, 21/11 : voir que × 3 puis × 100, c'est × 300
+  $("boutons").querySelectorAll("button:not(.fait)").forEach(bt => bt.onclick = () => { if (!trop() && !anim) multiplie(+bt.dataset.i); });
+  const g = { u: "d", d: "c", c: "m" };
+  $("consigne").textContent = t ? "10 " + NOMS[t][1] + " = 1 " + NOMS[g[t]][0] + " : touche la colonne pour échanger."
+    : !fait.length ? (ops.length > 1 ? nb(a) + " × " + nb(b) + " : " + nb(b) + ", c'est " + d + " × " + nb(p) + ". Touche × " + d + ", puis × " + nb(p) + "." : nb(a) + " × " + nb(b) + " : touche × " + nb(b) + ".")
+    : reste.length ? "Le nombre dans le tableau : " + nb(valeur()) + ". Touche × " + nb(reste[0][1]) + "."
+    : glisseMsg;
+  // Karim, 21/11 : en haut, le calcul seul (ce que je dis à l'oral n'est pas écrit) ; la colonne à échanger se voit à son cadre orange
+  $("consigne").innerHTML = nb(a) + " × " + nb(b) + " = " + (reste.length || t ? "?" : "<b>" + nb(valeur()) + "</b>");
+  $("fin").innerHTML = reste.length && !fait.length ? "" : ligne.join("  ▶  ") + (reste.length ? "" : "<br><b>" + nb(a) + " × " + nb(b) + " = " + nb(valeur()) + "</b>");
+  if (!reste.length) $("fin").innerHTML = "<b>" + nb(a) + " × " + nb(b) + " = " + nb(valeur()) + "</b>" + (ops.length > 1 ? '<div style="font-size:40px;font-weight:600;color:#546e7a">' + ligne.join("  ▶  ") + "</div>" : "");
+  $("suivant").hidden = !!reste.length || !!t;
+  neuf = "";
+}
+function multiplie(i) {
+  const f = ops[i][1];
+  if (f === 10 || f === 100 || f === 1000) {
+    // Karim, 21/11 : pas seulement « tout glisse » ; colonne par colonne, de la plus grande : « 9 centaines × 10 = 90 centaines = 9 milliers »,
+    // ce morceau avance ; puis « 3 dizaines × 10 = 30 dizaines = 3 centaines » ; à la fin, les colonnes vides reçoivent un 0.
+    const pas = { 10: 1, 100: 2, 1000: 3 }[f], ORD = ["m", "c", "d", "u"], NC = { u: ["unité", "unités"], d: ["dizaine", "dizaines"], c: ["centaine", "centaines"], m: ["millier", "milliers"] };
+    const nom = (x, n) => NC[x][n > 1 ? 1 : 0];
+    const L = ["c", "d", "u"].filter(x => N[x] > 0);
+    anim = true; dessine();
+    let k2 = 0;
+    const suivant = () => {
+      if (k2 >= L.length) {   // tout a avancé : les 0 viennent compléter
+        N = pas === 1 ? { m: N.c, c: N.d, d: N.u, u: 0 } : pas === 2 ? { m: N.d, c: N.u, d: 0, u: 0 } : { m: N.u, c: 0, d: 0, u: 0 };
+        zeros += pas; neuf = "1"; anim = false; fait.push(i); ligne.push("× " + nb(f)); ligne.push(nb(valeur()));
+        explique(pas === 1 ? "Chez les unités, il ne reste rien : je complète avec un <b>0</b>." : "Les " + pas + " dernières colonnes sont vides : je complète avec <b>" + "0".repeat(pas) + "</b>.");
+        dessine(); return;
+      }
+      const x = L[k2++], n = N[x], cible = ORD[ORD.indexOf(x) - pas];
+      explique(n + " " + nom(x, n) + " × " + nb(f) + " = <b>" + nb(n * f) + " " + NC[x][1] + "</b> = <b>" + n + " " + nom(cible, n) + "</b>");
+      const col = $("tableau").querySelector('[data-c="' + x + '"]');
+      col.querySelectorAll(".objets, .chiffre").forEach(e => { e.style.transition = "transform 1s ease-in-out"; e.style.transform = "translateX(calc(" + (-pas * 100) + "% - " + (pas * 3) + "px))"; e.style.position = "relative"; e.style.zIndex = 2; });
+      $("tableau").querySelector('[data-c="' + cible + '"]').classList.add("cible");
+      // à l'arrivée, le morceau prend la forme de sa nouvelle colonne (3 barres × 10 → 3 plaques)
+      setTimeout(() => { const o = col.querySelector(".objets"), cls = { m: "m", c: "p", d: "b", u: "u" }[cible]; o.innerHTML = ('<span class="' + cls + ' neuf">' + (cible === "m" ? CUBE : "") + '</span>').repeat(n); }, 1050);
+      setTimeout(suivant, 2600);
+    };
+    setTimeout(suivant, 200);
+    return;
+  }
+  N = { m: N.m * f, c: N.c * f, d: N.d * f, u: N.u * f };
+  fait.push(i); neuf = "1"; ligne.push("× " + nb(f)); if (!trop()) ligne.push(nb(valeur())); dessine();
+}
+function explique(h) { $("explic").innerHTML = h; }
+function echange() {
+  const t = trop(), g = { u: "d", d: "c", c: "m" }[t]; if (!t) return;
+  N[t] -= 10; N[g] += 1; if (!trop()) ligne.push(nb(valeur())); dessine();
+}
+$("suivant").onclick = () => { k = (k + 1) % NIVEAUX[niv].L.length; depart(); };
+$("menu").onclick = () => $("niveaux").classList.toggle("ouvert");
+function niveaux() { $("niveaux").innerHTML = Object.keys(NIVEAUX).map(n => '<button data-n="' + n + '" class="' + (n === niv ? "on" : "") + '">' + NIVEAUX[n].nom + '</button>').join("");
+  $("niveaux").querySelectorAll("button").forEach(b => b.onclick = () => { location.hash = b.dataset.n; $("niveaux").classList.remove("ouvert"); }); }
+
+// ✏️ Mon calcul (Karim, 21/11 : « je veux pouvoir faire les multiplications que je veux, moi ») : n'importe quel nombre,
+// fois un nombre comme 10, 20, 300, 4 000 (un chiffre suivi de zéros) ; le tableau va jusqu'aux milliers.
+// Lien direct : #36x300.
+const CL = { a: "", b: "", c: "a" };
+function verifie(a, b) {
+  if (!a || !b) return "Écris les deux nombres.";
+  if (!/^[1-9]0{1,3}$/.test(String(b))) return "Le 2e nombre : un chiffre suivi de zéros (10, 20, 300, 4 000…).";
+  if (a * b >= 10000) return "Le résultat doit rester plus petit que 10 000 (le tableau va jusqu'aux milliers).";
+  return "";
+}
+function lance(a, b) { NIVEAUX.perso = { nom: "✏️ " + nb(a) + " × " + nb(b), L: [[a, b]] }; niv = "perso"; k = 0; niveaux(); depart(); }
+function clavier() {
+  $("cl-calc").querySelectorAll(".champ").forEach(s => { s.textContent = CL[s.dataset.c] ? nb(+CL[s.dataset.c]) : "…"; s.classList.toggle("on", s.dataset.c === CL.c); s.onclick = () => { CL.c = s.dataset.c; clavier(); }; });
+}
+$("cl-touches").innerHTML = [1, 2, 3, 4, 5, 6, 7, 8, 9, 0].map(n => '<button data-n="' + n + '">' + n + "</button>").join("") + '<button class="non" data-n="del">⌫</button><button class="non" data-n="x">Annuler</button><button class="non" data-n="tab">×</button><button class="ok" data-n="ok">OK</button>';
+$("cl-touches").querySelectorAll("button").forEach(bt => bt.onclick = () => {
+  const n = bt.dataset.n; $("cl-msg").textContent = "";
+  if (n === "x") { $("clavier").hidden = true; return; }
+  if (n === "del") CL[CL.c] = CL[CL.c].slice(0, -1);
+  else if (n === "tab") CL.c = CL.c === "a" ? "b" : "a";
+  else if (n === "ok") { const m = verifie(+CL.a, +CL.b); if (m) { $("cl-msg").textContent = m; return; } $("clavier").hidden = true; lance(+CL.a, +CL.b); return; }
+  else if (CL[CL.c].length < 4 && !(n === "0" && !CL[CL.c])) CL[CL.c] += n;
+  clavier();
+});
+$("perso").onclick = () => { CL.a = ""; CL.b = ""; CL.c = "a"; $("cl-msg").textContent = ""; clavier(); $("clavier").hidden = false; };
+function lien() { const h = location.hash.slice(1), m = h.match(/^(\d+)x(\d+)$/); if (m && !verifie(+m[1], +m[2])) { lance(+m[1], +m[2]); return; } niv = NIVEAUX[h] ? h : "x10"; k = 0; niveaux(); depart(); }
+// une moitié d écran (✖️ Calcul mental en deux colonnes, 21/11) : une scène plus étroite, 1200 px de large au lieu de 1920
+function ajuste() { const et = innerWidth / innerHeight < 1.3, W = et ? 1200 : 1920; document.body.classList.toggle("etroit", et); const e = Math.min(innerWidth / W, innerHeight / 1080), s = $("scene"); s.style.width = W + "px"; s.style.transform = "scale(" + e + ")"; s.style.left = ((innerWidth - W * e) / 2) + "px"; s.style.top = ((innerHeight - 1080 * e) / 2) + "px"; }
+addEventListener("resize", ajuste); ajuste();
+addEventListener("hashchange", lien); lien();
+// ——— 💡 Pourquoi ça décale ? (refait le 21/11, Karim : « pas du tout efficace ; un exemple plus parlant, plus simple : 1 × 10,
+// j'ai 10 cubes, je déplace le 1 vers la colonne des dizaines et je complète avec le 0 »). Trois exemples, du plus simple au nombre
+// du tableau : 1 × 10, 3 × 10, puis 36 × 10. Pour chacun, 4 temps que je mène avec ▶ : le nombre ; 10 fois chaque objet ;
+// 10 objets se collent en 1 objet plus gros ; il ne tient plus dans sa colonne : il avance d'une colonne, le 0 bouche le trou.
+let pqN = 36, pqE = 0, PQ = [];
+const pqCol = (titre, contenu, extra) => '<div class="col"><h3>' + titre + '</h3><div class="objets">' + contenu + '</div><div class="chiffre">' + (extra ?? "") + '</div></div>';
+const rep = (s, n) => s.repeat(Math.max(0, n));
+const pl = (n, mot) => n + " " + mot + (n > 1 ? "s" : "");
+function pqEtapes() {
+  PQ = [];
+  [1, 3, pqN].forEach(v => {
+    const d = Math.floor(v / 10), u = v % 10, Z = '<span class="zero-pq">0</span>';
+    const groupesU = '<div class="gr-pq">' + rep('<div class="dix-u">' + rep('<span class="mu"></span>', 10) + '</div>', u) + '</div>';
+    const groupesD = '<div class="gr-pq">' + rep('<div class="dix-d">' + rep('<span class="mb"></span>', 10) + '</div>', d) + '</div>';
+    const vide = "";
+    PQ.push([`<b>${v}</b> : ${pl(u, "cube")}${d ? " et " + pl(d, "barre") : ""}. Calculons ${v} × 10.`,
+      pqCol("milliers", vide) + pqCol("centaines", vide) + pqCol("dizaines", rep('<span class="b"></span>', d), d || "") + pqCol("unités", rep('<span class="u"></span>', u), u), `${v} × 10 = ?`]);
+    PQ.push([`× 10 : je prends <b>10 fois</b> chaque ${d ? "objet" : "cube"}. ${u === 1 && !d ? "J'ai 10 cubes." : ""}`,
+      pqCol("milliers", vide) + pqCol("centaines", vide) + pqCol("dizaines", d ? groupesD : vide, d ? "?" : "") + pqCol("unités", groupesU, "?"), `${v} × 10 = ?`]);
+    PQ.push([`10 cubes, c'est <b>1 barre</b>${d ? " ; 10 barres, c'est <b>1 plaque</b>" : ""}. Mais une barre n'a pas sa place chez les unités…`,
+      pqCol("milliers", vide) + pqCol("centaines", vide) + pqCol("dizaines", d ? rep('<span class="p colle"></span>', d) : vide, d ? "?" : "") + pqCol("unités", rep('<span class="b colle"></span>', u), "?"), `${v} × 10 = ?`]);
+    PQ.push([`Chaque objet <b>avance d'une colonne</b>. Chez les unités, il ne reste rien : j'écris <b>0</b>.`,
+      pqCol("milliers", vide) + pqCol("centaines", d ? rep('<span class="p avance"></span>', d) : vide, d ? '<span class="avance-c">' + d + '</span>' : "") + pqCol("dizaines", rep('<span class="b avance"></span>', u), '<span class="avance-c">' + u + '</span>') + pqCol("unités", vide, Z),
+      `${v} × 10 = <b>${v * 10}</b>`]);
+  });
+  PQ.push([`<b>× 10 : chaque chiffre avance d'une colonne, et un 0 vient chez les unités.</b>`,
+    '<div class="regle-pq">' + [1, 3, pqN].map(v => `<div>${v} × 10 = <b>${v * 10}</b></div>`).join("") + '</div>', ""]);
+}
+function pqDessine() {
+  const T = PQ[pqE]; $("pq-texte").innerHTML = T[0]; $("pq-tab").innerHTML = T[1]; $("pq-calc").innerHTML = T[2];
+  $("pq-tab").classList.toggle("regle", pqE === PQ.length - 1);
+  $("pq-suite").hidden = pqE === PQ.length - 1;
+}
+$("pourquoi").onclick = () => { const v = valeur(); pqN = v >= 11 && v <= 99 && v % 10 ? v : 36; pqE = 0; pqEtapes(); $("pq").hidden = false; pqDessine(); };
+$("pq-suite").onclick = () => { if (pqE < PQ.length - 1) { pqE++; pqDessine(); } };
+$("pq-fermer").onclick = () => { $("pq").hidden = true; };
+window.X = { get N() { return N; }, valeur, trop, NIVEAUX, get k() { return k; }, get anim() { return anim; } };   // pour le test automatique
+</script>
+</body>
+</html>

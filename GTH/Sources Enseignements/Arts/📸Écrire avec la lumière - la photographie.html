@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Écrire avec la lumière</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect x='6' y='18' width='52' height='36' rx='7' fill='%231c3d7a'/%3E%3Crect x='20' y='10' width='18' height='10' rx='3' fill='%231c3d7a'/%3E%3Ccircle cx='32' cy='36' r='12' fill='%23f6d55c'/%3E%3Ccircle cx='32' cy='36' r='6' fill='%231c3d7a'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Quicksand:wght@600;700&display=swap">
+<style>
+  /* Univers de ce jeu : le cyanotype. Papier crème, encre bleu de Prusse, soleil jaune.
+     Trois onglets, une seule notion : la photographie, c'est la lumière qui écrit.
+     Le mot (photo = lumière, graphie = écrire) · La chambre noire (la lumière entre par un trou et dessine l'image, à l'envers)
+     · Le papier solaire (ce qu'on fera en classe : la lumière fonce le papier, l'objet le protège). */
+  :root{
+    --fond:#f6f1e3; --encre:#1c3d7a; --gris:#6b7280; --bord:#d9cfb4; --soleil:#f6c945;
+    --bien:#1aa37a; --faux:#e0456b; --talbot:#1f7a8c;
+    --papier:#d6d77e; --expose:#6d7c8f; --cyan:#1c3d7a; --blanc:#f7f4ea;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{margin:0; color:var(--encre); font-family:"Quicksand",system-ui,sans-serif; overflow:hidden; height:100vh; display:flex; flex-direction:column;
+    background:var(--fond); user-select:none; -webkit-user-select:none; touch-action:none;}
+
+  /* ---------- Barre du haut ---------- */
+  .barre{display:grid; grid-template-columns:1fr auto 1fr; align-items:center; gap:16px; padding:12px 26px; background:#fff; border-bottom:3px solid var(--bord);}
+  .titre{display:flex; align-items:center; gap:12px;}
+  .titre svg{width:48px; height:48px; flex:none;}
+  .titre h1{font-family:"Baloo 2",cursive; font-weight:800; font-size:1.9rem; margin:0;}
+  .onglets{display:flex; gap:10px; background:#efe8d6; padding:6px; border-radius:18px;}
+  .onglets button{font:inherit; font-family:"Baloo 2",cursive; font-weight:700; font-size:1.45rem; padding:6px 26px; border-radius:14px; border:none; cursor:pointer; background:transparent; color:var(--gris);}
+  .onglets button.actif{background:#fff; color:var(--encre); box-shadow:0 3px 10px rgba(28,61,122,.15);}
+  .droite{justify-self:end;}
+  .btn-son{width:44px; height:44px; border-radius:50%; font-size:1.2rem; cursor:pointer; background:#fff; border:2px solid var(--bord);}
+
+  /* ---------- Consigne ---------- */
+  .consigne{display:flex; align-items:center; justify-content:center; padding:14px 20px 0; min-height:70px;}
+  .consigne p{margin:0; font-family:"Baloo 2",cursive; font-weight:700; font-size:2.2rem; text-align:center;}
+  .consigne p.bien{color:var(--bien);} .consigne p.faux{color:var(--faux);}
+
+  /* ---------- Jeu ---------- */
+  .jeu{flex:1; display:flex; flex-direction:column; align-items:center; justify-content:space-evenly; padding:0 30px 10px; min-height:0; position:relative;}
+  .jeu[hidden]{display:none;}
+
+  /* Objets à glisser (ou toucher, puis toucher la cible) */
+  .mobile{cursor:grab; touch-action:none;}
+  .mobile.en-vol{z-index:60; cursor:grabbing; transition:none !important; filter:drop-shadow(0 16px 18px rgba(28,61,122,.35));}
+  .mobile.retour{transition:transform .3s ease;}
+  .mobile.choisi{outline:6px solid var(--talbot); outline-offset:6px; border-radius:16px;}
+  .cible-survol{box-shadow:0 0 0 8px rgba(31,122,140,.45) !important;}
+  @keyframes secoue{0%,100%{transform:translateX(0)}25%{transform:translateX(-14px)}75%{transform:translateX(14px)}}
+  .secoue{animation:secoue .35s ease 2;}
+  @keyframes pop{0%{transform:scale(1)}40%{transform:scale(1.15)}100%{transform:scale(1)}}
+  .pop{animation:pop .5s ease;}
+
+  /* ===== Onglet 1 : le mot ===== */
+  .pioche{display:flex; gap:60px; justify-content:center; min-height:150px; align-items:center;}
+  .etiq{font-family:"Baloo 2",cursive; font-weight:800; font-size:4.4rem; letter-spacing:4px; line-height:1; padding:22px 40px 14px; background:#fff;
+    border:4px solid var(--encre); box-shadow:0 8px 0 var(--encre); border-radius:18px; position:relative;}
+  .etiq.mot-famille{font-size:3.6rem; letter-spacing:1px; text-transform:none;}
+  .etiq .morceau{color:#c0392b;}
+  .sens{display:flex; gap:70px; justify-content:center;}
+  .case-sens{width:600px; min-height:300px; border-radius:26px; background:#fff; border:4px dashed var(--bord); display:flex; flex-direction:column; align-items:center; justify-content:flex-start; gap:12px; padding:22px; transition:box-shadow .15s;}
+  .case-sens .pictos{font-size:4.6rem; line-height:1;}
+  .case-sens .libelle{font-family:"Baloo 2",cursive; font-weight:800; font-size:2.8rem;}
+  .case-sens .grec{font-size:1.5rem; font-weight:700; color:var(--gris); min-height:1.8rem;}
+  .case-sens .pose{display:flex; flex-wrap:wrap; gap:10px; justify-content:center;}
+  .case-sens .pose span{font-family:"Baloo 2",cursive; font-weight:700; font-size:1.9rem; padding:2px 16px; border-radius:12px; background:#eef3fb; border:2px solid var(--encre);}
+  .case-sens.lumiere{background:#fffbea;} .case-sens.ecrire{background:#f3f6fc;}
+  .case-sens.rempli{border-style:solid; border-color:var(--encre);}
+  .egalite{font-family:"Baloo 2",cursive; font-weight:800; font-size:3.6rem; text-align:center; padding:10px 40px; border-radius:22px; background:#fff; border:4px solid var(--soleil);}
+  .egalite[hidden]{display:none;}
+  .egalite b{color:#b8860b;}
+  .compteur{font-size:1.5rem; font-weight:700; color:var(--gris);}
+
+  /* ===== Onglet 2 : la chambre noire ===== */
+  #scene-chambre{width:100%; height:100%; max-height:calc(100vh - 230px);}
+  #scene-chambre .poignee{cursor:grab;}
+  #scene-chambre .choisi-svg{filter:drop-shadow(0 0 10px #1f7a8c) drop-shadow(0 0 4px #1f7a8c);}
+  #scene-chambre text{font-family:"Baloo 2",cursive; font-weight:700;}
+
+  /* ===== Onglet 3 : le papier solaire ===== */
+  .atelier{display:flex; align-items:center; justify-content:center; gap:60px; width:100%;}
+  .plateau{width:330px; min-height:620px; border-radius:26px; background:#efe5cc; border:4px dashed var(--bord); display:flex; flex-wrap:wrap; align-content:center; justify-content:center; gap:20px; padding:20px;}
+  .objet{width:130px; height:130px; position:relative;}
+  .objet svg{width:100%; height:100%; display:block; pointer-events:none;}
+  .papier{position:relative; width:470px; height:665px; background:var(--papier); border-radius:6px; box-shadow:0 14px 34px rgba(0,0,0,.22); transition:background-color 3s ease, box-shadow .15s;}
+  .papier .objet{position:absolute; z-index:3;}
+  .papier .ombre-objet{position:absolute; width:130px; height:130px; z-index:1; pointer-events:none;}
+  .papier .ombre-objet path{fill:var(--papier); transition:fill 1.6s ease;}
+  .papier.expose{background:var(--expose);}
+  .papier.rince{background:var(--cyan); transition:background-color 1.6s ease;}
+  .papier.rince .ombre-objet path{fill:var(--blanc);}
+  .papier .vagues{position:absolute; inset:0; border-radius:6px; pointer-events:none; opacity:0; background:repeating-linear-gradient(180deg, rgba(255,255,255,.0) 0 18px, rgba(255,255,255,.35) 18px 22px);}
+  .papier.mouille .vagues{animation:vagues 1.6s ease;}
+  @keyframes vagues{0%{opacity:0; background-position:0 0}30%{opacity:1}100%{opacity:0; background-position:0 120px}}
+  .colonne{display:flex; flex-direction:column; justify-content:space-between; align-items:center; height:640px;}
+  .soleil{width:190px; height:190px;}
+  .soleil svg{width:100%; height:100%; pointer-events:none;}
+  .soleil.eteint{opacity:.35; cursor:default;}
+  .soleil.brille svg{animation:tourne 3s linear;}
+  @keyframes tourne{to{transform:rotate(90deg)}}
+  .bassine{width:300px; height:190px; border-radius:20px 20px 120px 120px / 20px 20px 70px 70px; background:linear-gradient(180deg,#bfe3f2 0%,#7ec3df 100%); border:6px solid #8aa0b3;
+    display:flex; align-items:center; justify-content:center; font-size:4rem; transition:box-shadow .15s;}
+  .bassine.eteinte{opacity:.35;}
+  .papier.mobile.en-vol{transform-origin:center;}
+
+  /* ---------- Bas : indice et recommencer ---------- */
+  .zone-indice{display:flex; align-items:center; justify-content:center; gap:14px; min-height:56px; padding-bottom:12px;}
+  .btn-indice{font:inherit; font-weight:700; font-size:1.2rem; padding:6px 16px; border-radius:999px; cursor:pointer; background:#fff8dc; border:2px solid #f1d27a; color:#7a5b00;}
+  .indice{font-size:1.45rem; font-weight:700; color:#7a5b00;}
+  .indice:not(:empty){background:rgba(255,248,220,.95); padding:2px 16px; border-radius:12px;}
+  .btn-suite{font:inherit; font-family:"Baloo 2",cursive; font-weight:800; font-size:1.5rem; padding:6px 30px; border-radius:999px; cursor:pointer; background:var(--encre); color:#fff; border:none; box-shadow:0 5px 0 #0f2550;}
+  .btn-suite[hidden]{display:none;}
+</style>
+</head>
+<body>
+<header class="barre">
+  <div class="titre">
+    <svg viewBox="0 0 64 64" aria-hidden="true"><rect x="6" y="18" width="52" height="36" rx="7" fill="#1c3d7a"/><rect x="20" y="10" width="18" height="10" rx="3" fill="#1c3d7a"/><circle cx="32" cy="36" r="12" fill="#f6d55c"/><circle cx="32" cy="36" r="6" fill="#1c3d7a"/><circle cx="49" cy="25" r="3" fill="#f6d55c"/></svg>
+    <h1>Écrire avec la lumière</h1>
+  </div>
+  <nav class="onglets" id="onglets">
+    <button data-onglet="mot" class="actif">Le mot</button>
+    <button data-onglet="chambre">La chambre noire</button>
+    <button data-onglet="soleil">Le papier solaire</button>
+  </nav>
+  <div class="droite"><button class="btn-son" id="btn-son" title="Son">🔊</button></div>
+</header>
+
+<div class="consigne"><p id="message"></p></div>
+
+<!-- Onglet 1 : le mot -->
+<section class="jeu" id="jeu-mot">
+  <div class="pioche" id="mot-pioche"></div>
+  <div class="sens">
+    <div class="case-sens ecrire" data-sens="ecrire"><div class="pictos">✏️</div><div class="libelle">écrire, dessiner</div><div class="grec"></div><div class="pose"></div></div>
+    <div class="case-sens lumiere" data-sens="lumiere"><div class="pictos">☀️</div><div class="libelle">la lumière</div><div class="grec"></div><div class="pose"></div></div>
+  </div>
+  <div class="egalite" id="egalite" hidden>PHOTO + GRAPHIE = <b>écrire avec la lumière</b></div>
+</section>
+
+<!-- Onglet 2 : la chambre noire -->
+<section class="jeu" id="jeu-chambre" hidden>
+  <svg id="scene-chambre" viewBox="0 0 1700 660" preserveAspectRatio="xMidYMid meet"></svg>
+</section>
+
+<!-- Onglet 3 : le papier solaire -->
+<section class="jeu" id="jeu-soleil" hidden>
+  <div class="atelier">
+    <div class="plateau" id="plateau" title="Les objets"></div>
+    <div class="papier" id="papier" title="Le papier solaire"><div class="vagues"></div></div>
+    <div class="colonne">
+      <div class="soleil mobile" id="soleil" title="Le soleil"><svg viewBox="0 0 100 100"><g stroke="#f0a020" stroke-width="6" stroke-linecap="round"><path d="M50 4v14M50 82v14M4 50h14M82 50h14M17 17l10 10M73 73l10 10M83 17L73 27M27 73L17 83"/></g><circle cx="50" cy="50" r="24" fill="#f6c945" stroke="#f0a020" stroke-width="4"/></svg></div>
+      <div class="bassine eteinte" id="bassine" title="La bassine d'eau">💧</div>
+    </div>
+  </div>
+</section>
+
+<div class="zone-indice">
+  <button class="btn-indice" id="btn-indice">💡 Indice</button>
+  <span class="indice" id="indice"></span>
+  <button class="btn-suite" id="btn-suite" hidden></button>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  var el = function (id) { return document.getElementById(id); };
+  var onglet = "mot", sonActif = true, indiceCourant = "";
+
+  // ---- Sons (Web Audio, sans fichier) ----
+  var ctxAudio = null;
+  function son(type) {
+    if (!sonActif) return;
+    try {
+      ctxAudio = ctxAudio || new (window.AudioContext || window.webkitAudioContext)();
+      var o = ctxAudio.createOscillator(), g = ctxAudio.createGain(), t = ctxAudio.currentTime;
+      o.connect(g); g.connect(ctxAudio.destination);
+      if (type === "bien") { o.type = "triangle"; o.frequency.setValueAtTime(660, t); o.frequency.setValueAtTime(880, t + 0.12); o.frequency.setValueAtTime(1175, t + 0.24); }
+      else if (type === "eau") { o.type = "sine"; o.frequency.setValueAtTime(300, t); o.frequency.exponentialRampToValueAtTime(900, t + 0.4); }
+      else { o.type = "sine"; o.frequency.setValueAtTime(420, t); o.frequency.exponentialRampToValueAtTime(90, t + 0.45); }
+      g.gain.setValueAtTime(0.18, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.45); o.start(t); o.stop(t + 0.45);
+    } catch (e) {}
+  }
+
+  function consigne(texte, classe) { el("message").textContent = texte || ""; el("message").className = classe || ""; }
+  function indice(texte) { indiceCourant = texte || ""; el("indice").textContent = ""; }
+  function suite(texte, action) {
+    var b = el("btn-suite");
+    if (!texte) { b.hidden = true; b.onclick = null; return; }
+    b.textContent = texte; b.hidden = false; b.onclick = action;
+  }
+  function secouer(n) { n.classList.remove("secoue"); void n.offsetWidth; n.classList.add("secoue"); }
+  function pop(n) { n.classList.remove("pop"); void n.offsetWidth; n.classList.add("pop"); }
+  function dans(r, x, y) { return x >= r.left && x <= r.right && y >= r.top && y <= r.bottom; }
+
+  // ==================================================================
+  // Deux gestes pour les éléments HTML : glisser-déposer, ou toucher l'objet puis toucher la cible.
+  // opts.cibles() : éléments où l'on peut déposer ; opts.depot(cible, x, y) : true si accepté ; opts.actif() : peut-on le prendre ?
+  // ==================================================================
+  var choix = null; // { el, opts }
+  function deselectionner() { if (choix) choix.el.classList.remove("choisi"); choix = null; }
+  function mobile(n, opts) {
+    n.classList.add("mobile");
+    n._actif = opts.actif || null;
+    n.addEventListener("pointerdown", function (ev) {
+      if (opts.actif && !opts.actif()) return;
+      ev.preventDefault(); ev.stopPropagation();
+      var x0 = ev.clientX, y0 = ev.clientY, vole = false, survol = null;
+      n.setPointerCapture(ev.pointerId);
+      function bouge(e) {
+        var dx = e.clientX - x0, dy = e.clientY - y0;
+        if (!vole && Math.abs(dx) + Math.abs(dy) > 8) { vole = true; deselectionner(); n.classList.remove("retour"); n.classList.add("en-vol"); }
+        if (!vole) return;
+        n.style.transform = "translate(" + dx + "px," + dy + "px)";
+        var c = trouverCible(opts, e.clientX, e.clientY);
+        if (c !== survol) { if (survol) survol.classList.remove("cible-survol"); survol = c; if (c) c.classList.add("cible-survol"); }
+      }
+      function lache(e) {
+        n.removeEventListener("pointermove", bouge); n.removeEventListener("pointerup", lache); n.removeEventListener("pointercancel", lache);
+        if (survol) survol.classList.remove("cible-survol");
+        if (!vole) { // toucher : on choisit l'objet
+          if (choix && choix.el === n) { deselectionner(); return; }
+          deselectionner(); choix = { el: n, opts: opts }; n.classList.add("choisi"); return;
+        }
+        n.classList.remove("en-vol");
+        var c = trouverCible(opts, e.clientX, e.clientY);
+        var ok = c ? opts.depot(c, e.clientX, e.clientY) : false;
+        if (ok) { n.style.transform = ""; }
+        else { n.classList.add("retour"); n.style.transform = ""; if (c) son("faux"); }
+      }
+      n.addEventListener("pointermove", bouge); n.addEventListener("pointerup", lache); n.addEventListener("pointercancel", lache);
+    });
+  }
+  function trouverCible(opts, x, y) {
+    var cs = opts.cibles();
+    for (var i = 0; i < cs.length; i++) if (dans(cs[i].getBoundingClientRect(), x, y)) return cs[i];
+    return null;
+  }
+  // Toucher une cible quand un objet est choisi
+  document.addEventListener("pointerup", function (e) {
+    if (!choix || e.target.closest("button")) return;
+    var m = e.target.closest(".mobile");
+    if (m && (!m._actif || m._actif())) return;
+    var c = trouverCible(choix.opts, e.clientX, e.clientY);
+    if (!c) return;
+    var opts = choix.opts, n = choix.el;
+    deselectionner();
+    if (!opts.depot(c, e.clientX, e.clientY)) { son("faux"); secouer(n); }
+  });
+
+  // ==================================================================
+  // Onglet 1 : LE MOT
+  // ==================================================================
+  // Étape 1 : PHOTO et GRAPHIE dans leur case. Étape 2 : les mots de la même famille.
+  var FAMILLE = [
+    { mot: "photocopie", sens: "lumiere", morceau: "photo" },
+    { mot: "orthographe", sens: "ecrire", morceau: "graphe" },
+    { mot: "photosynthèse", sens: "lumiere", morceau: "photo" },
+    { mot: "géographie", sens: "ecrire", morceau: "graphie" },
+    { mot: "autographe", sens: "ecrire", morceau: "graphe" },
+    { mot: "photophore", sens: "lumiere", morceau: "photo" },
+    { mot: "calligraphie", sens: "ecrire", morceau: "graphie" },
+    { mot: "biographie", sens: "ecrire", morceau: "graphie" }
+  ];
+  var motEtape = 1, motPlaces = 0, familleIndex = 0;
+  function casesSens() { return Array.prototype.slice.call(document.querySelectorAll(".case-sens")); }
+  function demarrerMot() {
+    motEtape = 1; motPlaces = 0; familleIndex = 0;
+    el("egalite").hidden = true; suite("");
+    casesSens().forEach(function (c) { c.classList.remove("rempli"); c.querySelector(".grec").textContent = ""; c.querySelector(".pose").innerHTML = ""; });
+    var p = el("mot-pioche"); p.innerHTML = "";
+    [["GRAPHIE", "ecrire"], ["PHOTO", "lumiere"]].forEach(function (m) {
+      var n = document.createElement("div"); n.className = "etiq"; n.textContent = m[0]; n.dataset.sens = m[1];
+      mobile(n, { cibles: casesSens, depot: function (c) { return deposerMorceau(n, c); } });
+      p.appendChild(n);
+    });
+    consigne("Glisse chaque morceau sur ce qu'il veut dire");
+    indice("« Photo » vient d'un mot grec qui veut dire la lumière.");
+  }
+  function deposerMorceau(n, c) {
+    if (c.dataset.sens !== n.dataset.sens) { consigne("🤪 Essaie l'autre case", "faux"); secouer(c); return false; }
+    son("bien");
+    c.classList.add("rempli"); pop(c);
+    c.querySelector(".grec").textContent = n.dataset.sens === "lumiere" ? "phôs, phôtos : la lumière (en grec)" : "graphein : écrire, dessiner (en grec)";
+    var s = document.createElement("span"); s.textContent = n.textContent; c.querySelector(".pose").appendChild(s);
+    n.remove(); motPlaces++;
+    if (motPlaces < 2) { consigne("✅ Et l'autre morceau ?", "bien"); return true; }
+    el("egalite").hidden = false; pop(el("egalite"));
+    consigne("✅ Photographier, c'est écrire avec la lumière", "bien");
+    indice("");
+    suite("Les mots de la famille →", demarrerFamille);
+    return true;
+  }
+  function demarrerFamille() {
+    motEtape = 2; familleIndex = 0; suite("");
+    el("egalite").hidden = true;
+    casesSens().forEach(function (c) { c.querySelector(".pose").innerHTML = ""; });
+    casesSens()[0].querySelector(".libelle").textContent = "GRAPHIE";
+    casesSens()[1].querySelector(".libelle").textContent = "PHOTO";
+    montrerMotFamille();
+  }
+  function montrerMotFamille() {
+    var p = el("mot-pioche"); p.innerHTML = "";
+    if (familleIndex >= FAMILLE.length) {
+      consigne("✅ Tous les mots sont rangés", "bien"); indice("");
+      suite("↺ Recommencer", function () { remettreLibelles(); demarrerMot(); });
+      return;
+    }
+    var f = FAMILLE[familleIndex];
+    var n = document.createElement("div"); n.className = "etiq mot-famille"; n.dataset.sens = f.sens; n.textContent = f.mot;
+    mobile(n, { cibles: casesSens, depot: function (c) { return deposerFamille(n, f, c); } });
+    p.appendChild(n);
+    consigne("Range le mot : lumière ou écriture ?");
+    indice("Cherche « photo » ou « graph » dans le mot.");
+    var cpt = document.createElement("div"); cpt.className = "compteur"; cpt.textContent = "Mots rangés : " + familleIndex + " / " + FAMILLE.length;
+    p.appendChild(cpt);
+  }
+  function deposerFamille(n, f, c) {
+    if (c.dataset.sens !== f.sens) { consigne("🤪 Regarde bien le morceau du mot", "faux"); secouer(c); return false; }
+    son("bien"); pop(c);
+    var s = document.createElement("span");
+    var i = f.mot.indexOf(f.morceau);
+    s.innerHTML = f.mot.slice(0, i) + '<b style="color:#c0392b">' + f.morceau + "</b>" + f.mot.slice(i + f.morceau.length);
+    c.querySelector(".pose").appendChild(s);
+    familleIndex++;
+    setTimeout(montrerMotFamille, 350);
+    return true;
+  }
+  function remettreLibelles() {
+    casesSens()[0].querySelector(".libelle").textContent = "écrire, dessiner";
+    casesSens()[1].querySelector(".libelle").textContent = "la lumière";
+  }
+
+  // ==================================================================
+  // Onglet 2 : LA CHAMBRE NOIRE (vue de côté)
+  // ==================================================================
+  var NS = "http://www.w3.org/2000/svg";
+  var SOL = 560, MUR_AVANT = 1000, MUR_FOND = 1450, HAUT_BOITE = 170, BAS_BOITE = 590;
+  var ch = {};
+  function svg(nom, attrs, parent) {
+    var n = document.createElementNS(NS, nom);
+    for (var k in attrs) n.setAttribute(k, attrs[k]);
+    if (parent) parent.appendChild(n);
+    return n;
+  }
+  // Dessins dans un repère local : origine = bas de l'objet, y vers le haut négatif.
+  function dessinArbre(g) {
+    svg("rect", { x: -14, y: -110, width: 28, height: 110, fill: "#8a5a2f" }, g);
+    svg("circle", { cx: 0, cy: -170, r: 80, fill: "#3e9b4f" }, g);
+    svg("circle", { cx: -40, cy: -140, r: 46, fill: "#4fb15f" }, g);
+    svg("circle", { cx: 34, cy: -200, r: 40, fill: "#57c06a" }, g);
+  }
+  function dessinBallon(g) { // origine = bas de la nacelle
+    svg("rect", { x: -20, y: -30, width: 40, height: 30, rx: 5, fill: "#8a5a2f" }, g);
+    svg("path", { d: "M-18 -30 L-34 -70 M18 -30 L34 -70", stroke: "#6b4a2b", "stroke-width": 4 }, g);
+    svg("path", { d: "M-36 -70 C-90 -110 -80 -200 0 -205 C80 -200 90 -110 36 -70 Z", fill: "#e8554e" }, g);
+    svg("path", { d: "M-14 -70 C-30 -110 -26 -200 0 -205 C26 -200 30 -110 14 -70 Z", fill: "#f6c945" }, g);
+  }
+  var ARBRE = { x: 330, y: SOL, haut: 250 }, BALLON = { x: 640, y: 330, haut: 205 };
+  function demarrerChambre() {
+    var s = el("scene-chambre"); s.innerHTML = "";
+    ch = { etape: 0, trouY: null, bouge: 0, s: s };
+    // ciel et sol
+    svg("rect", { x: 0, y: 0, width: 1700, height: SOL, fill: "#dff1fb" }, s);
+    svg("rect", { x: 0, y: SOL, width: 1700, height: 100, fill: "#cfe8b5" }, s);
+    // soleil
+    var sol = svg("g", { transform: "translate(110,90)" }, s);
+    svg("circle", { r: 46, fill: "#f6c945" }, sol);
+    // la boîte (chambre noire)
+    svg("rect", { x: MUR_AVANT, y: HAUT_BOITE, width: MUR_FOND - MUR_AVANT, height: BAS_BOITE - HAUT_BOITE, fill: "#26262e" }, s);
+    svg("rect", { x: MUR_FOND - 6, y: HAUT_BOITE, width: 22, height: BAS_BOITE - HAUT_BOITE, fill: "#3a3a44" }, s);
+    svg("rect", { x: MUR_AVANT - 6, y: HAUT_BOITE - 12, width: MUR_FOND - MUR_AVANT + 28, height: 14, fill: "#3a3a44" }, s);
+    svg("rect", { x: MUR_AVANT - 6, y: BAS_BOITE - 2, width: MUR_FOND - MUR_AVANT + 28, height: 14, fill: "#3a3a44" }, s);
+    ch.murAvant = svg("rect", { x: MUR_AVANT - 10, y: HAUT_BOITE - 12, width: 24, height: BAS_BOITE - HAUT_BOITE + 24, fill: "#4a4a56" }, s);
+    var t = svg("text", { x: (MUR_AVANT + MUR_FOND) / 2, y: HAUT_BOITE - 30, "text-anchor": "middle", "font-size": 34, fill: "#26262e" }, s);
+    t.textContent = "une boîte toute noire";
+    // couches : rayons, images, objets
+    var clip = svg("clipPath", { id: "dedans" }, svg("defs", {}, s));
+    svg("rect", { x: MUR_AVANT + 14, y: HAUT_BOITE + 2, width: MUR_FOND - MUR_AVANT - 20, height: BAS_BOITE - HAUT_BOITE - 4 }, clip);
+    ch.rayons = svg("g", { opacity: 0 }, s);
+    ch.trace = svg("g", { opacity: 0 }, s);
+    ch.rayonsDedans = svg("g", { opacity: 0, "clip-path": "url(#dedans)" }, s);
+    ch.images = svg("g", { opacity: 0, "clip-path": "url(#dedans)" }, s);
+    ch.trou = svg("g", {}, s);
+    ch.arbre = svg("g", {}, s); dessinArbre(ch.arbre);
+    ch.arbre.setAttribute("transform", "translate(" + ARBRE.x + "," + ARBRE.y + ")");
+    BALLON.x = 640; BALLON.y = 330;
+    ch.ballon = svg("g", { "class": "poignee" }, s); dessinBallon(ch.ballon);
+    // images à l'envers sur le mur du fond
+    ch.imgArbre = svg("g", {}, ch.images); dessinArbre(ch.imgArbre);
+    ch.imgBallon = svg("g", {}, ch.images); dessinBallon(ch.imgBallon);
+    // outils : l'épingle et le papier, dans le casier à droite
+    svg("rect", { x: 1500, y: 170, width: 180, height: 420, rx: 20, fill: "#efe5cc", stroke: "#d9cfb4", "stroke-width": 4, "stroke-dasharray": "12 8" }, s);
+    ch.epingle = svg("g", { "class": "poignee" }, s);
+    svg("rect", { x: -30, y: -50, width: 60, height: 110, fill: "transparent" }, ch.epingle);
+    svg("line", { x1: 0, y1: -10, x2: 0, y2: 50, stroke: "#8a8f99", "stroke-width": 5, "stroke-linecap": "round" }, ch.epingle);
+    svg("circle", { cx: 0, cy: -18, r: 16, fill: "#e8554e" }, ch.epingle);
+    ch.papierCh = svg("g", { "class": "poignee", opacity: 0.3 }, s);
+    svg("rect", { x: -40, y: -70, width: 80, height: 140, fill: "#e8dcb0", stroke: "#b9a46a", "stroke-width": 3 }, ch.papierCh);
+    var tp = svg("text", { x: 0, y: 8, "text-anchor": "middle", "font-size": 22, fill: "#7a6a3a" }, ch.papierCh); tp.textContent = "papier";
+    placer(ch.epingle, 1590, 280); placer(ch.papierCh, 1590, 470);
+    majBallon();
+    mobileSvg(ch.epingle, { actif: function () { return ch.etape === 0; }, depot: deposerEpingle, maison: [1590, 280] });
+    mobileSvg(ch.ballon, { actif: function () { return ch.etape >= 1 && ch.etape < 3; }, glisse: true, deplacer: deplacerBallon });
+    mobileSvg(ch.papierCh, { actif: function () { return ch.etape === 2; }, depot: deposerPapier, maison: [1590, 470] });
+    consigne("Perce un trou dans la boîte avec l'épingle");
+    indice("Pose l'épingle sur le mur de devant de la boîte.");
+    suite("");
+  }
+  function placer(g, x, y) { g.setAttribute("transform", "translate(" + x + "," + y + ")"); g._x = x; g._y = y; }
+  function pointSvg(e) {
+    var s = ch.s, p = s.createSVGPoint(); p.x = e.clientX; p.y = e.clientY;
+    return p.matrixTransform(s.getScreenCTM().inverse());
+  }
+  // Deux gestes dans le SVG : glisser, ou toucher l'objet puis toucher l'endroit.
+  var choixSvg = null;
+  function mobileSvg(g, opts) {
+    g.addEventListener("pointerdown", function (ev) {
+      if (!opts.actif()) return;
+      ev.preventDefault(); ev.stopPropagation();
+      var p0 = pointSvg(ev), gx = g._x, gy = g._y, vole = false;
+      function bouge(e) {
+        var p = pointSvg(e), dx = p.x - p0.x, dy = p.y - p0.y;
+        if (!vole && Math.abs(dx) + Math.abs(dy) > 10) { vole = true; if (choixSvg) { choixSvg.g.classList.remove("choisi-svg"); choixSvg = null; } }
+        if (!vole) return;
+        if (opts.deplacer) opts.deplacer(gx + dx, gy + dy); else placer(g, gx + dx, gy + dy);
+      }
+      function lache(e) {
+        window.removeEventListener("pointermove", bouge); window.removeEventListener("pointerup", lache); window.removeEventListener("pointercancel", lache);
+        if (!vole) {
+          if (choixSvg && choixSvg.g === g) { g.classList.remove("choisi-svg"); choixSvg = null; return; }
+          if (choixSvg) choixSvg.g.classList.remove("choisi-svg");
+          choixSvg = { g: g, opts: opts }; g.classList.add("choisi-svg"); return;
+        }
+        if (opts.depot) { var p = pointSvg(e); if (!opts.depot(p.x, p.y)) { son("faux"); placer(g, opts.maison[0], opts.maison[1]); } }
+      }
+      window.addEventListener("pointermove", bouge); window.addEventListener("pointerup", lache); window.addEventListener("pointercancel", lache);
+    });
+  }
+  el("scene-chambre").addEventListener("pointerup", function (e) {
+    if (!choixSvg || e.target.closest(".poignee")) return;
+    var c = choixSvg; c.g.classList.remove("choisi-svg"); choixSvg = null;
+    if (!c.opts.actif()) return;
+    var p = pointSvg(e);
+    if (c.opts.deplacer) { c.opts.deplacer(p.x, p.y); return; }
+    if (!c.opts.depot(p.x, p.y)) son("faux");
+  });
+  function deposerEpingle(x, y) {
+    if (Math.abs(x - MUR_AVANT) > 50 || y < HAUT_BOITE + 40 || y > BAS_BOITE - 40) {
+      consigne("🤪 Le trou se fait dans le mur de devant", "faux"); return false;
+    }
+    ch.trouY = Math.max(300, Math.min(480, y));
+    placer(ch.epingle, 1590, 280); ch.epingle.setAttribute("opacity", 0.3);
+    svg("rect", { x: MUR_AVANT - 12, y: ch.trouY - 7, width: 28, height: 14, fill: "#dff1fb" }, ch.trou);
+    ch.etape = 1; son("bien");
+    ch.rayons.setAttribute("opacity", 1); ch.rayonsDedans.setAttribute("opacity", 1); ch.images.setAttribute("opacity", 1);
+    majBallon();
+    consigne("✅ La lumière entre ! Monte et descends la montgolfière", "bien");
+    indice("Regarde où arrive l'image de la montgolfière, au fond de la boîte.");
+    return true;
+  }
+  function deplacerBallon(x, y) {
+    var ancienY = BALLON.y;
+    BALLON.x = Math.max(420, Math.min(720, x));
+    BALLON.y = Math.max(BALLON.haut + 10, Math.min(SOL - 10, y));
+    ch.bouge += Math.abs(BALLON.y - ancienY);
+    majBallon();
+    if (ch.etape === 1 && ch.bouge > 250) {
+      ch.etape = 2; son("bien");
+      ch.papierCh.setAttribute("opacity", 1);
+      consigne("✅ L'image est à l'envers ! Pose le papier au fond de la boîte", "bien");
+      indice("Les rayons se croisent dans le trou : le haut arrive en bas.");
+    }
+  }
+  // L'image d'un objet : chaque point passe par le trou et arrive sur le mur du fond.
+  function projeter(obj, g) {
+    var k = (MUR_FOND - MUR_AVANT) / (MUR_AVANT - obj.x);
+    var yBas = ch.trouY + (ch.trouY - obj.y) * k;
+    g.setAttribute("transform", "translate(" + (MUR_FOND - 30 - 60 * k) + "," + yBas + ") scale(" + k + "," + (-k) + ")");
+    return { k: k, yBas: yBas, yHaut: ch.trouY + (ch.trouY - (obj.y - obj.haut)) * k };
+  }
+  function majBallon() {
+    placer(ch.ballon, BALLON.x, BALLON.y);
+    if (ch.trouY === null) return;
+    ch.rayons.innerHTML = ""; ch.rayonsDedans.innerHTML = "";
+    [[ARBRE, ch.imgArbre, "#4fb15f"], [BALLON, ch.imgBallon, "#e8554e"]].forEach(function (o) {
+      var r = projeter(o[0], o[1]);
+      [[o[0].y - o[0].haut, r.yHaut], [o[0].y, r.yBas]].forEach(function (pt) {
+        svg("line", { x1: o[0].x, y1: pt[0], x2: MUR_AVANT, y2: ch.trouY, stroke: "#f6c945", "stroke-width": 5, opacity: 0.85 }, ch.rayons);
+        svg("line", { x1: MUR_AVANT, y1: ch.trouY, x2: MUR_FOND - 6, y2: pt[1], stroke: "#f6c945", "stroke-width": 5, opacity: 0.85 }, ch.rayonsDedans);
+      });
+    });
+  }
+  function deposerPapier(x, y) {
+    if (Math.abs(x - MUR_FOND) > 90 || y < HAUT_BOITE || y > BAS_BOITE) { consigne("🤪 Le papier va sur le mur du fond", "faux"); return false; }
+    ch.etape = 3; son("bien");
+    placer(ch.papierCh, 1590, 470); ch.papierCh.setAttribute("opacity", 0);
+    // le papier se colle au fond ; l'image s'y imprime peu à peu
+    var feuille = svg("rect", { x: MUR_FOND - 24, y: HAUT_BOITE + 6, width: 18, height: BAS_BOITE - HAUT_BOITE - 12, fill: "#e8dcb0" }, ch.trace);
+    ch.trace.setAttribute("opacity", 1);
+    var t0 = performance.now();
+    consigne("La lumière écrit sur le papier…");
+    indice("");
+    (function anime(t) {
+      var a = Math.min(1, (t - t0) / 3000);
+      feuille.setAttribute("fill", "rgb(" + Math.round(232 - 120 * a) + "," + Math.round(220 - 130 * a) + "," + Math.round(176 - 110 * a) + ")");
+      if (a < 1) requestAnimationFrame(anime);
+      else {
+        son("bien");
+        sortirPhoto();
+        consigne("✅ L'image est écrite par la lumière : c'est une photographie !", "bien");
+        indice("En 1826, Nicéphore Niépce a fait la première photo : il a fallu des heures de lumière.");
+        suite("↺ Recommencer", demarrerChambre);
+      }
+    })(t0);
+    return true;
+  }
+
+  // La photo sort de la boîte, remise à l'endroit, en sépia comme les premières photos.
+  function sortirPhoto() {
+    var s = ch.s, defs = s.querySelector("defs");
+    var f = svg("filter", { id: "sepia" }, defs);
+    svg("feColorMatrix", { type: "matrix", values: "0.39 0.77 0.19 0 0  0.35 0.69 0.17 0 0  0.27 0.53 0.13 0 0  0 0 0 1 0" }, f);
+    var cadre = svg("g", { transform: "translate(1510,250)" }, s);
+    svg("rect", { x: -8, y: -8, width: 176, height: 146, fill: "#fff", stroke: "#b9a46a", "stroke-width": 3 }, cadre);
+    var photo = svg("g", { filter: "url(#sepia)" }, cadre);
+    svg("rect", { x: 0, y: 0, width: 160, height: 130, fill: "#dff1fb" }, photo);
+    svg("rect", { x: 0, y: 100, width: 160, height: 30, fill: "#cfe8b5" }, photo);
+    var monde = svg("g", { transform: "translate(-30,0) scale(0.2)" }, photo); // la scène 0–900 × 0–650, réduite
+    var a = svg("g", { transform: "translate(" + ARBRE.x + "," + ARBRE.y + ")" }, monde); dessinArbre(a);
+    var b = svg("g", { transform: "translate(" + BALLON.x + "," + BALLON.y + ")" }, monde); dessinBallon(b);
+    var t = svg("text", { x: 80, y: 172, "text-anchor": "middle", "font-size": 24, fill: "#7a6a3a" }, cadre); t.textContent = "ma photo";
+  }
+
+  // ==================================================================
+  // Onglet 3 : LE PAPIER SOLAIRE (cyanotype)
+  // ==================================================================
+  function cercle(cx, cy, r) { return "M" + (cx - r) + " " + cy + " a" + r + " " + r + " 0 1 0 " + 2 * r + " 0 a" + r + " " + r + " 0 1 0 " + -2 * r + " 0 Z"; }
+  var OBJETS = [
+    { nom: "feuille", couleur: "#4fa34f", forme: "M50 4 C82 20 92 58 50 96 C8 58 18 20 50 4 Z", deco: '<path d="M50 14 V90 M50 40 L32 28 M50 56 L30 44 M50 40 L68 28 M50 56 L70 44" stroke="#2f6d2f" stroke-width="3" fill="none"/>' },
+    { nom: "clé", couleur: "#9aa3ad", forme: cercle(26, 50, 20) + " " + cercle(26, 50, 9) + " M44 45 H96 V55 H88 V68 H80 V55 H72 V64 H64 V55 H44 Z", regle: "evenodd" },
+    { nom: "étoile", couleur: "#d9a441", forme: "M50 4 L61 37 L96 37 L68 58 L79 93 L50 72 L21 93 L32 58 L4 37 L39 37 Z" },
+    { nom: "fleur", couleur: "#e47fb0", forme: cercle(50, 22, 17) + cercle(76, 42, 17) + cercle(66, 72, 17) + cercle(34, 72, 17) + cercle(24, 42, 17) + cercle(50, 50, 16), deco: '<circle cx="50" cy="50" r="12" fill="#f6c945"/>' },
+    { nom: "cœur", couleur: "#e8554e", forme: "M50 92 C10 62 4 36 24 20 C38 9 50 22 50 30 C50 22 62 9 76 20 C96 36 90 62 50 92 Z" }
+  ];
+  var so = {};
+  function svgObjet(o, remplissage) {
+    return '<svg viewBox="0 0 100 100"><path d="' + o.forme + '" fill="' + remplissage + '"' + (o.regle ? ' fill-rule="' + o.regle + '"' : "") + "/>" + (remplissage === o.couleur && o.deco ? o.deco : "") + "</svg>";
+  }
+  function demarrerSoleil() {
+    so = { etape: "poser" };
+    var papier = el("papier");
+    papier.className = "papier";
+    Array.prototype.slice.call(papier.querySelectorAll(".objet,.ombre-objet")).forEach(function (n) { n.remove(); });
+    papier.style.transform = "";
+    var plateau = el("plateau"); plateau.innerHTML = "";
+    OBJETS.forEach(function (o) {
+      var n = document.createElement("div"); n.className = "objet"; n.title = o.nom; n.innerHTML = svgObjet(o, o.couleur); n._objet = o;
+      mobile(n, {
+        actif: function () { return so.etape === "poser" || (so.etape === "enlever" && n.parentNode === papier); },
+        cibles: function () { return so.etape === "poser" ? [papier, plateau] : [plateau]; },
+        depot: function (c, x, y) { return deposerObjet(n, c, x, y); }
+      });
+      plateau.appendChild(n);
+    });
+    el("soleil").classList.add("eteint"); el("bassine").classList.add("eteinte");
+    consigne("Pose des objets sur le papier solaire");
+    indice("Le papier est sensible à la lumière : il fonce au soleil.");
+    suite("");
+  }
+  function objetsSurPapier() { return Array.prototype.slice.call(el("papier").querySelectorAll(".objet")); }
+  function deposerObjet(n, c, x, y) {
+    var papier = el("papier"), plateau = el("plateau");
+    if (c === papier && so.etape === "poser") {
+      var r = papier.getBoundingClientRect();
+      n.style.left = Math.max(0, Math.min(r.width - 130, x - r.left - 65)) + "px";
+      n.style.top = Math.max(0, Math.min(r.height - 130, y - r.top - 65)) + "px";
+      papier.appendChild(n);
+      el("soleil").classList.remove("eteint");
+      consigne("Pose d'autres objets, puis glisse le soleil sur le papier");
+      indice("Le soleil se pose sur la feuille.");
+      return true;
+    }
+    if (c === plateau) {
+      if (n.parentNode === plateau) return true;
+      n.style.left = ""; n.style.top = "";
+      plateau.appendChild(n);
+      if (so.etape === "poser") { if (!objetsSurPapier().length) { el("soleil").classList.add("eteint"); consigne("Pose des objets sur le papier solaire"); } return true; }
+      if (so.etape === "enlever" && !objetsSurPapier().length) {
+        so.etape = "rincer"; son("bien");
+        el("bassine").classList.remove("eteinte");
+        consigne("✅ Sous les objets, le papier n'a pas foncé ! Plonge la feuille dans l'eau", "bien");
+        indice("Glisse la feuille dans la bassine.");
+      }
+      return true;
+    }
+    return false;
+  }
+  mobile(el("soleil"), {
+    actif: function () { return so.etape === "poser" && objetsSurPapier().length > 0; },
+    cibles: function () { return [el("papier")]; },
+    depot: function () { exposer(); return true; }
+  });
+  function exposer() {
+    so.etape = "expo"; son("bien");
+    var papier = el("papier");
+    // l'ombre de chaque objet garde la couleur du papier : la lumière n'y arrive pas
+    objetsSurPapier().forEach(function (n) {
+      var d = document.createElement("div"); d.className = "ombre-objet"; d.style.left = n.style.left; d.style.top = n.style.top;
+      d.innerHTML = svgObjet(n._objet, "");
+      papier.insertBefore(d, papier.firstChild);
+    });
+    el("soleil").classList.add("brille");
+    papier.classList.add("expose");
+    consigne("La lumière écrit sur le papier…");
+    indice("");
+    setTimeout(function () {
+      el("soleil").classList.remove("brille"); el("soleil").classList.add("eteint");
+      so.etape = "enlever";
+      consigne("Enlève les objets du papier");
+      indice("Remets les objets dans le plateau.");
+    }, 3100);
+  }
+  mobile(el("papier"), {
+    actif: function () { return so.etape === "rincer"; },
+    cibles: function () { return [el("bassine")]; },
+    depot: function () { rincer(); return true; }
+  });
+  function rincer() {
+    so.etape = "fini"; son("eau");
+    var papier = el("papier");
+    papier.classList.add("mouille", "rince");
+    el("bassine").classList.add("eteinte");
+    setTimeout(function () {
+      son("bien");
+      consigne("✅ La lumière a écrit en bleu, les objets sont restés blancs", "bien");
+      indice("Là où la lumière passe : bleu. Là où l'objet la bloque : blanc.");
+      suite("↺ Recommencer", demarrerSoleil);
+    }, 1700);
+  }
+
+  // ==================================================================
+  // Onglets, indice, son
+  // ==================================================================
+  function changerOnglet(o) {
+    onglet = o; deselectionner();
+    Array.prototype.forEach.call(document.querySelectorAll("#onglets button"), function (b) { b.classList.toggle("actif", b.dataset.onglet === o); });
+    ["mot", "chambre", "soleil"].forEach(function (k) { el("jeu-" + k).hidden = k !== o; });
+    if (o === "mot") { remettreLibelles(); demarrerMot(); }
+    else if (o === "chambre") demarrerChambre();
+    else demarrerSoleil();
+    try { history.replaceState(null, "", "#" + o); } catch (e) {}
+  }
+  Array.prototype.forEach.call(document.querySelectorAll("#onglets button"), function (b) {
+    b.addEventListener("click", function () { changerOnglet(b.dataset.onglet); });
+  });
+  el("btn-indice").addEventListener("click", function () { el("indice").textContent = indiceCourant; });
+  el("btn-son").addEventListener("click", function () { sonActif = !sonActif; el("btn-son").textContent = sonActif ? "🔊" : "🔇"; });
+
+  var depart = location.hash.slice(1);
+  changerOnglet(["mot", "chambre", "soleil"].indexOf(depart) !== -1 ? depart : "mot");
+
+  // Pour les tests
+  window.__lumiere = { changerOnglet: changerOnglet, etat: function () { return { onglet: onglet, motEtape: motEtape, familleIndex: familleIndex, chambre: ch.etape, soleil: so.etape }; } };
+})();
+</script>
+<!-- MENU -->
+<script>
+/* ==== LE MENU ☰ (GTH, 10/10) : interface épurée — à l'écran, seulement le titre, le score, la consigne et l'activité ====
+   Tout le reste (niveaux, onglets de méthode, ✏️, 🔊, 🖨️, aide…) part dans un menu ☰, ouvert d'un toucher.
+   Réglage par outil (CONF, posé par l'injecteur) : ancre = où mettre le bouton ☰ (sinon en haut à droite de l'écran) ;
+   cacher = ce qui part dans le menu (sinon : tout ce qui, dans « .barre .droite », n'est pas un score).
+   Installé par .claude/outils/menu-outil/injecter.py ; ne pas modifier dans l'outil, mais dans ce fichier. */
+(function () {
+  var CONF = {"ancre": ".barre .droite", "cacher": ["#onglets", "#btn-son"]};
+  var st = document.createElement("style");
+  st.textContent =
+    ".menu-btn{width:58px; height:58px; border-radius:16px; border:2px solid rgba(0,0,0,.15); background:#fff; color:#1f2a33; font-size:2rem; line-height:1; cursor:pointer; flex:none; padding:0;}" +
+    ".menu-btn.fixe{position:fixed; top:10px; right:12px; z-index:150; box-shadow:0 4px 14px rgba(0,0,0,.15);}" +
+    ".menu-btn.ouvert{background:#1f2a33; color:#fff;}" +
+    ".menu-panneau{position:fixed; top:76px; right:16px; z-index:200; background:#fff; color:#1f2a33; border-radius:18px; box-shadow:0 18px 50px rgba(0,0,0,.28); padding:16px 18px;" +
+    "  display:flex; flex-direction:column; align-items:flex-start; gap:12px; max-width:min(620px, 92vw); max-height:80vh; overflow:auto;}" +
+    ".menu-panneau[hidden]{display:none !important;}" +
+    ".menu-panneau h4{margin:0; font-family:sans-serif; font-size:.85rem; text-transform:uppercase; letter-spacing:.6px; color:#6d7a85;}" +
+    ".menu-panneau > *{position:static !important; margin:0 !important;}" +
+    ".menu-panneau > div,.menu-panneau > nav{display:flex; flex-wrap:wrap; gap:8px;}";
+  document.head.appendChild(st);
+  function installer() {
+    var autres = [];
+    if (CONF.cacher) CONF.cacher.forEach(function (s) { document.querySelectorAll(s).forEach(function (e) { if (autres.indexOf(e) === -1) autres.push(e); }); });
+    else { var d = document.querySelector(".barre .droite"); if (d) autres = Array.prototype.filter.call(d.children, function (e) { return !e.classList.contains("score"); }); }
+    if (!autres.length) return;
+    var btn = document.createElement("button"); btn.type = "button"; btn.className = "menu-btn"; btn.title = "Niveaux et réglages"; btn.textContent = "☰";
+    var pan = document.createElement("div"); pan.className = "menu-panneau"; pan.hidden = true;
+    var t = document.createElement("h4"); t.textContent = "Niveaux et réglages"; pan.appendChild(t);
+    autres.forEach(function (e) { pan.appendChild(e); });
+    var ancre = document.querySelector(CONF.ancre || ".barre .droite");
+    if (ancre) ancre.appendChild(btn); else { btn.classList.add("fixe"); document.body.appendChild(btn); }
+    document.body.appendChild(pan);
+    function ouvrir(o) { pan.hidden = !o; btn.classList.toggle("ouvert", o); }
+    btn.addEventListener("click", function (e) { e.stopPropagation(); ouvrir(pan.hidden); });
+    // un niveau choisi, ou une fenêtre ouverte (✏️, 🖨️) : le menu se referme ; on garde le menu ouvert pour choisir un type de jeu
+    pan.addEventListener("click", function (e) { var b = e.target.closest("button"); if (b && !b.closest(CONF.garderOuvert || ".types")) setTimeout(function () { ouvrir(false); }, 120); });
+    document.addEventListener("pointerdown", function (e) { if (!pan.hidden && !pan.contains(e.target) && e.target !== btn) ouvrir(false); });
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", installer); else installer();
+})();
+</script>
+<!-- /MENU -->
+<!-- INDICE-COTE -->
+<script>
+/* 💡 sur le côté (Karim, 21/10) : dans les jeux qui ont un bouton « 💡 Indice » (.btn-indice), le bouton devient une ampoule seule,
+   collée au bord droit de l'écran, à mi-hauteur ; l'indice s'ouvre dans une bulle à côté d'elle, jamais sous le jeu.
+   Le jeu garde son propre code : au toucher, on regarde quel texte il vient d'écrire (zone #indice, ou la ligne de message),
+   on le reprend dans la bulle et on remet la zone comme avant. Installé par injecter.py. */
+(function () {
+  var b = document.querySelector(".btn-indice"); if (!b) return;
+  var st = document.createElement("style");
+  st.textContent =
+    ".btn-indice.cote{position:fixed !important; right:18px; top:50%; transform:translateY(-50%); width:76px; height:76px; padding:0 !important; border-radius:50% !important;" +
+    " font-size:40px !important; line-height:1; z-index:60; margin:0 !important; display:flex; align-items:center; justify-content:center}" +
+    "#bulle-cote{position:fixed; right:110px; top:50%; transform:translateY(-50%); max-width:520px; background:#fff8c4; border:2px solid #d4b106; border-radius:18px;" +
+    " padding:16px 22px; font-size:26px; line-height:1.35; z-index:60; box-shadow:0 6px 18px rgba(0,0,0,.15); display:none}" +
+    "#bulle-cote::after{content:''; position:absolute; right:-14px; top:50%; margin-top:-12px; border:12px solid transparent; border-left:14px solid #d4b106; border-right:none}";
+  document.head.appendChild(st);
+  b.classList.add("cote"); b.textContent = "💡"; b.title = "Indice"; document.body.appendChild(b);
+  var bulle = document.createElement("div"); bulle.id = "bulle-cote"; document.body.appendChild(bulle);
+  var zones = function () { return Array.prototype.slice.call(document.querySelectorAll("#indice, .indice, #message, .message, #verdict, .verdict, #consigne-aide")); };
+  var avant = [], minuteur = null;
+  b.addEventListener("click", function () { avant = zones().map(function (z) { return [z, z.textContent, z.className]; }); }, true);   // avant le code du jeu
+  b.addEventListener("click", function () {
+    setTimeout(function () {
+      var txt = "";
+      avant.forEach(function (a) {
+        var z = a[0], neuf = z.textContent;
+        if (neuf !== a[1] && neuf.trim()) { txt = neuf; z.textContent = a[1]; z.className = a[2]; }
+      });
+      if (!txt) return;   // le jeu montre l'indice autrement : on le laisse faire
+      bulle.textContent = txt.replace(/^\s*💡\s*/, ""); bulle.style.display = "block";
+      clearTimeout(minuteur); minuteur = setTimeout(function () { bulle.style.display = "none"; }, 8000);
+    }, 0);
+  });
+  document.addEventListener("pointerdown", function (e) { if (e.target !== b && e.target !== bulle) bulle.style.display = "none"; });
+})();
+</script>
+<!-- /INDICE-COTE -->
+</body>
+</html>

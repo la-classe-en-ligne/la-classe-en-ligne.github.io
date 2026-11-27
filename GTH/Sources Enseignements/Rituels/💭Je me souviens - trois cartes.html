@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>💭 Je me souviens</title>
+<!--
+  💭 Je me souviens, en activité (Karim, 21/11 : « trois notions de la journée, mais il faut en faire une activité »).
+  Trois cartes retournées. Un élève en touche une : la question apparaît, tout le monde écrit sur l'ardoise ;
+  je touche « Réponse » : la carte montre la réponse. Le jour se choisit en haut (par défaut, le jour même s'il est prévu).
+  Les questions de chaque jour sont écrites ci-dessous (JOURS) : une notion vraiment faite, jamais une notion à venir.
+-->
+<style>
+* { box-sizing:border-box; }
+html,body { margin:0; height:100%; overflow:hidden; background:#f4f1ea; font-family:"Segoe UI",Calibri,Arial,sans-serif; color:#17252b; user-select:none; -webkit-user-select:none; touch-action:manipulation; }
+#scene { position:absolute; width:1920px; height:1080px; transform-origin:0 0; }
+#haut { position:absolute; top:18px; left:36px; right:36px; display:flex; align-items:center; gap:14px; font-size:28px; color:#78909c; }
+#jours { margin-left:auto; display:flex; gap:8px; }
+#jours button { font:inherit; font-size:22px; padding:4px 14px; border-radius:20px; border:2px solid #cfd8dc; background:#fff; color:#546e7a; cursor:pointer; }
+#jours button.on { background:#1f7a8c; border-color:#1f7a8c; color:#fff; }
+h1 { position:absolute; top:80px; left:0; right:0; margin:0; text-align:center; font-size:64px; color:#1f7a8c; }
+#cartes { position:absolute; top:220px; left:80px; right:80px; display:grid; grid-template-columns:repeat(3, 1fr); gap:50px; }
+.carte { height:720px; perspective:1600px; cursor:pointer; }
+.face { position:absolute; inset:0; border-radius:34px; backface-visibility:hidden; transition:transform .7s; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:40px; text-align:center; box-shadow:0 14px 34px rgba(0,0,0,.18); }
+.carte > div { position:relative; width:100%; height:100%; }
+.dos { background:var(--c); color:#fff; font-size:250px; font-weight:800; }
+.dos small { font-size:46px; font-weight:600; opacity:.9; }
+.recto { background:#fff; border:8px solid var(--c); transform:rotateY(180deg); }
+.carte.ouverte .dos { transform:rotateY(180deg); } .carte.ouverte .recto { transform:rotateY(360deg); }
+.dom { font-size:36px; font-weight:700; color:var(--c); margin-bottom:24px; }
+.q { font-size:54px; font-weight:600; line-height:1.3; }
+.q .cm { display:block; font-size:44px; margin-top:16px; color:#455a64; }
+.r { margin-top:40px; font-size:56px; font-weight:800; color:#2e7d32; min-height:80px; }
+.voir { margin-top:30px; font:inherit; font-size:34px; font-weight:700; padding:10px 34px; border-radius:18px; border:3px solid var(--c); background:#fff; color:var(--c); cursor:pointer; }
+#cadeau { position:absolute; left:50%; bottom:22px; transform:translateX(-50%); font:inherit; font-size:44px; font-weight:800; padding:10px 46px; border-radius:30px; border:0; background:#f9a825; color:#fff; cursor:pointer; box-shadow:0 8px 20px rgba(0,0,0,.2); animation:saute 1s infinite; }
+@keyframes saute { 50% { transform:translateX(-50%) translateY(-12px); } }
+#surprise { position:absolute; inset:0; background:rgba(23,37,43,.55); display:flex; align-items:center; justify-content:center; }
+#surprise[hidden], #cadeau[hidden] { display:none; }
+#boite { width:1400px; min-height:640px; background:#fffdf5; border-radius:40px; border:10px solid #f9a825; padding:50px 70px; text-align:center; position:relative; animation:ouvre .6s cubic-bezier(.3,1.6,.5,1); }
+@keyframes ouvre { from { transform:scale(.2) rotate(-8deg); opacity:0; } }
+#boite .genre { font-size:40px; font-weight:800; color:#e65100; letter-spacing:1px; }
+#boite .emo { font-size:170px; line-height:1.1; margin:10px 0; }
+#boite .txt { font-size:62px; font-weight:600; line-height:1.3; }
+#boite .rep { font-size:66px; font-weight:800; color:#2e7d32; margin-top:34px; min-height:90px; }
+#boite button { font:inherit; font-size:38px; font-weight:700; padding:10px 40px; border-radius:20px; border:3px solid #f9a825; background:#fff; color:#e65100; cursor:pointer; margin-top:20px; }
+#boite .ferme { position:absolute; top:18px; right:24px; margin:0; border:0; font-size:46px; color:#90a4ae; padding:0 10px; }
+#boite svg { display:block; margin:10px auto; }
+</style>
+</head>
+<body>
+<div id="scene">
+  <div id="haut"><span>💭 Je me souviens</span><div id="jours"></div></div>
+  <h1>Je me souviens</h1>
+  <div id="cartes"></div>
+  <button id="cadeau" hidden>🎁 La surprise</button>
+  <div id="surprise" hidden><div id="boite"></div></div>
+</div>
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+const FR = "#c62828", MA = "#1565c0", HG = "#2e7d32";
+// les questions de chaque jour (3 notions faites dans la journée ou la semaine)
+const JOURS = {
+  "2026-11-23": { nom: "Lundi 23", Q: [
+    { c: FR, dom: "La dictée", q: "« Il chante. »<br>Écris la phrase avec <b>ils</b>.", r: "Ils chantent." },
+    { c: MA, dom: "Le problème", q: "J'ai 30 billes. J'en donne 8, puis 10.<br>Combien m'en reste-t-il ?", r: "30 − 8 = 22, puis 22 − 10 = 12 billes" },
+    { c: MA, dom: "Le calcul mental", q: "<span class=\"cm\">CM1 : 4 × 20</span><span class=\"cm\">CM2 : 3 × 300</span>", r: "80 · 900" } ] },
+  "2026-11-26": { nom: "Jeudi 26", Q: [
+    { c: FR, dom: "La dictée", q: "« Il saute. »<br>Écris la phrase avec <b>ils</b>.", r: "Ils sautent." },
+    { c: FR, dom: "Les verbes qui trichent", q: "Le verbe <b>aller</b>, avec <b>je</b>.<br>Le verbe <b>faire</b>, avec <b>ils</b>.", r: "je vais · ils font" },
+    { c: MA, dom: "Le carnet des produits", q: "Je sais 4 × 17 = 68.<br>Trouve 8 × 17.", r: "68 + 68 = 136 (je double)" } ] },
+  "2026-11-27": { nom: "Vendredi 27", Q: [
+    { c: FR, dom: "La dictée", q: "« Elle grandit. »<br>Écris la phrase avec <b>elles</b>.", r: "Elles grandissent." },
+    { c: MA, dom: "Le calcul mental", q: "<span class=\"cm\">CM1 : 7 + ? = 10 · 60 + ? = 100</span><span class=\"cm\">CM2 : 24 × 25</span>", r: "3 · 40 · 600" },
+    { c: MA, dom: "L'heure", q: "Combien de minutes dans 2 heures ?<br>Et dans une demi-heure ?", r: "120 minutes · 30 minutes" } ] }
+};
+
+// 🎁 La récompense, quand les trois réponses sont montrées (Karim, 21/11 : « une petite récompense différente des fois :
+// une belle image, une mini devinette, une blague drôle »). Jamais la même deux fois de suite (mémoire de l'ordinateur).
+const ML = '<svg width="1000" height="300" viewBox="0 0 1000 300" stroke="#17252b" stroke-width="10" stroke-linecap="round" fill="none">'
+  + '<line x1="250" y1="80" x2="750" y2="80"/><path d="M290 30 L250 80 L290 130 M710 30 L750 80 L710 130"/>'
+  + '<line x1="250" y1="230" x2="750" y2="230"/><path d="M210 180 L250 230 L210 280 M790 180 L750 230 L790 280"/></svg>';
+const EB = (() => { const R = (cx, cy, r, n, d) => Array.from({ length: n }, (_, i) => '<circle cx="' + (cx + d * Math.cos(i * 2 * Math.PI / n)) + '" cy="' + (cy + d * Math.sin(i * 2 * Math.PI / n)) + '" r="' + r + '" fill="#90a4ae"/>').join("");
+  return '<svg width="1000" height="330" viewBox="0 0 1000 330">' + R(270, 165, 62, 6, 135) + '<circle cx="270" cy="165" r="36" fill="#ef6c00"/>' + R(740, 165, 13, 8, 62) + '<circle cx="740" cy="165" r="36" fill="#ef6c00"/></svg>'; })();
+const SURPRISES = [
+  { g: "😂 La blague", e: "📚", t: "Pourquoi le livre de maths est-il triste ?", r: "Parce qu'il a trop de problèmes !" },
+  { g: "😂 La blague", e: "🍓", t: "Que fait une fraise sur un cheval ?", r: "Tagada, tagada !" },
+  { g: "😂 La blague", e: "🤿", t: "Pourquoi les plongeurs plongent-ils toujours en arrière ?", r: "Parce que sinon, ils tombent dans le bateau !" },
+  { g: "😂 La blague", e: "🪂", t: "Quel est le sport le plus silencieux ?", r: "Le parachute (para-chut !)" },
+  { g: "😂 La blague", e: "💡", t: "Quel est le comble pour un électricien ?", r: "De ne pas être au courant !" },
+  { g: "😂 La blague", e: "🐟", t: "Que dit un poisson quand il se cogne ?", r: "« Ça fait mal à la nageoire ! »" },
+  { g: "🤔 La devinette", e: "🔤", t: "Je commence la nuit et je finis le matin.<br>Qui suis-je ?", r: "La lettre N !" },
+  { g: "🤔 La devinette", e: "🦷", t: "J'ai des dents, mais je ne mange jamais.<br>Qui suis-je ?", r: "Un peigne !" },
+  { g: "🤔 La devinette", e: "🕳️", t: "Plus on m'enlève de terre, plus je deviens grand.<br>Qui suis-je ?", r: "Un trou !" },
+  { g: "🤔 La devinette", e: "🪜", t: "Je monte et je descends, mais je ne bouge jamais.<br>Qui suis-je ?", r: "Un escalier !" },
+  { g: "🤔 La devinette", e: "🤫", t: "Si tu me partages, je n'existe plus.<br>Qui suis-je ?", r: "Un secret !" },
+  { g: "🌟 Le savais-tu ?", e: "🐙", t: "La pieuvre a trois cœurs…", r: "… et son sang est bleu !" },
+  { g: "🌟 Le savais-tu ?", e: "🦒", t: "Combien d'os la girafe a-t-elle dans son long cou ?", r: "Sept, comme nous !" },
+  { g: "🌟 Le savais-tu ?", e: "🍯", t: "Le miel ne se gâte jamais.", r: "On en a trouvé, encore bon, dans des tombes égyptiennes de plus de 3 000 ans !" },
+  { g: "🌟 Le savais-tu ?", e: "🦈", t: "Qui est apparu en premier sur la Terre : les requins ou les dinosaures ?", r: "Les requins, 200 millions d'années avant !" },
+  { g: "👀 L'illusion", e: "", svg: ML, t: "Quel trait est le plus long ?", r: "Aucun : ils ont la même longueur !" },
+  { g: "👀 L'illusion", e: "", svg: EB, t: "Quel rond orange est le plus grand ?", r: "Aucun : ils sont exactement pareils !" }
+];
+function surprise() {
+  let der = -1; try { der = +localStorage.getItem("jms-surprise"); } catch (e) {}
+  let k; do { k = Math.floor(Math.random() * SURPRISES.length); } while (k === der && SURPRISES.length > 1);
+  try { localStorage.setItem("jms-surprise", k); } catch (e) {}
+  const s = SURPRISES[k];
+  $("boite").innerHTML = '<button class="ferme">✕</button><div class="genre">' + s.g + '</div>' + (s.svg || '<div class="emo">' + s.e + '</div>')
+    + '<div class="txt">' + s.t + '</div><div class="rep"></div><button class="montre">' + (s.g.includes("savais") ? "La suite" : "La réponse") + '</button>';
+  $("boite").querySelector(".montre").onclick = e => { $("boite").querySelector(".rep").innerHTML = s.r; e.target.hidden = true; };
+  $("boite").querySelector(".ferme").onclick = () => { $("surprise").hidden = true; };
+  $("surprise").hidden = false;
+}
+$("cadeau").onclick = surprise;
+function toutVu() { $("cadeau").hidden = [...document.querySelectorAll(".carte .r")].some(r => !r.textContent); }
+let J = "";
+function cartes() {
+  const D = JOURS[J];
+  $("jours").innerHTML = Object.entries(JOURS).map(([k, v]) => '<button data-j="' + k + '" class="' + (k === J ? "on" : "") + '">' + v.nom + "</button>").join("");
+  $("jours").querySelectorAll("button").forEach(b => b.onclick = () => { J = b.dataset.j; cartes(); });
+  $("cartes").innerHTML = D.Q.map((x, i) => '<div class="carte" style="--c:' + x.c + '"><div><div class="face dos">' + (i + 1) + '<small>' + x.dom + '</small></div>'
+    + '<div class="face recto"><div class="dom">' + x.dom + '</div><div class="q">' + x.q + '</div><div class="r"></div><button class="voir">Réponse</button></div></div></div>').join("");
+  $("cartes").querySelectorAll(".carte").forEach((c, i) => {
+    c.onclick = () => c.classList.add("ouverte");
+    c.querySelector(".voir").onclick = e => { e.stopPropagation(); c.querySelector(".r").textContent = D.Q[i].r; e.target.hidden = true; toutVu(); };
+  });
+  toutVu();
+}
+const auj = new Date(), cle = auj.getFullYear() + "-" + String(auj.getMonth() + 1).padStart(2, "0") + "-" + String(auj.getDate()).padStart(2, "0");
+J = JOURS[location.hash.slice(1)] ? location.hash.slice(1) : JOURS[cle] ? cle : Object.keys(JOURS)[0];
+cartes();
+function ajuste() { const e = Math.min(innerWidth / 1920, innerHeight / 1080), s = $("scene"); s.style.transform = "scale(" + e + ")"; s.style.left = ((innerWidth - 1920 * e) / 2) + "px"; s.style.top = ((innerHeight - 1080 * e) / 2) + "px"; }
+addEventListener("resize", ajuste); ajuste();
+</script>
+</body>
+</html>

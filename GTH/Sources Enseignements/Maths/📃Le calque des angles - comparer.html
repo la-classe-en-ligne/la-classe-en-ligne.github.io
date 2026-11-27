@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Le calque des angles</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect x='6' y='10' width='52' height='44' rx='4' fill='%23e3eefa' stroke='%237e9fc0' stroke-width='3'/%3E%3Cpath d='M16 46 L50 46 M16 46 L40 18' stroke='%23d23b3b' stroke-width='5' stroke-linecap='round'/%3E%3Ccircle cx='16' cy='46' r='4' fill='%23d23b3b'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Quicksand:wght@600;700&display=swap">
+<style>
+  /* Univers de ce jeu : la table à dessin. Une feuille blanche avec deux angles, une feuille de papier calque et un crayon rouge.
+     On fait vraiment les gestes de la classe : poser le calque, repasser l'angle, le poser sur l'autre (sommet sur sommet,
+     un côté sur un côté), regarder ce qui dépasse. L'outil ne compare jamais à la place de l'élève. */
+  :root{ --encre:#26323f; --gris:#6b7785; --bord:#d9c4a3; --rouge:#d23b3b; --bien:#1a8f5c; --faux:#d6455d; --bois:#c89459; }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{margin:0; color:var(--encre); font-family:"Quicksand",system-ui,sans-serif; overflow:hidden; height:100vh; display:flex; flex-direction:column;
+    background:repeating-linear-gradient(90deg,#c89459 0 46px,#c08b50 46px 50px,#cd9a60 50px 120px,#c48f55 120px 124px);
+    user-select:none; -webkit-user-select:none; touch-action:none;}
+
+  /* ---------- Barre du haut ---------- */
+  .barre{display:grid; grid-template-columns:1fr auto 1fr; align-items:center; gap:16px; padding:12px 26px; background:#fffaf2; border-bottom:3px solid var(--bord);}
+  .titre{display:flex; align-items:center; gap:12px;}
+  .titre svg{width:50px; height:50px; flex:none;}
+  .titre h1{font-family:"Baloo 2",cursive; font-weight:800; font-size:1.9rem; margin:0;}
+  .onglets{display:flex; gap:10px; background:#f1e6d3; padding:6px; border-radius:18px;}
+  .onglets button{font:inherit; font-family:"Baloo 2",cursive; font-weight:700; font-size:1.45rem; padding:6px 26px; border-radius:14px; border:none; cursor:pointer; background:transparent; color:var(--gris);}
+  .onglets button.actif{background:#fff; color:var(--encre); box-shadow:0 3px 10px rgba(60,35,10,.18);}
+  .niveaux button[hidden]{display:none;}
+  .jeu[hidden]{display:none;}
+  /* Vocabulaire : des étiquettes à poser sur l'angle */
+  svg#planVocab{flex:1; min-height:0; width:100%; max-width:1800px; background:#fff; border-radius:8px; box-shadow:0 12px 30px rgba(60,35,10,.35); touch-action:none;}
+  .etiquettes{display:flex; gap:22px; align-items:center; flex-wrap:wrap; justify-content:center; min-height:84px;}
+  .etiquette{font-family:"Baloo 2",cursive; font-weight:800; font-size:2.4rem; line-height:1; padding:12px 26px 8px; border-radius:16px; background:#fffaf2;
+    border:4px solid var(--encre); box-shadow:0 6px 0 var(--encre); cursor:grab; touch-action:none;}
+  .etiquette.e-sommet{border-color:#1a8f5c; box-shadow:0 6px 0 #1a8f5c;} .etiquette.e-cote{border-color:#2f7bd6; box-shadow:0 6px 0 #2f7bd6;}
+  .etiquette.e-angle{border-color:#e8692a; box-shadow:0 6px 0 #e8692a;}
+  .etiquette.choisi{outline:7px solid #1f7a8c; outline-offset:3px;}
+  .etiquette.en-vol{position:fixed; z-index:50; pointer-events:none; transform:scale(1.08) rotate(-3deg);}
+  .etiquette.secoue{animation:poseFaux .45s ease;}
+  .chapeau{position:relative; display:inline-block;}
+  .chapeau::before{content:""; position:absolute; left:8%; right:8%; top:-9px; height:12px; border-top:4px solid currentColor; border-radius:50% 50% 0 0;}
+  .droite{justify-self:end; display:flex; align-items:center; gap:12px;}
+  .score{display:flex; flex-direction:column; align-items:center; padding:2px 14px; border-radius:12px; background:#fff; border:2px solid var(--bord); min-width:130px;}
+  .score small{font-size:.8rem; font-weight:700; color:var(--gris); text-transform:uppercase; letter-spacing:.5px;}
+  .score b{font-family:"Baloo 2",cursive; font-size:1.8rem; line-height:1.05;}
+  .niveaux{display:flex; flex-direction:column; gap:4px;}
+  .niveaux button{font:inherit; font-weight:700; font-size:.85rem; padding:2px 12px; border-radius:999px; cursor:pointer; background:#fff; color:var(--gris); border:2px solid var(--bord);}
+  .niveaux button.actif{background:var(--encre); color:#fff; border-color:var(--encre);}
+  .btn-son{width:44px; height:44px; border-radius:50%; font-size:1.2rem; cursor:pointer; background:#fff; border:2px solid var(--bord);}
+
+  /* ---------- Consigne ---------- */
+  .consigne{display:flex; justify-content:center; padding:12px 20px 0;}
+  .consigne p{margin:0; font-family:"Baloo 2",cursive; font-weight:700; font-size:2.1rem; text-align:center; background:#fffaf2; padding:2px 24px; border-radius:16px; box-shadow:0 4px 0 rgba(0,0,0,.15);}
+
+  /* ---------- Jeu ---------- */
+  .jeu{flex:1; min-height:0; display:flex; flex-direction:column; align-items:center; padding:10px 30px 0; gap:10px;}
+  svg#plan{overflow:visible; flex:1; min-height:0; width:100%; max-width:1800px; background:#fff; border-radius:8px; box-shadow:0 12px 30px rgba(60,35,10,.35); touch-action:none;}
+  #calque{cursor:grab;}
+  .pose-ok{animation:poseOk .5s ease;} .pose-faux{animation:poseFaux .5s ease;}
+  @keyframes poseOk{0%{transform:translateY(-40px) scale(1.3)}60%{transform:translateY(6px)}100%{transform:none}}
+  @keyframes poseFaux{0%,100%{transform:none}25%{transform:translateX(-12px)}75%{transform:translateX(12px)}}
+  .jetons{display:flex; gap:26px; align-items:center;}
+  .jeton{font-family:"Baloo 2",cursive; font-weight:800; font-size:2.6rem; line-height:1; padding:10px 26px 6px; border-radius:18px; background:#fffaf2;
+    border:4px solid var(--encre); box-shadow:0 6px 0 var(--encre); cursor:grab; touch-action:none; display:flex; align-items:center; gap:10px;}
+  .jeton small{font-family:"Quicksand"; font-size:1.1rem; font-weight:700;}
+  .jeton.choisi{outline:7px solid #1f7a8c; outline-offset:3px;}
+  .jeton.eteint{opacity:.3; cursor:default;}
+  .jeton.en-vol{position:fixed; z-index:50; pointer-events:none; transform:scale(1.08) rotate(-3deg);}
+
+  .bas{display:flex; flex-direction:column; align-items:center; gap:6px; padding:8px 0 16px;}
+  .boutons{display:flex; gap:12px;}
+  .btn-indice{font:inherit; font-weight:700; font-size:1.2rem; padding:6px 16px; border-radius:999px; cursor:pointer; background:#fff8dc; border:2px solid #f1d27a; color:#7a5b00;}
+  .btn-reprendre{font:inherit; font-weight:700; font-size:1.2rem; padding:6px 16px; border-radius:999px; cursor:pointer; background:#fff; border:2px solid var(--bord); color:var(--gris);}
+  .verdict{min-height:3rem; font-family:"Baloo 2",cursive; font-size:2.2rem; font-weight:800; text-align:center;}
+  .verdict:not(:empty){background:#fffaf2; padding:0 24px; border-radius:14px;}
+  .verdict.bien{color:var(--bien);} .verdict.faux{color:var(--faux);}
+  .btn-suivant{font:inherit; font-family:"Baloo 2",cursive; font-weight:800; font-size:1.8rem; padding:4px 34px; border-radius:999px; cursor:pointer;
+    background:var(--encre); color:#fff; border:none;}
+  .btn-suivant[hidden],.btn-reprendre[hidden]{display:none;}
+</style>
+</head>
+<body>
+<div class="barre">
+  <div class="titre">
+    <svg viewBox="0 0 64 64" aria-hidden="true"><rect x="6" y="10" width="52" height="44" rx="4" fill="#e3eefa" stroke="#7e9fc0" stroke-width="3"/><path d="M16 46 L50 46 M16 46 L40 18" stroke="#d23b3b" stroke-width="5" stroke-linecap="round"/><circle cx="16" cy="46" r="4" fill="#d23b3b"/></svg>
+    <h1>Le calque des angles</h1>
+  </div>
+  <div class="onglets" id="onglets">
+    <button type="button" data-onglet="comparer" class="actif">Comparer</button>
+    <button type="button" data-onglet="vocab">Vocabulaire</button>
+  </div>
+  <div class="droite">
+    <div class="score" title="Réussis du premier coup"><small id="nomScore">Paires réussies</small><b id="score">0</b></div>
+    <div class="score" title="Le meilleur score à ce niveau, gardé sur cet ordinateur"><small>🏆 Record</small><b id="record">0</b></div>
+    <div class="niveaux" id="niveaux">
+      <button type="button" data-niveau="cotes" class="actif" title="Les côtés longs ne font pas un grand angle">Côtés trompeurs</button>
+      <button type="button" data-niveau="tournes" title="Les deux angles ne sont pas tournés pareil">Angles tournés</button>
+      <button type="button" data-niveau="defi" title="Presque pareils, ou pareils">Défi</button>
+      <button type="button" data-niveau="mots" title="sommet, côté, angle" hidden>Les mots</button>
+      <button type="button" data-niveau="lettres" title="l'angle FEG : le sommet est E" hidden>Les lettres</button>
+      <button type="button" data-niveau="types" title="aigu, droit ou obtus" hidden>Aigu, droit, obtus</button>
+    </div>
+    <button class="btn-son" id="btnSon" type="button" title="Son">🔊</button>
+  </div>
+</div>
+<div class="consigne"><p id="consigne"></p></div>
+<div class="jeu" id="jeuVocab" hidden>
+  <svg id="planVocab" viewBox="0 0 1800 640" aria-label="Un angle et ses mots">
+    <rect width="1800" height="640" fill="url(#carreaux)"/>
+    <g id="vAngle"></g>
+    <g id="vPoses" pointer-events="none"></g>
+  </svg>
+  <div class="etiquettes" id="etiquettes"></div>
+</div>
+<div class="jeu" id="jeuComparer">
+  <svg id="plan" viewBox="0 0 1800 640" aria-label="Deux angles à comparer">
+    <defs>
+      <pattern id="carreaux" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M40 0 H0 V40" fill="none" stroke="#edf1f5" stroke-width="2"/></pattern>
+      <filter id="ombre" x="-10%" y="-10%" width="120%" height="120%"><feDropShadow dx="0" dy="6" stdDeviation="6" flood-color="#2b4a6b" flood-opacity=".25"/></filter>
+    </defs>
+    <rect width="1800" height="640" fill="url(#carreaux)"/>
+    <g id="angles"></g>
+    <g id="calque">
+      <rect id="feuille" x="-260" y="-220" width="520" height="440" rx="6" fill="#e6f0fb" fill-opacity=".5" stroke="#8fb0d0" stroke-width="3" filter="url(#ombre)"/>
+      <text x="-244" y="-196" font-size="20" font-family="Quicksand, sans-serif" font-weight="700" fill="#7e9fc0" pointer-events="none">papier calque</text>
+      <g id="copie" pointer-events="none"></g>
+    </g>
+    <g id="marque" pointer-events="none"></g>
+    <g id="punaise" style="display:none" pointer-events="none"><circle r="17" fill="#ffd23f" stroke="#7a5b00" stroke-width="3"/><circle r="5" fill="#7a5b00"/></g>
+  </svg>
+  <div class="jetons">
+    <div class="jeton eteint" id="couronne" data-rep="couronne">👑 <small>le plus grand</small></div>
+    <div class="jeton eteint" id="egal" data-rep="egal">= <small>pareils</small></div>
+  </div>
+</div>
+<div class="bas">
+  <div class="boutons">
+    <button class="btn-indice" id="btnIndice" type="button">💡 Indice</button>
+    <button class="btn-reprendre" id="btnReprendre" type="button" title="Effacer le calque et le remettre au milieu">↺ Nouveau calque</button>
+  </div>
+  <div class="verdict" id="verdict"></div>
+  <button class="btn-suivant" id="btnSuivant" type="button" hidden>➜</button>
+</div>
+<script>
+(function () {
+  // Une paire = deux angles { a: ouverture (degrés), r: direction du 1er côté (degrés, sens inverse des aiguilles), l1, l2: longueurs }.
+  // La première paire de chaque niveau est celle de la fiche de recherche du 2/10 (paires 1, 2 et 3).
+  function A(a, r, l1, l2) { return { a: a, r: r, l1: l1, l2: l2 }; }
+  var PAIRES = {
+    cotes: [
+      [A(40, 10, 300, 300), A(60, 15, 105, 105)], [A(30, 170, 290, 280), A(50, 190, 120, 120)], [A(70, 95, 120, 130), A(45, 80, 300, 290)],
+      [A(100, 200, 110, 120), A(80, 250, 290, 300)], [A(35, 260, 280, 300), A(55, 120, 130, 110)], [A(120, 10, 120, 110), A(95, 185, 290, 280)],
+      [A(50, 300, 300, 300), A(65, 150, 100, 120)], [A(25, 200, 290, 290), A(40, 60, 120, 130)], [A(85, 95, 300, 280), A(110, 330, 120, 110)],
+      [A(60, 230, 110, 110), A(45, 165, 290, 300)], [A(140, 0, 110, 120), A(120, 200, 280, 260)]
+    ],
+    tournes: [
+      [A(110, 250, 190, 190), A(95, 10, 190, 190)], [A(50, 120, 200, 200), A(65, 300, 200, 200)], [A(80, 200, 210, 190), A(60, 45, 200, 210)],
+      [A(130, 70, 180, 200), A(115, 250, 200, 180)], [A(35, 160, 220, 210), A(45, 280, 200, 200)], [A(100, 300, 190, 200), A(75, 100, 200, 190)],
+      [A(60, 30, 200, 200), A(60, 190, 200, 200)], [A(145, 200, 180, 190), A(125, 20, 190, 180)], [A(70, 260, 200, 200), A(90, 140, 190, 200)],
+      [A(40, 80, 210, 200), A(30, 220, 200, 210)], [A(120, 140, 190, 190), A(105, 330, 190, 190)]
+    ],
+    defi: [
+      [A(85, 30, 200, 200), A(95, 160, 200, 200)], [A(45, 170, 280, 280), A(45, 60, 110, 110)], [A(70, 20, 200, 190), A(78, 200, 190, 200)],
+      [A(100, 250, 190, 200), A(100, 40, 260, 120)], [A(55, 110, 200, 200), A(48, 330, 200, 210)], [A(120, 10, 150, 250), A(112, 190, 240, 160)],
+      [A(35, 60, 230, 220), A(42, 250, 120, 140)], [A(90, 15, 200, 200), A(82, 150, 200, 210)], [A(65, 300, 200, 190), A(65, 100, 130, 260)],
+      [A(135, 180, 180, 190), A(143, 20, 190, 170)], [A(60, 225, 250, 250), A(66, 100, 140, 150)]
+    ]
+  };
+  var CENTRES = [{ x: 390, y: 320 }, { x: 1410, y: 320 }], DEPART = { x: 900, y: 330 };
+  var DEMI_L = 260, DEMI_H = 220;
+  var el = function (id) { return document.getElementById(id); };
+  var svg = el("plan");
+  var niveau = "cotes", index = 0, score = 0, sonActif = true;
+  var angles = [];          // les deux angles dessinés : sommet S, bouts E1, E2 (coordonnées de la feuille)
+  var cal = { x: DEPART.x, y: DEPART.y, rot: 0, f: 1 };   // le calque : centre, rotation (degrés, sens des aiguilles), f = -1 s'il est retourné
+  var phase, source, cible, copie, traces, erreurs, fini;
+
+  var ctx = null;
+  function son(type) {
+    if (!sonActif) return;
+    try {
+      ctx = ctx || new (window.AudioContext || window.webkitAudioContext)();
+      var o = ctx.createOscillator(), g = ctx.createGain(), t = ctx.currentTime;
+      o.connect(g); g.connect(ctx.destination);
+      if (type === "bien") { o.type = "triangle"; o.frequency.setValueAtTime(660, t); o.frequency.setValueAtTime(990, t + .12); }
+      else if (type === "clic") { o.type = "square"; o.frequency.setValueAtTime(1200, t); }
+      else if (type === "crayon") { o.type = "sawtooth"; o.frequency.setValueAtTime(240, t); }
+      else { o.type = "sine"; o.frequency.setValueAtTime(400, t); o.frequency.exponentialRampToValueAtTime(90, t + .4); }
+      g.gain.setValueAtTime(type === "clic" ? .06 : .12, t); g.gain.exponentialRampToValueAtTime(.001, t + .3); o.start(t); o.stop(t + .35);
+    } catch (e) { /* pas de son */ }
+  }
+  function cleRecord() { return "calque-angles-record-" + niveau; }
+  function lireRecord() { try { return parseInt(localStorage.getItem(cleRecord()), 10) || 0; } catch (e) { return 0; } }
+  function majScore() {
+    var r = lireRecord();
+    if (score > r) { r = score; try { localStorage.setItem(cleRecord(), String(r)); } catch (e) {} }
+    el("score").textContent = score; el("record").textContent = r;
+  }
+  function rad(d) { return d * Math.PI / 180; }
+  function deg(r) { return r * 180 / Math.PI; }
+  function ecartAngle(a, b) { return Math.abs(((a - b) % 360 + 540) % 360 - 180); }
+  function pointSVG(ev) { var p = svg.createSVGPoint(); p.x = ev.clientX; p.y = ev.clientY; return p.matrixTransform(svg.getScreenCTM().inverse()); }
+  // Passer des coordonnées de la feuille à celles du calque, et retour.
+  function versCalque(p) { var c = Math.cos(rad(cal.rot)), s = Math.sin(rad(cal.rot)), dx = p.x - cal.x, dy = p.y - cal.y; return { x: (c * dx + s * dy) * cal.f, y: -s * dx + c * dy }; }
+  function versFeuille(p) { var c = Math.cos(rad(cal.rot)), s = Math.sin(rad(cal.rot)), x = p.x * cal.f; return { x: cal.x + c * x - s * p.y, y: cal.y + s * x + c * p.y }; }
+  function placerCalque() { el("calque").setAttribute("transform", "translate(" + cal.x + "," + cal.y + ") rotate(" + cal.rot + ") scale(" + cal.f + ",1)"); }
+  // placer le calque pour que le point p du calque tombe sur le point w de la feuille
+  function caler(p, w) { var c = Math.cos(rad(cal.rot)), s = Math.sin(rad(cal.rot)), x = p.x * cal.f; cal.x = w.x - (c * x - s * p.y); cal.y = w.y - (s * x + c * p.y); }
+  function dist(a, b) { return Math.hypot(a.x - b.x, a.y - b.y); }
+
+  // ---------- Dessin des deux angles ----------
+  function construireAngles() {
+    var paire = PAIRES[niveau][index];
+    angles = paire.map(function (it, i) {
+      var e1 = { x: it.l1 * Math.cos(rad(it.r)), y: -it.l1 * Math.sin(rad(it.r)) };
+      var e2 = { x: it.l2 * Math.cos(rad(it.r + it.a)), y: -it.l2 * Math.sin(rad(it.r + it.a)) };
+      var xs = [0, e1.x, e2.x], ys = [0, e1.y, e2.y];
+      var mx = (Math.min.apply(null, xs) + Math.max.apply(null, xs)) / 2, my = (Math.min.apply(null, ys) + Math.max.apply(null, ys)) / 2;
+      var S = { x: CENTRES[i].x - mx, y: CENTRES[i].y - my };
+      return { it: it, S: S, E: [{ x: S.x + e1.x, y: S.y + e1.y }, { x: S.x + e2.x, y: S.y + e2.y }],
+               dir: [-it.r, -(it.r + it.a)],   // direction de chaque côté, en degrés (repère de l'écran)
+               haut: Math.min.apply(null, ys) - my + CENTRES[i].y, centre: CENTRES[i] };
+    });
+    var h = "";
+    angles.forEach(function (an, i) {
+      var S = an.S, it = an.it, ra = 42;
+      var a1 = { x: S.x + ra * Math.cos(rad(it.r)), y: S.y - ra * Math.sin(rad(it.r)) }, a2 = { x: S.x + ra * Math.cos(rad(it.r + it.a)), y: S.y - ra * Math.sin(rad(it.r + it.a)) };
+      h += '<path d="M' + a1.x + ' ' + a1.y + ' A' + ra + ' ' + ra + ' 0 0 0 ' + a2.x + ' ' + a2.y + '" fill="none" stroke="#2f7bd6" stroke-width="4"/>';
+      an.E.forEach(function (E) { h += '<line x1="' + S.x + '" y1="' + S.y + '" x2="' + E.x + '" y2="' + E.y + '" stroke="#26323f" stroke-width="7" stroke-linecap="round"/>'; });
+      h += '<circle cx="' + S.x + '" cy="' + S.y + '" r="9" fill="#26323f"/>';
+      h += '<text x="' + an.centre.x + '" y="' + Math.max(36, an.haut - 26) + '" text-anchor="middle" font-family="Baloo 2, cursive" font-weight="800" font-size="40" fill="#6b7785">angle ' + (i + 1) + '</text>';
+    });
+    el("angles").innerHTML = h;
+  }
+
+  // ---------- Les étapes ----------
+  var CONSIGNES = {
+    poser: "Pose le calque sur un des deux angles",
+    tracer: "Repasse les deux côtés au crayon rouge",
+    deplacer: "Pose le calque sur l'autre angle : sommet sur sommet",
+    tourner: "Tourne le calque : un côté rouge sur un côté noir",
+    remettre: "Remets le calque sur l'angle pour finir de repasser",
+    comparer: "Pose la couronne sur le plus grand angle"
+  };
+  function allerA(p) {
+    phase = p; el("consigne").textContent = CONSIGNES[p];
+    var pin = el("punaise");
+    if ((p === "tourner" || p === "retourner" || p === "comparer") && cible) { pin.style.display = ""; pin.setAttribute("transform", "translate(" + cible.S.x + "," + cible.S.y + ")"); }
+    else pin.style.display = "none";
+    ["couronne", "egal"].forEach(function (id) { el(id).classList.toggle("eteint", p !== "comparer" || fini); });
+
+  }
+  function nouveauCalque() {
+    cal = { x: DEPART.x, y: DEPART.y, rot: 0, f: 1 }; placerCalque();
+    source = null; cible = null; copie = { S: null, E: [null, null] }; traces = [false, false];
+    el("marque").innerHTML = "";
+    el("copie").innerHTML = "";
+    allerA("poser");
+  }
+  function afficher() {
+    construireAngles(); erreurs = 0; fini = false; if (typeof oublierJeton === "function") oublierJeton();
+    el("verdict").textContent = ""; el("verdict").className = "verdict"; el("btnSuivant").hidden = true;
+    nouveauCalque(); majScore();
+  }
+
+  function dessinerCopie(partiel) {
+    var h = "";
+    [0, 1].forEach(function (i) {
+      if (traces[i]) h += '<line x1="' + copie.S.x + '" y1="' + copie.S.y + '" x2="' + copie.E[i].x + '" y2="' + copie.E[i].y + '" stroke="#d23b3b" stroke-width="6" stroke-linecap="round" stroke-opacity=".9"/>';
+    });
+    if (partiel) h += '<line x1="' + partiel[0].x + '" y1="' + partiel[0].y + '" x2="' + partiel[1].x + '" y2="' + partiel[1].y + '" stroke="#d23b3b" stroke-width="6" stroke-linecap="round" stroke-opacity=".9"/>';
+    if (traces[0] || traces[1]) h += '<circle cx="' + copie.S.x + '" cy="' + copie.S.y + '" r="8" fill="#d23b3b"/>';
+    el("copie").innerHTML = h;
+  }
+
+  // Le calque couvre-t-il tout l'angle ?
+  function couvre(an) {
+    return [an.S, an.E[0], an.E[1]].every(function (p) { var q = versCalque(p); return Math.abs(q.x) < DEMI_L - 8 && Math.abs(q.y) < DEMI_H - 8; });
+  }
+  // Où est le sommet rouge sur la feuille, et dans quelle direction pointent les côtés rouges ?
+  function sommetRouge() { return versFeuille(copie.S); }
+  function dirLocale(i) { return deg(Math.atan2(copie.E[i].y - copie.S.y, (copie.E[i].x - copie.S.x) * cal.f)); }
+  function dirRouge(i) { return dirLocale(i) + cal.rot; }
+  function sommetPose() { return cible && copie.S && dist(sommetRouge(), cible.S) < 0.5; }
+  function signe(a) { a = ((a % 360) + 540) % 360 - 180; return a > 0 ? 1 : -1; }
+  // quel côté rouge est sur quel côté noir ? null s'il n'y en a pas
+  function alignement() {
+    if (!sommetPose()) return null;
+    // un angle n'a pas d'endroit ni d'envers : le 1er côté rouge sur le 1er côté noir, ou le 2e sur le 2e
+    for (var i = 0; i < 2; i++)
+      if (ecartAngle(dirRouge(i), cible.dir[i]) < 0.5) return { i: i, j: i };
+    return null;
+  }
+  // les deux angles s'ouvrent-ils du même côté du côté commun ? sinon, il faut retourner le calque
+  function memeCote(al) { return signe(dirRouge(1 - al.i) - dirRouge(al.i)) === signe(cible.dir[1 - al.j] - cible.dir[al.j]); }
+  function cotePose() { var al = alignement(); return !!al && memeCote(al); }
+  function bilanPosition() {
+    if (phase === "poser" || phase === "tracer" || phase === "remettre") return;
+    var al = alignement();
+    allerA(al ? (memeCote(al) ? "comparer" : "retourner") : (sommetPose() ? "tourner" : "deplacer"));
+  }
+  function enPlacePourTracer() { return source && cal.x === source.centre.x && cal.y === source.centre.y && cal.rot === 0 && cal.f === 1; }
+
+  // ---------- Gestes sur le calque ----------
+  el("calque").addEventListener("pointerdown", function (ev) {
+    if (fini) return;
+    ev.preventDefault();
+    // Calque bien posé sur l'angle : un doigt sur un côté noir le repasse ; ailleurs, on déplace le calque (pour aller voir l'autre angle).
+    if (phase === "tracer" && enPlacePourTracer() && tracer(ev)) return;
+    // Sommet posé : le calque tient par une punaise sur le sommet. On le prend loin du sommet : il tourne ; tout près : il se déplace.
+    if ((phase === "tourner" || phase === "retourner" || phase === "comparer") && dist(pointSVG(ev), sommetRouge()) > 110) return tourner(ev);
+    deplacer(ev);
+  });
+
+  function deplacer(ev) {
+    var d = pointSVG(ev), dx = cal.x - d.x, dy = cal.y - d.y;
+    el("calque").style.cursor = "grabbing";
+    function bouge(e) {
+      var p = pointSVG(e); cal.x = p.x + dx; cal.y = p.y + dy;
+      // Aimant : le sommet rouge se colle sur le sommet de l'autre angle quand il arrive tout près.
+      if (traces[0] && traces[1]) {
+        if (dist(sommetRouge(), cible.S) < 36) caler(copie.S, cible.S);
+      } else if (source && dist({ x: cal.x, y: cal.y }, source.centre) < 36 && cal.rot === 0 && cal.f === 1) { cal.x = source.centre.x; cal.y = source.centre.y; }
+      placerCalque();
+    }
+    function lache() {
+      document.removeEventListener("pointermove", bouge); document.removeEventListener("pointerup", lache);
+      el("calque").style.cursor = "";
+      if (phase === "tracer" || phase === "remettre") {
+        if (enPlacePourTracer()) { allerA("tracer"); return; }
+        if (traces[0] || traces[1]) { allerA("remettre"); return; }
+        source = null; cible = null; phase = "poser";   // calque encore vide : on peut le poser sur l'autre angle
+      }
+      if (phase === "poser") {
+        // Le calque posé sur un angle : on le cale pour qu'il couvre tout l'angle.
+        for (var i = 0; i < 2; i++) {
+          var q = versCalque(angles[i].S);
+          if (Math.abs(q.x) < DEMI_L && Math.abs(q.y) < DEMI_H) {
+            cal.x = angles[i].centre.x; cal.y = angles[i].centre.y; cal.rot = 0; placerCalque();
+            if (couvre(angles[i])) { source = angles[i]; cible = angles[1 - i]; son("clic"); allerA("tracer"); }
+            return;
+          }
+        }
+        return;
+      }
+      if (sommetPose()) son("clic");
+      bilanPosition();
+    }
+    document.addEventListener("pointermove", bouge); document.addEventListener("pointerup", lache);
+  }
+
+  // Repasser un côté : le doigt glisse le long du côté ; quand presque tout le côté est repassé, le trait rouge est fait.
+  function projection(p, i) {
+    var S = source.S, E = source.E[i], vx = E.x - S.x, vy = E.y - S.y, L2 = vx * vx + vy * vy;
+    var t = ((p.x - S.x) * vx + (p.y - S.y) * vy) / L2, tc = Math.max(0, Math.min(1, t));
+    return { t: tc, d: Math.hypot(p.x - (S.x + tc * vx), p.y - (S.y + tc * vy)) };
+  }
+  function tracer(ev) {
+    var p = pointSVG(ev), cote = -1, best = 40;
+    [0, 1].forEach(function (i) { if (!traces[i]) { var pr = projection(p, i); if (pr.d < best) { best = pr.d; cote = i; } } });
+    if (cote < 0) return false;
+    var t0 = projection(p, cote).t, tmin = t0, tmax = t0;
+    copie.S = versCalque(source.S);
+    function point(t) { var S = source.S, E = source.E[cote]; return versCalque({ x: S.x + t * (E.x - S.x), y: S.y + t * (E.y - S.y) }); }
+    function bouge(e) {
+      var pr = projection(pointSVG(e), cote);
+      if (pr.d > 55) return;
+      tmin = Math.min(tmin, pr.t); tmax = Math.max(tmax, pr.t);
+      if (tmax - tmin >= 0.8) {
+        traces[cote] = true; copie.E[cote] = versCalque(source.E[cote]); dessinerCopie(); son("crayon");
+        fin();
+        if (traces[0] && traces[1]) allerA("deplacer");
+        return;
+      }
+      dessinerCopie([point(tmin), point(tmax)]);
+    }
+    function fin() { document.removeEventListener("pointermove", bouge); document.removeEventListener("pointerup", lache); }
+    function lache() { fin(); dessinerCopie(); }
+    document.addEventListener("pointermove", bouge); document.addEventListener("pointerup", lache);
+    return true;
+  }
+
+  // Tourner le calque autour du sommet rouge ; aimant quand un côté rouge arrive sur un côté noir.
+  function tourner(ev) {
+    var pivot = copie.S ? sommetRouge() : { x: cal.x, y: cal.y }, pivotLocal = copie.S || { x: 0, y: 0 };
+    var p0 = pointSVG(ev), a0 = deg(Math.atan2(p0.y - pivot.y, p0.x - pivot.x)), rot0 = cal.rot;
+    function bouge(e) {
+      var p = pointSVG(e), rot = rot0 + deg(Math.atan2(p.y - pivot.y, p.x - pivot.x)) - a0;
+      // aimant, qu'on tourne dans un sens ou dans l'autre : un côté rouge se cale sur le côté noir qu'il peut recouvrir
+      if (sommetPose() || (cible && dist(pivot, cible.S) < 0.5)) {
+        [0, 1].forEach(function (i) {
+          var vise = cible.dir[i] - dirLocale(i);
+          if (ecartAngle(rot, vise) < 8) rot = vise;
+        });
+      }
+      cal.rot = rot;
+      caler(pivotLocal, pivot);   // garder le sommet rouge immobile
+      placerCalque();
+    }
+    function lache() {
+      document.removeEventListener("pointermove", bouge); document.removeEventListener("pointerup", lache);
+      if (cotePose()) son("clic");
+      bilanPosition();
+    }
+    document.addEventListener("pointermove", bouge); document.addEventListener("pointerup", lache);
+  }
+
+  // ---------- Réponse : on pose la couronne sur un angle, ou le signe = ----------
+  function jeton(j) {
+    j.addEventListener("pointerdown", function (ev) {
+      if (phase !== "comparer" || fini) return;
+      ev.preventDefault();
+      var vol = j.cloneNode(true); vol.classList.add("en-vol"); document.body.appendChild(vol);
+      function place(x, y) { vol.style.left = (x - vol.offsetWidth / 2) + "px"; vol.style.top = (y - vol.offsetHeight / 2) + "px"; }
+      place(ev.clientX, ev.clientY);
+      var x0 = ev.clientX, y0 = ev.clientY, bouge_ = false;
+      function bouge(e) { place(e.clientX, e.clientY); if (Math.hypot(e.clientX - x0, e.clientY - y0) > 12) bouge_ = true; }
+      function lache(e) {
+        document.removeEventListener("pointermove", bouge); document.removeEventListener("pointerup", lache);
+        vol.remove();
+        // Simple toucher : le jeton est choisi, puis on touche l'angle.
+        if (!bouge_) { var deja = jetonChoisi === j; oublierJeton(); if (!deja) { jetonChoisi = j; j.classList.add("choisi"); } return; }
+        oublierJeton();
+        var r = svg.getBoundingClientRect();
+        if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) return;
+        var x = pointSVG(e).x;
+        repondre(j.dataset.rep === "egal" ? -1 : (x < 900 ? 0 : 1));
+      }
+      document.addEventListener("pointermove", bouge); document.addEventListener("pointerup", lache);
+    });
+  }
+  var jetonChoisi = null;
+  function oublierJeton() { if (jetonChoisi) jetonChoisi.classList.remove("choisi"); jetonChoisi = null; }
+  svg.addEventListener("click", function (ev) {
+    if (!jetonChoisi || phase !== "comparer" || fini) return;
+    var j = jetonChoisi; oublierJeton();
+    repondre(j.dataset.rep === "egal" ? -1 : (pointSVG(ev).x < 900 ? 0 : 1));
+  });
+  jeton(el("couronne")); jeton(el("egal"));
+
+  // La couronne (ou le =) reste posée là où on l'a mise : au-dessus de l'angle choisi, ou entre les deux.
+  var minuterieMarque = null;
+  function poserMarque(choix, juste) {
+    clearTimeout(minuterieMarque);
+    var x = choix === -1 ? 900 : angles[choix].centre.x, y = choix === -1 ? 330 : Math.max(36, angles[choix].haut - 26) - 10;
+    var signeTxt = choix === -1 ? "=" : "👑";
+    el("marque").innerHTML = '<g transform="translate(' + x + ',' + y + ')"><g class="' + (juste ? "pose-ok" : "pose-faux") + '">' +
+      (choix === -1 ? '<circle r="46" fill="#fffaf2" stroke="' + (juste ? "#1a8f5c" : "#d6455d") + '" stroke-width="5"/>' : '') +
+      '<text y="' + (choix === -1 ? 22 : 0) + '" text-anchor="middle" font-size="' + (choix === -1 ? 70 : 84) + '" font-family="Baloo 2, cursive" font-weight="800" fill="#26323f">' + signeTxt + '</text></g></g>';
+    if (!juste) minuterieMarque = setTimeout(function () { el("marque").innerHTML = ""; }, 1400);
+  }
+  function repondre(choix) {
+    var a = angles[0].it.a, b = angles[1].it.a, juste = a === b ? -1 : (a > b ? 0 : 1);
+    poserMarque(choix, choix === juste);
+    if (choix !== juste) {
+      erreurs++; son("non"); el("verdict").className = "verdict faux";
+      el("verdict").textContent = "🤪 Regarde bien le calque : quel côté dépasse ?";
+      return;
+    }
+    fini = true; if (!erreurs) score++; majScore(); son("bien");
+    el("verdict").className = "verdict bien";
+    el("verdict").textContent = juste === -1 ? "✅ Pareils : les côtés se recouvrent" : "✅ L'angle " + (juste + 1) + " est le plus grand : il est plus ouvert";
+    el("btnSuivant").hidden = false; allerA("comparer");
+  }
+
+  // ---------- Vocabulaire : poser sommet, côté, angle (et les lettres) sur l'angle — mémo MES 1 « Les angles » ----------
+  // Un angle est l'espace entre deux demi-droites ayant le même sommet. L'angle FEG : E est le sommet, [EF) et [EG) sont les côtés.
+  function V(a, r, l, lettres) { return { a: a, r: r, l: l, L: lettres }; }
+  var VOCAB = {
+    // des angles assez ouverts (60° au moins) pour qu'on puisse poser l'étiquette « angle » entre les côtés
+    mots: [V(60, 15, 340), V(110, 160, 320), V(65, 230, 360), V(90, 300, 330), V(130, 60, 300), V(70, 190, 350),
+           V(60, 100, 340), V(100, 20, 320), V(75, 250, 340), V(140, 200, 300), V(65, 330, 350), V(120, 110, 310)],
+    lettres: [V(60, 15, 340, "FEG"), V(110, 160, 320, "ABC"), V(65, 230, 360, "RST"), V(90, 300, 330, "MNP"), V(130, 60, 300, "XYZ"),
+              V(70, 190, 350, "IJK"), V(60, 100, 340, "DOL"), V(100, 20, 320, "UVW"), V(75, 250, 340, "HGK"), V(140, 200, 300, "PQR"),
+              V(65, 330, 350, "ACD"), V(120, 110, 310, "TSU")],
+    // aigu : plus petit qu'un angle droit ; droit : le coin de l'équerre ; obtus : plus grand qu'un angle droit
+    types: [V(40, 20, 330), V(90, 200, 320), V(130, 60, 300), V(60, 250, 340), V(90, 30, 320), V(150, 190, 300),
+            V(30, 120, 340), V(110, 310, 320), V(90, 115, 320), V(70, 160, 340), V(140, 280, 300), V(50, 340, 340)]
+  };
+  var vIndex = 0, vAn = null, vPlaces = {}, vErreurs = 0, vFini = false, vChoisie = null, vEnVol = false;
+  var COUL = { sommet: "#1a8f5c", c0: "#2f7bd6", c1: "#2f7bd6", angle: "#e8692a" };
+  function vCentreAngle(it) {
+    var e1 = { x: it.l * Math.cos(rad(it.r)), y: -it.l * Math.sin(rad(it.r)) }, e2 = { x: it.l * Math.cos(rad(it.r + it.a)), y: -it.l * Math.sin(rad(it.r + it.a)) };
+    var xs = [0, e1.x, e2.x], ys = [0, e1.y, e2.y];
+    var S = { x: 900 - (Math.min.apply(null, xs) + Math.max.apply(null, xs)) / 2, y: 330 - (Math.min.apply(null, ys) + Math.max.apply(null, ys)) / 2 };
+    return { it: it, S: S, E: [{ x: S.x + e1.x, y: S.y + e1.y }, { x: S.x + e2.x, y: S.y + e2.y }], bis: it.r + it.a / 2 };
+  }
+  function vPoint(an, r, deg_) { return { x: an.S.x + r * Math.cos(rad(deg_)), y: an.S.y - r * Math.sin(rad(deg_)) }; }
+  function chapeauSVG(x, y, n) { var w = n * 11; return '<path d="M' + (x - w) + ' ' + (y - 34) + ' Q' + x + ' ' + (y - 50) + ' ' + (x + w) + ' ' + (y - 34) + '" fill="none" stroke="currentColor" stroke-width="4"/>'; }
+  function vEtiquettes() {
+    var L = vAn.it.L;
+    if (niveau === "types") {
+      var a = vAn.it.a, juste = a < 90 ? "aigu" : (a === 90 ? "droit" : "obtus"), partout = ["angle", "sommet", "c0", "c1"];
+      return ["aigu", "droit", "obtus"].map(function (t) { return { id: t, txt: "angle " + t, ok: t === juste ? partout : [], cls: "e-angle" }; });
+    }
+    if (!L) return [{ id: "sommet", txt: "sommet", ok: ["sommet"], cls: "e-sommet" }, { id: "cote1", txt: "côté", ok: ["c0", "c1"], cls: "e-cote" },
+                    { id: "cote2", txt: "côté", ok: ["c0", "c1"], cls: "e-cote" }, { id: "angle", txt: "angle", ok: ["angle"], cls: "e-angle" }];
+    var P = L[0], S = L[1], Q = L[2];
+    return [{ id: "sommet", txt: "sommet " + S, ok: ["sommet"], cls: "e-sommet" },
+            { id: "cote1", txt: "côté [" + S + P + ")", ok: ["c0"], cls: "e-cote" },
+            { id: "cote2", txt: "côté [" + S + Q + ")", ok: ["c1"], cls: "e-cote" },
+            { id: "angle", txt: "angle", html: 'angle <span class="chapeau">' + P + S + Q + '</span>', ok: ["angle"], cls: "e-angle", notation: P + S + Q },
+            { id: "piege", txt: "angle", html: 'angle <span class="chapeau">' + S + P + Q + '</span>', ok: [], cls: "e-angle" }];
+  }
+  var vListe = [];
+  function vDessiner() {
+    var an = vAn, S = an.S, it = an.it, h = "", rs = 120;
+    var a1 = vPoint(an, rs, it.r), a2 = vPoint(an, rs, it.r + it.a);
+    h += '<path d="M' + S.x + ' ' + S.y + ' L' + a1.x + ' ' + a1.y + ' A' + rs + ' ' + rs + ' 0 0 0 ' + a2.x + ' ' + a2.y + ' Z" fill="#ffe2cf" fill-opacity=".8"/>';
+    h += '<path d="M' + a1.x + ' ' + a1.y + ' A' + rs + ' ' + rs + ' 0 0 0 ' + a2.x + ' ' + a2.y + '" fill="none" stroke="#e8692a" stroke-width="5"/>';
+    an.E.forEach(function (E) { h += '<line x1="' + S.x + '" y1="' + S.y + '" x2="' + E.x + '" y2="' + E.y + '" stroke="#26323f" stroke-width="8" stroke-linecap="round"/>'; });
+    h += '<circle cx="' + S.x + '" cy="' + S.y + '" r="11" fill="#26323f"/>';
+    if (it.L) {
+      // les points nommés : une petite croix sur chaque côté, la lettre à côté ; la lettre du sommet de l'autre côté de l'angle
+      [0, 1].forEach(function (i) {
+        var d = i ? it.r + it.a : it.r, P = vPoint(an, it.l * 0.86, d), n = { x: -Math.sin(rad(d)), y: -Math.cos(rad(d)) };
+        h += '<line x1="' + (P.x - 14 * n.x) + '" y1="' + (P.y - 14 * n.y) + '" x2="' + (P.x + 14 * n.x) + '" y2="' + (P.y + 14 * n.y) + '" stroke="#26323f" stroke-width="5"/>';
+        // la lettre à côté de la croix, à l'extérieur de l'angle : elle ne touche jamais le trait
+        var sens = i ? 1 : -1, M = vPoint(an, it.l * 0.86, d), ecart = 44;
+        var T = { x: M.x + ecart * Math.cos(rad(d + 90 * sens)), y: M.y - ecart * Math.sin(rad(d + 90 * sens)) };
+        h += '<text x="' + T.x + '" y="' + (T.y + 17) + '" text-anchor="middle" font-family="Baloo 2, cursive" font-weight="800" font-size="48" fill="#26323f">' + it.L[i ? 2 : 0] + '</text>';
+      });
+      var TS = vPoint(an, 52, an.bis + 180);
+      h += '<text x="' + TS.x + '" y="' + (TS.y + 16) + '" text-anchor="middle" font-family="Baloo 2, cursive" font-weight="800" font-size="48" fill="#26323f">' + it.L[1] + '</text>';
+    }
+    if (niveau === "types" && vFini && it.a === 90) {
+      var q1 = vPoint(an, 34, it.r), q3 = vPoint(an, 34, it.r + 90), q2 = { x: q1.x + q3.x - S.x, y: q1.y + q3.y - S.y };
+      h += '<path d="M' + q1.x + ' ' + q1.y + ' L' + q2.x + ' ' + q2.y + ' L' + q3.x + ' ' + q3.y + '" fill="none" stroke="#26323f" stroke-width="4"/>';
+    }
+    el("vAngle").innerHTML = h;
+    // les étiquettes déjà posées, à leur place : on mesure chaque étiquette, puis on la pousse juste assez pour qu'elle ne touche pas l'angle
+    var groupe = el("vPoses"); groupe.innerHTML = "";
+    Object.keys(vPlaces).forEach(function (zone) {
+      var e = vPlaces[zone], ns = "http://www.w3.org/2000/svg";
+      var g = document.createElementNS(ns, "g"); g.setAttribute("style", "color:" + COUL[zone]); groupe.appendChild(g);
+      var rect = document.createElementNS(ns, "rect"); g.appendChild(rect);
+      var t = document.createElementNS(ns, "text");
+      t.setAttribute("text-anchor", "middle"); t.setAttribute("y", "12"); t.setAttribute("font-family", "Baloo 2, cursive"); t.setAttribute("font-weight", "800");
+      t.setAttribute("font-size", "34"); t.setAttribute("fill", "currentColor"); t.textContent = e.notation ? "angle " + e.notation : e.txt; g.appendChild(t);
+      var w = t.getComputedTextLength() + 32, hh = 58;
+      rect.setAttribute("x", -w / 2); rect.setAttribute("y", -30); rect.setAttribute("width", w); rect.setAttribute("height", hh);
+      rect.setAttribute("rx", 12); rect.setAttribute("fill", "#fff"); rect.setAttribute("stroke", "currentColor"); rect.setAttribute("stroke-width", 4);
+      if (e.notation) {   // le chapeau au-dessus des trois lettres, comme dans le mémo
+        var debut = t.getStartPositionOfChar(6).x, long3 = t.getSubStringLength(6, 3), cx = debut + long3 / 2, demi = long3 / 2;
+        var ch = document.createElementNS(ns, "path");
+        ch.setAttribute("d", "M" + (cx - demi) + " -16 Q" + cx + " -34 " + (cx + demi) + " -16"); ch.setAttribute("fill", "none"); ch.setAttribute("stroke", "currentColor"); ch.setAttribute("stroke-width", 3.5);
+        g.appendChild(ch); rect.setAttribute("y", -40); rect.setAttribute("height", hh + 10);
+      }
+      // demi-largeur de l'étiquette dans la direction d (degrés, sens inverse des aiguilles)
+      function etendue(d) { return Math.abs(w / 2 * Math.sin(rad(d))) + Math.abs(hh / 2 * Math.cos(rad(d))); }
+      var pos;
+      if (zone === "sommet") {
+        var dS = an.bis + 180, recul = (it.L ? 70 : 24) + Math.abs(w / 2 * Math.cos(rad(dS))) + Math.abs(hh / 2 * Math.sin(rad(dS)));
+        pos = vPoint(an, recul, dS);
+      } else if (zone === "angle") {
+        var besoin = Math.max(etendue(it.r - an.bis + 90), etendue(it.r + it.a - an.bis + 90));
+        var dA = Math.max(150, (Math.max(etendue(it.r), etendue(it.r + it.a)) + 14) / Math.sin(rad(it.a / 2)));
+        pos = vPoint(an, Math.min(dA, it.l * 0.62), an.bis);
+      } else {
+        var d = zone === "c0" ? it.r : it.r + it.a, sens = zone === "c0" ? -1 : 1, m = vPoint(an, it.l * 0.5, d);
+        var ecart = 16 + etendue(d);   // distance au côté pour que l'étiquette ne le touche pas
+        pos = { x: m.x + ecart * Math.cos(rad(d + 90 * sens)), y: m.y - ecart * Math.sin(rad(d + 90 * sens)) };
+      }
+      g.setAttribute("transform", "translate(" + pos.x + "," + pos.y + ")");
+    });
+  }
+  // Où tombe le doigt ? sur le sommet, sur un côté, ou dans l'angle (l'espace entre les côtés)
+  function vZone(ev) {
+    var q = pointSVGde(el("planVocab"), ev), an = vAn, it = an.it, d = dist(q, an.S);
+    if (d < 50) return "sommet";
+    for (var i = 0; i < 2; i++) {
+      var E = an.E[i], vx = E.x - an.S.x, vy = E.y - an.S.y, t = ((q.x - an.S.x) * vx + (q.y - an.S.y) * vy) / (vx * vx + vy * vy);
+      if (t > 0.2 && t < 1.08 && Math.hypot(q.x - (an.S.x + t * vx), q.y - (an.S.y + t * vy)) < 40) return "c" + i;
+    }
+    var ang = deg(Math.atan2(-(q.y - an.S.y), q.x - an.S.x)), dans = ((ang - it.r) % 360 + 360) % 360;
+    if (dans > 4 && dans < it.a - 4 && d > 50 && d < it.l) return "angle";
+    return null;
+  }
+  function pointSVGde(sv, ev) { var p = sv.createSVGPoint(); p.x = ev.clientX; p.y = ev.clientY; return p.matrixTransform(sv.getScreenCTM().inverse()); }
+  function vPoser(e, tuile, zone) {
+    if (vFini || !zone) return;
+    if (niveau === "types" && e.ok.length) zone = "sommet";   // le nom de l'angle se pose derrière le sommet, hors de l'angle
+    if (e.ok.indexOf(zone) !== -1 && !vPlaces[zone]) {
+      vPlaces[zone] = e; tuile.remove(); vChoisie = null; son("clic"); vDessiner();
+      var reste = vListe.filter(function (x) { return x.ok.length && !Object.keys(vPlaces).some(function (z) { return vPlaces[z] === x; }); }).length;
+      if (!reste) {
+        vFini = true; if (!vErreurs) score++; majScore(); son("bien"); vDessiner();
+        el("etiquettes").querySelectorAll(".etiquette").forEach(function (x) { x.remove(); });
+        el("verdict").className = "verdict bien";
+        el("verdict").textContent = niveau === "types" ? "✅ " + e.txt + (e.id === "aigu" ? " : plus petit qu'un angle droit" : e.id === "droit" ? " : le coin de l'équerre" : " : plus grand qu'un angle droit")
+          : vAn.it.L ? "✅ L'angle " + vAn.it.L + " : son sommet est " + vAn.it.L[1] : "✅ Le sommet, les deux côtés et l'angle";
+        el("btnSuivant").hidden = false;
+      } else { el("verdict").className = "verdict bien"; el("verdict").textContent = "✅"; }
+      return;
+    }
+    vErreurs++; son("non"); tuile.classList.remove("secoue"); void tuile.offsetWidth; tuile.classList.add("secoue");
+    el("verdict").className = "verdict faux";
+    el("verdict").textContent = e.id === "piege" ? "🤪 Dans le nom de l'angle, le sommet est la lettre du milieu"
+      : niveau === "types" ? "🤪 Compare avec le coin de l'équerre" : "🤪";
+  }
+  function vAfficher() {
+    var liste = VOCAB[niveau], it0 = liste[vIndex % liste.length];
+    vAn = vCentreAngle({ a: it0.a, r: it0.r, l: Math.round(it0.l * 0.82), L: it0.L });   // côtés un peu plus courts : la place pour les étiquettes
+    vPlaces = {}; vErreurs = 0; vFini = false; vChoisie = null;
+    vListe = vEtiquettes();
+    var zone = el("etiquettes"); zone.innerHTML = "";
+    var ordre = vListe.slice().sort(function () { return Math.random() - .5; });
+    ordre.forEach(function (e) {
+      var t = document.createElement("div"); t.className = "etiquette " + e.cls; t.innerHTML = e.html || e.txt; zone.appendChild(t);
+      t.addEventListener("pointerdown", function (ev) {
+        if (vFini) return; ev.preventDefault();
+        var vol = t.cloneNode(true); vol.classList.add("en-vol"); vol.classList.remove("choisi"); document.body.appendChild(vol);
+        var x0 = ev.clientX, y0 = ev.clientY, bouge_ = false; vEnVol = true;
+        function place(x, y) { vol.style.left = (x - vol.offsetWidth / 2) + "px"; vol.style.top = (y - vol.offsetHeight / 2) + "px"; }
+        place(x0, y0);
+        function bouge(m) { place(m.clientX, m.clientY); if (Math.hypot(m.clientX - x0, m.clientY - y0) > 12) bouge_ = true; }
+        function lache(m) {
+          document.removeEventListener("pointermove", bouge); document.removeEventListener("pointerup", lache);
+          vol.remove(); setTimeout(function () { vEnVol = false; }, 0);
+          if (!bouge_) {   // simple toucher : l'étiquette est choisie, puis on touche sa place sur l'angle
+            var deja = vChoisie && vChoisie.t === t;
+            if (vChoisie) vChoisie.t.classList.remove("choisi");
+            vChoisie = deja ? null : { t: t, e: e }; if (vChoisie) t.classList.add("choisi");
+            return;
+          }
+          if (vChoisie) { vChoisie.t.classList.remove("choisi"); vChoisie = null; }
+          vPoser(e, t, vZone(m));
+        }
+        document.addEventListener("pointermove", bouge); document.addEventListener("pointerup", lache);
+      });
+    });
+    el("consigne").textContent = niveau === "types" ? "Pose le bon nom sur l'angle" : vAn.it.L ? "Pose chaque étiquette à sa place sur l'angle" : "Pose chaque mot à sa place sur l'angle";
+    el("verdict").textContent = ""; el("verdict").className = "verdict"; el("btnSuivant").hidden = true;
+    vDessiner(); majScore();
+  }
+  el("planVocab").addEventListener("click", function (ev) {
+    if (!vChoisie || vEnVol || vFini) return;
+    var c = vChoisie; c.t.classList.remove("choisi"); vChoisie = null; vPoser(c.e, c.t, vZone(ev));
+  });
+
+  // ---------- Indice : il dit le geste de l'étape ----------
+  var INDICES = {
+    poser: "💡 Fais glisser le calque pour qu'il cache tout un angle",
+    tracer: "💡 Passe le doigt sur un côté noir, du sommet jusqu'au bout",
+    deplacer: "💡 Mets le point rouge sur le point noir de l'autre angle",
+    tourner: "💡 Prends le calque loin de la punaise et fais-le tourner",
+    remettre: "💡 Pose le calque pile sur l'angle : il se cale tout seul",
+    comparer: "💡 Regarde l'autre côté : le rouge est-il dedans ou dehors ?"
+  };
+  function indice() {
+    if (onglet === "vocab") {
+      if (vFini) return; el("verdict").className = "verdict";
+      el("verdict").textContent = niveau === "types" ? "💡 Plus fermé que le coin de l'équerre : aigu ; pile le coin : droit ; plus ouvert : obtus"
+        : vAn.it.L ? "💡 Dans l'angle " + vAn.it.L + ", la lettre du milieu est le sommet" : "💡 Le sommet est le point d'où partent les deux côtés";
+      return;
+    }
+    if (fini) return; el("verdict").className = "verdict"; el("verdict").textContent = INDICES[phase];
+  }
+  el("btnIndice").addEventListener("click", indice);
+
+  el("btnReprendre").addEventListener("click", function () { if (!fini) { el("verdict").textContent = ""; nouveauCalque(); } });
+  el("btnSuivant").addEventListener("click", function () {
+    if (onglet === "vocab") { vIndex = (vIndex + 1) % VOCAB[niveau].length; vAfficher(); return; }
+    index = (index + 1) % PAIRES[niveau].length; afficher();
+  });
+  el("btnSon").addEventListener("click", function () { sonActif = !sonActif; el("btnSon").textContent = sonActif ? "🔊" : "🔇"; });
+  // Deux onglets : Comparer (le calque) et Vocabulaire (sommet, côté, angle) ; chacun ses niveaux.
+  var onglet = "comparer", NIVEAUX_ONGLET = { comparer: ["cotes", "tournes", "defi"], vocab: ["mots", "lettres", "types"] };
+  function choisirNiveau(n) {
+    var b = document.querySelector('#niveaux button[data-niveau="' + n + '"]'); if (!b) return false;
+    niveau = n; index = 0; vIndex = 0; score = 0;
+    onglet = NIVEAUX_ONGLET.vocab.indexOf(n) !== -1 ? "vocab" : "comparer";
+    document.querySelectorAll("#niveaux button").forEach(function (x) { x.classList.toggle("actif", x === b); x.hidden = NIVEAUX_ONGLET[onglet].indexOf(x.dataset.niveau) === -1; });
+    document.querySelectorAll("#onglets button").forEach(function (x) { x.classList.toggle("actif", x.dataset.onglet === onglet); });
+    el("jeuComparer").hidden = onglet !== "comparer"; el("jeuVocab").hidden = onglet !== "vocab";
+    el("btnReprendre").hidden = onglet !== "comparer";
+    el("nomScore").textContent = onglet === "vocab" ? "Angles réussis" : "Paires réussies";
+    if (onglet === "vocab") vAfficher(); else afficher();
+    return true;
+  }
+  document.querySelectorAll("#onglets button").forEach(function (b) { b.addEventListener("click", function () { choisirNiveau(NIVEAUX_ONGLET[b.dataset.onglet][0]); }); });
+  document.querySelectorAll("#niveaux button").forEach(function (b) { b.addEventListener("click", function () { choisirNiveau(b.dataset.niveau); }); });
+  // Class Flow ouvre le jeu sur un niveau : …html#tournes ou #defi
+  if (!(location.hash && choisirNiveau(location.hash.slice(1)))) afficher();
+  // Pour les tests automatiques
+  window.__calque = { PAIRES: PAIRES, angles: function () { return angles; }, cal: function () { return cal; }, phase: function () { return phase; },
+    couvre: couvre, redessiner: function () { vDessiner(); }, vAn: function () { return vAn; }, vListe: function () { return vListe; }, vPlaces: function () { return vPlaces; },
+    // un point du calque loin du sommet rouge, pour le faire tourner
+    prise: function () { var best = null; [[-1, -1], [1, -1], [1, 1], [-1, 1], [0, -1], [0, 1], [-1, 0], [1, 0]].forEach(function (c) { var q = { x: c[0] * (DEMI_L - 40), y: c[1] * (DEMI_H - 40) };
+      var w = versFeuille(q), dd = dist(q, copie.S); if (w.x > 20 && w.x < 1780 && w.y > 20 && w.y < 620 && (!best || dd > best.d)) best = { d: dd, p: w }; }); return best.p; }, niveau: function () { return niveau; }, index: function () { return index; } };
+})();
+</script>
+<!-- MENU -->
+<script>
+/* ==== LE MENU ☰ (GTH, 10/10) : interface épurée — à l'écran, seulement le titre, le score, la consigne et l'activité ====
+   Tout le reste (niveaux, onglets de méthode, ✏️, 🔊, 🖨️, aide…) part dans un menu ☰, ouvert d'un toucher.
+   Réglage par outil (CONF, posé par l'injecteur) : ancre = où mettre le bouton ☰ (sinon en haut à droite de l'écran) ;
+   cacher = ce qui part dans le menu (sinon : tout ce qui, dans « .barre .droite », n'est pas un score).
+   Installé par .claude/outils/menu-outil/injecter.py ; ne pas modifier dans l'outil, mais dans ce fichier. */
+(function () {
+  var CONF = {"cacher": ["#onglets", ".barre .droite > :not(.score)"]};
+  var st = document.createElement("style");
+  st.textContent =
+    ".menu-btn{width:58px; height:58px; border-radius:16px; border:2px solid rgba(0,0,0,.15); background:#fff; color:#1f2a33; font-size:2rem; line-height:1; cursor:pointer; flex:none; padding:0;}" +
+    ".menu-btn.fixe{position:fixed; top:10px; right:12px; z-index:150; box-shadow:0 4px 14px rgba(0,0,0,.15);}" +
+    ".menu-btn.ouvert{background:#1f2a33; color:#fff;}" +
+    ".menu-panneau{position:fixed; top:76px; right:16px; z-index:200; background:#fff; color:#1f2a33; border-radius:18px; box-shadow:0 18px 50px rgba(0,0,0,.28); padding:16px 18px;" +
+    "  display:flex; flex-direction:column; align-items:flex-start; gap:12px; max-width:min(620px, 92vw); max-height:80vh; overflow:auto;}" +
+    ".menu-panneau[hidden]{display:none !important;}" +
+    ".menu-panneau h4{margin:0; font-family:sans-serif; font-size:.85rem; text-transform:uppercase; letter-spacing:.6px; color:#6d7a85;}" +
+    ".menu-panneau > *{position:static !important; margin:0 !important;}" +
+    ".menu-panneau > div,.menu-panneau > nav{display:flex; flex-wrap:wrap; gap:8px;}";
+  document.head.appendChild(st);
+  function installer() {
+    var autres = [];
+    if (CONF.cacher) CONF.cacher.forEach(function (s) { document.querySelectorAll(s).forEach(function (e) { if (autres.indexOf(e) === -1) autres.push(e); }); });
+    else { var d = document.querySelector(".barre .droite"); if (d) autres = Array.prototype.filter.call(d.children, function (e) { return !e.classList.contains("score"); }); }
+    if (!autres.length) return;
+    var btn = document.createElement("button"); btn.type = "button"; btn.className = "menu-btn"; btn.title = "Niveaux et réglages"; btn.textContent = "☰";
+    var pan = document.createElement("div"); pan.className = "menu-panneau"; pan.hidden = true;
+    var t = document.createElement("h4"); t.textContent = "Niveaux et réglages"; pan.appendChild(t);
+    autres.forEach(function (e) { pan.appendChild(e); });
+    var ancre = document.querySelector(CONF.ancre || ".barre .droite");
+    if (ancre) ancre.appendChild(btn); else { btn.classList.add("fixe"); document.body.appendChild(btn); }
+    document.body.appendChild(pan);
+    function ouvrir(o) { pan.hidden = !o; btn.classList.toggle("ouvert", o); }
+    btn.addEventListener("click", function (e) { e.stopPropagation(); ouvrir(pan.hidden); });
+    // un niveau choisi, ou une fenêtre ouverte (✏️, 🖨️) : le menu se referme ; on garde le menu ouvert pour choisir un type de jeu
+    pan.addEventListener("click", function (e) { var b = e.target.closest("button"); if (b && !b.closest(CONF.garderOuvert || ".types")) setTimeout(function () { ouvrir(false); }, 120); });
+    document.addEventListener("pointerdown", function (e) { if (!pan.hidden && !pan.contains(e.target) && e.target !== btn) ouvrir(false); });
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", installer); else installer();
+})();
+</script>
+<!-- /MENU -->
+<!-- INDICE-COTE -->
+<script>
+/* 💡 sur le côté (Karim, 21/10) : dans les jeux qui ont un bouton « 💡 Indice » (.btn-indice), le bouton devient une ampoule seule,
+   collée au bord droit de l'écran, à mi-hauteur ; l'indice s'ouvre dans une bulle à côté d'elle, jamais sous le jeu.
+   Le jeu garde son propre code : au toucher, on regarde quel texte il vient d'écrire (zone #indice, ou la ligne de message),
+   on le reprend dans la bulle et on remet la zone comme avant. Installé par injecter.py. */
+(function () {
+  var b = document.querySelector(".btn-indice"); if (!b) return;
+  var st = document.createElement("style");
+  st.textContent =
+    ".btn-indice.cote{position:fixed !important; right:18px; top:50%; transform:translateY(-50%); width:76px; height:76px; padding:0 !important; border-radius:50% !important;" +
+    " font-size:40px !important; line-height:1; z-index:60; margin:0 !important; display:flex; align-items:center; justify-content:center}" +
+    "#bulle-cote{position:fixed; right:110px; top:50%; transform:translateY(-50%); max-width:520px; background:#fff8c4; border:2px solid #d4b106; border-radius:18px;" +
+    " padding:16px 22px; font-size:26px; line-height:1.35; z-index:60; box-shadow:0 6px 18px rgba(0,0,0,.15); display:none}" +
+    "#bulle-cote::after{content:''; position:absolute; right:-14px; top:50%; margin-top:-12px; border:12px solid transparent; border-left:14px solid #d4b106; border-right:none}";
+  document.head.appendChild(st);
+  b.classList.add("cote"); b.textContent = "💡"; b.title = "Indice"; document.body.appendChild(b);
+  var bulle = document.createElement("div"); bulle.id = "bulle-cote"; document.body.appendChild(bulle);
+  var zones = function () { return Array.prototype.slice.call(document.querySelectorAll("#indice, .indice, #message, .message, #verdict, .verdict, #consigne-aide")); };
+  var avant = [], minuteur = null;
+  b.addEventListener("click", function () { avant = zones().map(function (z) { return [z, z.textContent, z.className]; }); }, true);   // avant le code du jeu
+  b.addEventListener("click", function () {
+    setTimeout(function () {
+      var txt = "";
+      avant.forEach(function (a) {
+        var z = a[0], neuf = z.textContent;
+        if (neuf !== a[1] && neuf.trim()) { txt = neuf; z.textContent = a[1]; z.className = a[2]; }
+      });
+      if (!txt) return;   // le jeu montre l'indice autrement : on le laisse faire
+      bulle.textContent = txt.replace(/^\s*💡\s*/, ""); bulle.style.display = "block";
+      clearTimeout(minuteur); minuteur = setTimeout(function () { bulle.style.display = "none"; }, 8000);
+    }, 0);
+  });
+  document.addEventListener("pointerdown", function (e) { if (e.target !== b && e.target !== bulle) bulle.style.display = "none"; });
+})();
+</script>
+<!-- /INDICE-COTE -->
+</body>
+</html>

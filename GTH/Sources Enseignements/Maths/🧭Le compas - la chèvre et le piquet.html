@@ -1,0 +1,344 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Le compas</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='24' fill='%23c5e1a5' stroke='%23558b2f' stroke-width='4'/%3E%3Ccircle cx='32' cy='32' r='5' fill='%236d4c41'/%3E%3Cpath d='M32 32H56' stroke='%23795548' stroke-width='3'/%3E%3C/svg%3E">
+<!--
+  🧭 Le compas : la chèvre et le piquet — le cercle et le triangle au compas, P2 📅 2, 3 et 6 (GTH v2 : donnees/seances/maths/ma-s2-geometrie.js,
+  ma-s3-geometrie.js, ma-s6-geometrie.js). Maquette validée par Karim le 28/10 (Rapports/Jeux de la P2 — ce qui existe, ce qui manque.md, C n° 2).
+  Univers : un pré vu de dessus. La chèvre est attachée au piquet : le piquet = la pointe du compas (le centre), la corde tendue = l'écartement
+  (le rayon) ; en tournant, la chèvre broute un cercle : tous ses points sont à la même distance du piquet.
+  Gestes, comme avec un vrai compas : RÉGLER (piquet sur le 0 de la règle, glisser la chèvre jusqu'au nombre, ou toucher la règle),
+  PIQUER (glisser le piquet sur le centre, ou toucher le piquet puis le point), TOURNER (faire tourner la chèvre au doigt : le cercle se trace
+  sous le doigt ; seul geste sans « toucher », c'est le geste à apprendre). Le jeu ne trace jamais à la place de l'élève : une corde mal réglée
+  ou un piquet à côté du centre donnent un cercle faux, effacé avec la raison.
+  Onglets : Le rayon (#rayon), Le diamètre (#diametre), Passant par (#passant : pointe sur le centre, corde jusqu'au point), Le triangle
+  (#triangle : la base est tracée ; deux arcs, puis poser le sommet), Défi (#defi : reproduire une figure, plusieurs cercles).
+  Contenu : séances 📅 2, 3, 6 (mémo GEOM 4 p. 54 ; guide P2 S2 séance 3 p. 13 et S5 séance 3 p. 36 ; manuel P2 p. 53 ex. 2-3 et p. 67 ex. 3 b) ;
+  les autres mesures et figures sont de moi, sur le même modèle (marquées « de moi » ci-dessous). 1 cm = 50 px. Hors ligne (ENI, Chromebook). Sans son.
+-->
+<style>
+:root{--herbe:#cfe8a9;--herbe2:#b9db8a;--brout:#f1e6b8;--terre:#6d4c41;--encre:#263b14;--vert:#2e7d32;--rouge:#c62828;--talbot:#1f7a8c}
+html,body{margin:0;height:100%;background:#263b14;overflow:hidden;font-family:Arial,Helvetica,sans-serif;color:var(--encre)}
+#scene{position:absolute;left:0;top:0;width:1920px;height:1080px;transform-origin:0 0;background:var(--herbe)}
+#decor{position:absolute;left:0;top:0;width:1920px;height:1080px;z-index:-1;pointer-events:none}
+
+#barre{height:84px;display:flex;align-items:center;gap:20px;padding:0 28px;background:#558b2f;color:#fff}
+#barre h1{margin:0;font-size:34px;display:flex;align-items:center;gap:12px;white-space:nowrap}
+#barre h1 svg{width:56px;height:56px}
+.onglets{display:flex;gap:8px;margin-left:16px}
+.onglets button{font:inherit;font-size:23px;padding:10px 18px;border-radius:10px;border:2px solid #8bc34a;background:#689f38;color:#fff;cursor:pointer}
+.onglets button.on{background:#fff;color:var(--encre);font-weight:700;border-color:#fff}
+#coin{margin-left:auto;font-size:22px;white-space:nowrap}
+#coin b{font-size:28px;color:#fff59d}
+#consigne{height:100px;display:flex;align-items:center;justify-content:center;font-size:48px;font-weight:700;text-align:center;background:#e7f3d4}
+#consigne .q{color:#b23a00}
+svg#pre{position:absolute;left:0;top:184px;width:1920px;height:786px;touch-action:none}
+#bas{position:absolute;left:0;right:0;bottom:0;height:110px;display:flex;align-items:center;justify-content:center}
+#verdict{font-size:38px;font-weight:700;text-align:center}
+#verdict.ok{color:var(--vert)} #verdict.ko{color:var(--rouge)}
+#indice{position:absolute;right:26px;top:96px;width:82px;height:82px;padding:0;border-radius:50%;font-size:44px;line-height:1;z-index:20;border:2px solid #d4b106;background:#fff8c4;cursor:pointer}
+#bulle{position:absolute;right:124px;top:100px;max-width:660px;background:#fff8c4;border:2px solid #d4b106;border-radius:18px;padding:16px 26px;font-size:28px;display:none;box-shadow:0 6px 18px rgba(0,0,0,.25);z-index:20}
+.choisi{filter:drop-shadow(0 0 7px #1f7a8c) drop-shadow(0 0 3px #1f7a8c)}
+#piquet,#chevre,#drapeau{cursor:grab}
+.point text{font-size:34px;font-weight:700;fill:#263b14}
+#modele{font-size:26px}
+</style>
+</head>
+<body>
+<div id="scene">
+  <svg id="decor" viewBox="0 0 1920 1080" aria-hidden="true"><g transform="translate(517 856)"><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(0)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(45)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(90)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(135)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(180)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(225)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(270)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(315)"/><circle r="4" fill="#fbc02d"/></g><g transform="translate(1144 383)"><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(0)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(45)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(90)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(135)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(180)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(225)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(270)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(315)"/><circle r="4" fill="#fbc02d"/></g><g transform="translate(787 868)"><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(0)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(45)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(90)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(135)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(180)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(225)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(270)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(315)"/><circle r="4" fill="#fbc02d"/></g><g transform="translate(1000 890)"><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(0)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(45)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(90)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(135)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(180)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(225)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(270)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(315)"/><circle r="4" fill="#fbc02d"/></g><g transform="translate(1219 317)"><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(0)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(45)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(90)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(135)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(180)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(225)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(270)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(315)"/><circle r="4" fill="#fbc02d"/></g><g transform="translate(1270 263)"><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(0)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(45)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(90)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(135)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(180)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(225)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(270)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(315)"/><circle r="4" fill="#fbc02d"/></g><g transform="translate(1745 730)"><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(0)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(45)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(90)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(135)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(180)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(225)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(270)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(315)"/><circle r="4" fill="#fbc02d"/></g><g transform="translate(561 814)"><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(0)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(45)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(90)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(135)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(180)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(225)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(270)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(315)"/><circle r="4" fill="#fbc02d"/></g><g transform="translate(509 446)"><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(0)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(45)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(90)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(135)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(180)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(225)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(270)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(315)"/><circle r="4" fill="#fbc02d"/></g><g transform="translate(1498 731)"><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(0)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(45)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(90)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(135)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(180)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(225)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(270)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(315)"/><circle r="4" fill="#fbc02d"/></g><g transform="translate(1137 812)"><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(0)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(45)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(90)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(135)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(180)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(225)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(270)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(315)"/><circle r="4" fill="#fbc02d"/></g><g transform="translate(1005 656)"><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(0)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(45)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(90)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(135)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(180)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(225)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(270)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(315)"/><circle r="4" fill="#fbc02d"/></g><g transform="translate(1338 404)"><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(0)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(45)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(90)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(135)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(180)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(225)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(270)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(315)"/><circle r="4" fill="#fbc02d"/></g><g transform="translate(504 900)"><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(0)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(45)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(90)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(135)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(180)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(225)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(270)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(315)"/><circle r="4" fill="#fbc02d"/></g><g transform="translate(340 785)"><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(0)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(45)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(90)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(135)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(180)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(225)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(270)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(315)"/><circle r="4" fill="#fbc02d"/></g><g transform="translate(828 1009)"><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(0)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(45)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(90)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(135)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(180)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(225)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(270)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(315)"/><circle r="4" fill="#fbc02d"/></g><g transform="translate(61 937)"><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(0)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(45)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(90)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(135)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(180)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(225)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(270)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(315)"/><circle r="4" fill="#fbc02d"/></g><g transform="translate(1621 315)"><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(0)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(45)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(90)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(135)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(180)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(225)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(270)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(315)"/><circle r="4" fill="#fbc02d"/></g><g transform="translate(356 1026)"><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(0)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(45)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(90)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(135)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(180)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(225)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(270)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(315)"/><circle r="4" fill="#fbc02d"/></g><g transform="translate(1240 293)"><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(0)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(45)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(90)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(135)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(180)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(225)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(270)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(315)"/><circle r="4" fill="#fbc02d"/></g><g transform="translate(646 1048)"><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(0)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(45)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(90)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(135)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(180)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(225)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(270)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(315)"/><circle r="4" fill="#fbc02d"/></g><g transform="translate(93 525)"><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(0)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(45)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(90)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(135)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(180)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(225)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(270)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(315)"/><circle r="4" fill="#fbc02d"/></g><g transform="translate(998 859)"><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(0)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(45)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(90)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(135)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(180)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(225)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(270)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(315)"/><circle r="4" fill="#fbc02d"/></g><g transform="translate(1502 646)"><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(0)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(45)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(90)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(135)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(180)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(225)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(270)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(315)"/><circle r="4" fill="#fbc02d"/></g><g transform="translate(1492 687)"><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(0)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(45)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(90)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(135)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(180)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(225)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(270)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(315)"/><circle r="4" fill="#fbc02d"/></g><g transform="translate(838 995)"><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(0)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(45)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(90)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(135)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(180)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(225)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(270)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(315)"/><circle r="4" fill="#fbc02d"/></g><g transform="translate(1670 840)"><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(0)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(45)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(90)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(135)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(180)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(225)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(270)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(315)"/><circle r="4" fill="#fbc02d"/></g><g transform="translate(940 387)"><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(0)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(45)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(90)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(135)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(180)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(225)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(270)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(315)"/><circle r="4" fill="#fbc02d"/></g><g transform="translate(1829 624)"><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(0)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(45)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(90)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(135)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(180)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(225)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(270)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(315)"/><circle r="4" fill="#fbc02d"/></g><g transform="translate(229 286)"><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(0)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(45)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(90)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(135)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(180)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(225)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(270)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(315)"/><circle r="4" fill="#fbc02d"/></g><g transform="translate(308 756)"><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(0)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(45)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(90)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(135)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(180)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(225)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(270)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(315)"/><circle r="4" fill="#fbc02d"/></g><g transform="translate(474 514)"><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(0)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(45)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(90)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(135)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(180)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(225)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(270)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(315)"/><circle r="4" fill="#fbc02d"/></g><g transform="translate(1406 696)"><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(0)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(45)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(90)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(135)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(180)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(225)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(270)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(315)"/><circle r="4" fill="#fbc02d"/></g><g transform="translate(1625 891)"><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(0)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(45)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(90)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(135)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(180)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(225)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(270)"/><ellipse cx="0" cy="-7" rx="3.5" ry="7" fill="#fff" transform="rotate(315)"/><circle r="4" fill="#fbc02d"/></g><rect x="0" y="196" width="1920" height="9" fill="#a1887f" stroke="#5d4037" stroke-width="2"/><rect x="0" y="216" width="1920" height="9" fill="#a1887f" stroke="#5d4037" stroke-width="2"/><rect x="10" y="186" width="16" height="46" rx="3" fill="#8d6e63" stroke="#5d4037" stroke-width="2"/><rect x="130" y="186" width="16" height="46" rx="3" fill="#8d6e63" stroke="#5d4037" stroke-width="2"/><rect x="250" y="186" width="16" height="46" rx="3" fill="#8d6e63" stroke="#5d4037" stroke-width="2"/><rect x="370" y="186" width="16" height="46" rx="3" fill="#8d6e63" stroke="#5d4037" stroke-width="2"/><rect x="490" y="186" width="16" height="46" rx="3" fill="#8d6e63" stroke="#5d4037" stroke-width="2"/><rect x="610" y="186" width="16" height="46" rx="3" fill="#8d6e63" stroke="#5d4037" stroke-width="2"/><rect x="730" y="186" width="16" height="46" rx="3" fill="#8d6e63" stroke="#5d4037" stroke-width="2"/><rect x="850" y="186" width="16" height="46" rx="3" fill="#8d6e63" stroke="#5d4037" stroke-width="2"/><rect x="970" y="186" width="16" height="46" rx="3" fill="#8d6e63" stroke="#5d4037" stroke-width="2"/><rect x="1090" y="186" width="16" height="46" rx="3" fill="#8d6e63" stroke="#5d4037" stroke-width="2"/><rect x="1210" y="186" width="16" height="46" rx="3" fill="#8d6e63" stroke="#5d4037" stroke-width="2"/><rect x="1330" y="186" width="16" height="46" rx="3" fill="#8d6e63" stroke="#5d4037" stroke-width="2"/><rect x="1450" y="186" width="16" height="46" rx="3" fill="#8d6e63" stroke="#5d4037" stroke-width="2"/><rect x="1570" y="186" width="16" height="46" rx="3" fill="#8d6e63" stroke="#5d4037" stroke-width="2"/><rect x="1690" y="186" width="16" height="46" rx="3" fill="#8d6e63" stroke="#5d4037" stroke-width="2"/><rect x="1810" y="186" width="16" height="46" rx="3" fill="#8d6e63" stroke="#5d4037" stroke-width="2"/></svg>
+  <div id="barre">
+    <h1><svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="24" fill="#c5e1a5" stroke="#fff" stroke-width="4"/><circle cx="32" cy="32" r="5" fill="#6d4c41"/><path d="M32 32H54" stroke="#fff" stroke-width="3"/><circle cx="54" cy="32" r="6" fill="#fff"/></svg>Le compas</h1>
+    <div class="onglets"><button data-o="rayon">Le rayon</button><button data-o="diametre">Le diamètre</button><button data-o="passant">Passant par</button><button data-o="triangle">Le triangle</button><button data-o="defi">Défi</button></div>
+    <div id="coin"><span id="nomScore">Cercles réussis</span> : <b id="score">0</b> · 🏆 Record : <b id="record">0</b></div>
+  </div>
+  <div id="consigne"></div>
+  <svg id="pre" viewBox="0 0 1920 786"></svg>
+  <div id="bulle"></div>
+  <button id="indice" title="Indice">💡</button>
+  <div id="bas"><div id="verdict"></div></div>
+</div>
+<script>
+"use strict";
+const K = 50;                       // 1 cm = 50 px
+const C0 = [1180, 340];             // le milieu du pré (cm → px autour de ce point)
+const REGLE = { x0: 150, y: 712 };  // le 0 de la règle ; elle va jusqu'à 12 cm
+// ---------- les exercices (cm ; y vers le bas). « src » : d'où vient l'exemple ----------
+const RAYON = [[3, "séance 📅 2 (mémo GEOM 4)"], [4, "séance 📅 3"], [2.5], [5], [3.5], [4.5], [2], [6], [1.5], [5.5]]
+  .map(([r, src], i) => ({ src: src || "de moi", pts: { O: [[0, 0], [-1.5, .4], [1.5, -.4]][i % 3] }, taches: [{ c: "O", r }] }));
+const DIAM = [[6, "séance 📅 2"], [8, "séance 📅 2"], [10, "séance 📅 3 (Je vérifie)"], [4, "séance 📅 3 (cercle C2)"], [9, "séance 📅 3 ([KL] = 9 cm)"], [7], [5], [12], [3], [11]]
+  .map(([d, src], i) => ({ src: src || "de moi", pts: { O: [[0, 0], [1, .5], [-1, -.5]][i % 3] }, taches: [{ c: "O", d }] }));
+const PASSANT = [[3, 0, "séance 📅 3"], [0, -4], [2.5, 2], [-3, -3], [4, 1.5], [1, -5], [-4.5, 0], [3.5, -3], [2, 2], [-2, 4]]
+  .map(([dx, dy, src]) => ({ src: src || "de moi", pts: { O: [0, 0], N: [dx, dy] }, taches: [{ c: "O", par: "N" }] }));
+// le triangle : base [JK] tracée ; JI = g, KI = d ; le sommet au-dessus de la base
+const TRIANGLE = [[4, 6, 6, "JKI", "séance 📅 6"], [5, 7, 7, "ABC", "séance 📅 6 (Je vérifie)"], [5, 5, 5, "DEF", "séance 📅 6 (Défi)"], [6, 5, 4, "RST"], [7, 6, 5, "LMN"],
+  [5, 4, 3, "PQR"], [6, 6, 6, "UVW"], [8, 5, 5, "GHK"], [6, 4, 5, "XYZ"], [7, 5, 4, "EFG"]].map(([b, g, d, noms, src]) => ({ src: src || "de moi", b, g, d, noms }));
+const DEFI = [
+  { src: "séance 📅 6 (manuel P2 p. 53, ex. 3, CM1)", t: "Trois cercles de centre O : rayons 2 cm, 3,5 cm et 4,5 cm.", pts: { O: [0, 0] }, taches: [{ c: "O", r: 2 }, { c: "O", r: 3.5 }, { c: "O", r: 4.5 }] },
+  { src: "séance 📅 6 (Défi)", t: "Le cercle de centre D passant par E, puis le cercle de centre E passant par D.", pts: { D: [-2.5, 0], E: [2.5, 0] }, taches: [{ c: "D", par: "E" }, { c: "E", par: "D" }] },
+  { src: "séance 📅 6 (Je vérifie)", t: "Le cercle de diamètre [AB] (AB = 6 cm).", pts: { A: [-3, 0], B: [3, 0] }, seg: [["A", "B"]], taches: [{ m: ["A", "B"], d: 6 }] },
+  { src: "de moi", t: "Deux cercles de centre O : rayon 1,5 cm, puis diamètre 9 cm.", pts: { O: [0, 0] }, taches: [{ c: "O", r: 1.5 }, { c: "O", d: 9 }] },
+  { src: "de moi", t: "Le cercle de centre O de rayon 3 cm, puis le cercle de centre A passant par O.", pts: { O: [-1.5, 0], A: [1.5, 0] }, taches: [{ c: "O", r: 3 }, { c: "A", par: "O" }] },
+  { src: "de moi", t: "Le cercle de diamètre [CD] (CD = 5 cm), puis le cercle de centre C passant par D.", pts: { C: [-2.5, 0], D: [2.5, 0] }, seg: [["C", "D"]], taches: [{ m: ["C", "D"], d: 5 }, { c: "C", par: "D" }] },
+  { src: "de moi", t: "La cible : quatre cercles de centre O, rayons 1, 2, 3 et 4 cm.", pts: { O: [0, 0] }, taches: [{ c: "O", r: 1 }, { c: "O", r: 2 }, { c: "O", r: 3 }, { c: "O", r: 4 }] },
+  { src: "de moi", t: "Un cercle de centre A et un cercle de centre B, tous les deux de rayon 2 cm.", pts: { A: [-2, 0], B: [2, 0] }, taches: [{ c: "A", r: 2 }, { c: "B", r: 2 }] },
+  { src: "de moi", t: "Le cercle de diamètre [EF] (EF = 7 cm), puis le cercle de même centre de rayon 2 cm.", pts: { E: [-3.5, 0], F: [3.5, 0] }, seg: [["E", "F"]], taches: [{ m: ["E", "F"], d: 7 }, { m: ["E", "F"], r: 2 }] },
+  { src: "de moi", t: "Le cercle de centre O passant par M, puis le cercle de diamètre [OM] (OM = 4 cm).", pts: { O: [-2, 0], M: [2, 0] }, seg: [["O", "M"]], taches: [{ c: "O", par: "M" }, { m: ["O", "M"], d: 4 }] }
+];
+const LISTES = { rayon: RAYON, diametre: DIAM, passant: PASSANT, triangle: TRIANGLE, defi: DEFI };
+
+const etat = { o: "rayon", i: 0, score: 0, t: 0, phase: "", r: 2, p: null, acc: 0, a0: 0, prev: 0, chemin: [], amin: 0, amax: 0, arc: 0 };
+window.COMPAS = etat;
+const $ = id => document.getElementById(id);
+const mem = { lire(k) { try { return +localStorage.getItem(k) || 0; } catch (e) { return 0; } }, ecrire(k, v) { try { localStorage.setItem(k, v); } catch (e) {} } };
+const cleRecord = () => "compas-record-" + etat.o;
+function afficheScore() { $("score").textContent = etat.score; $("record").textContent = mem.lire(cleRecord()); $("nomScore").textContent = etat.o === "triangle" ? "Triangles réussis" : etat.o === "defi" ? "Figures réussies" : "Cercles réussis"; }
+function marque() { etat.score++; if (etat.score > mem.lire(cleRecord())) mem.ecrire(cleRecord(), etat.score); afficheScore(); }
+function verdict(t, cls) { const v = $("verdict"); v.textContent = t; v.className = cls || ""; }
+function consigne(h) { $("consigne").innerHTML = "<span>" + h + "</span>"; }
+function bulle(t) { const b = $("bulle"); b.textContent = t; b.style.display = "block"; clearTimeout(bulle.t); bulle.t = setTimeout(() => b.style.display = "none", 8000); }
+let minuteur = 0; const plusTard = (f, ms) => { clearTimeout(minuteur); minuteur = setTimeout(f, ms || 2000); };
+const ex = () => { const L = LISTES[etat.o]; return L[etat.i % L.length]; };
+const px = c => [C0[0] + c[0] * K, C0[1] + c[1] * K];
+const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
+const virgule = x => String(x).replace(".", ",");
+const NS = "http://www.w3.org/2000/svg";
+function el(tag, at, parent) { const e = document.createElementNS(NS, tag); for (const k in at) e.setAttribute(k, at[k]); (parent || $("pre")).appendChild(e); return e; }
+function versPre(ev) { const s = $("pre"), pt = s.createSVGPoint(); pt.x = ev.clientX; pt.y = ev.clientY; const q = pt.matrixTransform(s.getScreenCTM().inverse()); return [q.x, q.y]; }
+
+// ---------- le décor : le pré, la règle, les points ; le compas = le piquet, la corde, la chèvre ----------
+const DEFS = '<defs><pattern id="touffes" width="46" height="46" patternUnits="userSpaceOnUse"><path d="M10 30l3-9 3 9M30 14l3-8 3 8" stroke="#9ccc65" stroke-width="3" fill="none" stroke-linecap="round"/></pattern>'
+  + '<g id="bete"><path d="M-46 0l-14 -5" stroke="#bdbdbd" stroke-width="7" stroke-linecap="round"/>'
+  + '<ellipse cx="0" cy="0" rx="46" ry="30" fill="#fafafa" stroke="#8d8d8d" stroke-width="3"/><ellipse cx="-12" cy="-8" rx="14" ry="9" fill="#d7ccc8"/><ellipse cx="14" cy="10" rx="9" ry="6" fill="#d7ccc8"/>'
+  + '<path d="M58 -9q8 -16 22 -14M58 9q8 16 22 14" stroke="#8d6e63" stroke-width="5" fill="none" stroke-linecap="round"/>'
+  + '<ellipse cx="44" cy="-19" rx="10" ry="5" fill="#eeeeee" stroke="#8d8d8d" stroke-width="2"/><ellipse cx="44" cy="19" rx="10" ry="5" fill="#eeeeee" stroke="#8d8d8d" stroke-width="2"/>'
+  + '<ellipse cx="54" cy="0" rx="20" ry="15" fill="#fafafa" stroke="#8d8d8d" stroke-width="3"/><circle cx="60" cy="-6" r="3" fill="#333"/><circle cx="60" cy="6" r="3" fill="#333"/><ellipse cx="73" cy="0" rx="5" ry="7" fill="#f8bbd0"/></g>'
+  + '<g id="pieu"><circle r="16" fill="#8d6e63" stroke="#4e342e" stroke-width="4"/><circle r="6" fill="#4e342e"/></g></defs>';
+function decor() {
+  const s = $("pre"); s.innerHTML = DEFS;
+  el("rect", { x: 0, y: 0, width: 1920, height: 786, fill: "url(#touffes)" });
+  el("g", { id: "brout" }); el("g", { id: "traits" }); el("g", { id: "figure" });
+  // la règle
+  const g = el("g", { id: "regle" });
+  el("rect", { x: REGLE.x0 - 30, y: REGLE.y, width: 12 * K + 60, height: 62, rx: 8, fill: "#fff8e1", stroke: "#8d6e63", "stroke-width": 3 }, g);
+  for (let m = 0; m <= 120; m++) {
+    const x = REGLE.x0 + m * K / 10, h = m % 10 === 0 ? 22 : m % 5 === 0 ? 15 : 8;
+    el("line", { x1: x, y1: REGLE.y, x2: x, y2: REGLE.y + h, stroke: "#5d4037", "stroke-width": m % 10 ? 1.5 : 2.5 }, g);
+    if (m % 10 === 0) { const t = el("text", { x, y: REGLE.y + 50, "text-anchor": "middle", "font-size": 22, "font-weight": 700, fill: "#5d4037" }, g); t.textContent = m / 10; }
+  }
+  el("text", { x: REGLE.x0 + 12 * K + 46, y: REGLE.y + 40, "font-size": 22, fill: "#5d4037" }, g).textContent = "cm";
+  el("g", { id: "drapeaux" });
+  el("line", { id: "corde", stroke: "#6d4c41", "stroke-width": 4, "stroke-dasharray": "2 6", "stroke-linecap": "round" });
+  el("use", { id: "piquet", href: "#pieu" }); el("use", { id: "chevre", href: "#bete" });
+  el("circle", { id: "mine", r: 8, fill: "#c62828", stroke: "#fff", "stroke-width": 3, "pointer-events": "none" });   // le bout de la corde : le point qui trace (la mine)
+}
+function point(nom, c, avecCroix) {
+  const [x, y] = px(c), g = el("g", { class: "point" }, $("figure"));
+  if (avecCroix !== false) { el("path", { d: "M" + (x - 9) + " " + (y - 9) + "l18 18M" + (x + 9) + " " + (y - 9) + "l-18 18", stroke: "#263b14", "stroke-width": 4 }, g); }
+  el("text", { x: x + 14, y: y - 14 }, g).textContent = nom;
+}
+function placeCompas() {   // le piquet en p, la chèvre au bout de la corde (angle a)
+  const P = etat.p || [REGLE.x0, REGLE.y - 14], a = etat.ang || 0, Q = [P[0] + etat.r * K * Math.cos(a), P[1] + etat.r * K * Math.sin(a)];
+  $("piquet").setAttribute("x", P[0]); $("piquet").setAttribute("y", P[1]);
+  $("chevre").setAttribute("x", Q[0]); $("chevre").setAttribute("y", Q[1]);
+  // sur la règle, la chèvre regarde vers le haut (elle ne cache pas les graduations) ; dans le pré, elle marche le long du cercle
+  const surLaRegle = !etat.p, rot = surLaRegle ? -90 : a * 180 / Math.PI + 90, dec = surLaRegle ? -40 : 0;
+  $("chevre").setAttribute("transform", "translate(0 " + dec + ") rotate(" + rot + " " + Q[0] + " " + Q[1] + ")");
+  $("mine").setAttribute("cx", Q[0]); $("mine").setAttribute("cy", Q[1]);
+  const c = $("corde"); c.setAttribute("x1", P[0]); c.setAttribute("y1", P[1]); c.setAttribute("x2", Q[0]); c.setAttribute("y2", Q[1]);
+}
+
+// ---------- une tâche de cercle : régler, piquer, tourner ----------
+function tache() { return ex().taches ? ex().taches[etat.t] : null; }
+function centreDe(T) { const P = ex().pts; return T.m ? [(P[T.m[0]][0] + P[T.m[1]][0]) / 2, (P[T.m[0]][1] + P[T.m[1]][1]) / 2] : P[T.c]; }
+function rayonDe(T) { return T.r || (T.d ? T.d / 2 : dist(ex().pts[T.c], ex().pts[T.par])); }
+const nomCentre = T => T.m ? "le milieu de [" + T.m.join("") + "]" : "le centre " + T.c;
+function nouvelleTache() {
+  const T = tache(); etat.p = null; etat.ang = 0; etat.r = 2; etat.chemin = []; etat.acc = 0;
+  if (T.par) { etat.phase = "piquer"; consigne("Plante le piquet sur <span class=\"q\">" + nomCentre(T) + "</span>"); }
+  else { etat.phase = "regler"; consigne(T.d ? "Le diamètre fait <span class=\"q\">" + virgule(T.d) + " cm</span> : règle la corde" : "Règle la corde sur <span class=\"q\">" + virgule(T.r) + " cm</span>"); }
+  placeCompas(); montreModele();
+}
+function montreModele() {   // Défi : la liste des cercles, celui en cours en gras
+  const m = $("modele"); if (m) m.remove();
+  if (etat.o !== "defi") return;
+  const g = el("g", { id: "modele" }); const E = ex();
+  el("rect", { x: 20, y: 20, width: 560, height: 70 + E.taches.length * 44, rx: 14, fill: "#fffde7", stroke: "#c0ca33", "stroke-width": 3 }, g);
+  const t = el("text", { x: 40, y: 58, "font-weight": 700 }, g); t.textContent = "Le modèle :";
+  E.taches.forEach((T, j) => { const l = el("text", { x: 40, y: 100 + j * 44, "font-weight": j === etat.t ? 700 : 400, fill: j < etat.t ? "#2e7d32" : "#263b14" }, g);
+    l.textContent = (j < etat.t ? "✔ " : j === etat.t ? "▶ " : "· ") + (T.par ? "centre " + T.c + ", passant par " + T.par : (T.m ? "centre : milieu de [" + T.m.join("") + "]" : "centre " + T.c) + ", " + (T.d ? "diamètre " + virgule(T.d) : "rayon " + virgule(T.r)) + " cm"); });
+}
+function nouvelExercice() {
+  clearTimeout(minuteur); decor(); verdict(""); etat.t = 0; etat.arcs = 0;
+  if (etat.o === "triangle") return nouveauTriangle();
+  const E = ex();
+  (E.seg || []).forEach(([a, b]) => { const A = px(E.pts[a]), B = px(E.pts[b]); el("line", { x1: A[0], y1: A[1], x2: B[0], y2: B[1], stroke: "#263b14", "stroke-width": 4 }, $("figure")); });
+  for (const n in E.pts) point(n, E.pts[n]);
+  if (etat.o === "defi") consigne(E.t);
+  nouvelleTache();
+}
+// ---------- le triangle ----------
+function sommets() { const E = ex(), J = [C0[0] - E.b * K / 2, 560], Kp = [J[0] + E.b * K, 560], x = (E.b * E.b + E.g * E.g - E.d * E.d) / (2 * E.b), y = Math.sqrt(E.g * E.g - x * x); return { J, K: Kp, I: [J[0] + x * K, 560 - y * K] }; }
+function nouveauTriangle() {
+  const E = ex(), S = sommets();
+  el("line", { x1: S.J[0], y1: S.J[1], x2: S.K[0], y2: S.K[1], stroke: "#263b14", "stroke-width": 5 }, $("figure"));
+  [[E.noms[0], S.J], [E.noms[1], S.K]].forEach(([n, p]) => { const g = el("g", { class: "point" }, $("figure")); el("text", { x: p[0] + (n === E.noms[0] ? -40 : 14), y: p[1] + 40 }, g).textContent = n; });
+  const m = el("text", { x: (S.J[0] + S.K[0]) / 2, y: 610, "text-anchor": "middle", "font-size": 28, fill: "#263b14" }, $("figure")); m.textContent = E.noms[0] + E.noms[1] + " = " + virgule(E.b) + " cm";
+  etat.tri = 0; triEtape();
+}
+function triEtape() {   // 0 : arc depuis J ; 1 : arc depuis K ; 2 : poser le sommet
+  const E = ex(), n = E.noms;
+  etat.p = null; etat.ang = 0; etat.r = 2; etat.chemin = [];
+  if (etat.tri < 2) {
+    const de = etat.tri ? n[1] : n[0], l = etat.tri ? E.d : E.g;
+    etat.phase = "regler"; consigne("Piquet en <span class=\"q\">" + de + "</span>, corde de <span class=\"q\">" + virgule(l) + " cm</span> : fais un arc");
+    $("piquet").style.display = $("chevre").style.display = $("corde").style.display = $("mine").style.display = "";
+    placeCompas();
+  } else {
+    etat.phase = "sommet"; consigne("Pose <span class=\"q\">" + n[2] + "</span> là où les deux arcs se croisent");
+    $("piquet").style.display = $("chevre").style.display = $("corde").style.display = $("mine").style.display = "none";
+    const d = el("g", { id: "drapeau" }, $("drapeaux")); d.dataset.x = 1700; d.dataset.y = 640;
+    el("circle", { cx: 1700, cy: 640, r: 34, fill: "#fff", stroke: "#263b14", "stroke-width": 4 }, d);
+    el("text", { x: 1700, y: 652, "text-anchor": "middle", "font-size": 34, "font-weight": 700 }, d).textContent = n[2];
+  }
+}
+// ---------- les gestes ----------
+let tient = null, choix = null;
+function choisir(e) { if (choix) choix.classList.remove("choisi"); choix = e; if (e) e.classList.add("choisi"); }
+const surRegle = p => p[1] > REGLE.y - 70 && p[1] < REGLE.y + 70 && p[0] > REGLE.x0 - 40 && p[0] < REGLE.x0 + 12 * K + 40;
+function reglerA(x) { etat.r = Math.max(.5, Math.min(12, Math.round((x - REGLE.x0) / K * 2) / 2)); etat.ang = 0; placeCompas(); }
+$("pre").addEventListener("pointerdown", ev => {
+  const q = versPre(ev), t = ev.target.closest && ev.target.closest("#piquet, #chevre, #drapeau");
+  ev.preventDefault();
+  tient = { el: t, q0: q, bouge: false };
+  if (t && t.id === "chevre" && etat.phase === "tourner") { const P = etat.p; etat.prev = Math.atan2(q[1] - P[1], q[0] - P[0]); }
+});
+$("pre").addEventListener("pointermove", ev => {
+  if (!tient) return; const q = versPre(ev);
+  if (!tient.bouge && dist(q, tient.q0) > 10) { tient.bouge = true; choisir(null); }
+  if (!tient.bouge || !tient.el) return;
+  const id = tient.el.id;
+  if (id === "chevre" && etat.phase === "regler" && !etat.p) reglerA(q[0]);
+  else if (id === "chevre" && etat.phase === "tendre") { const P = etat.p; etat.r = dist(q, P) / K; etat.ang = Math.atan2(q[1] - P[1], q[0] - P[0]); placeCompas(); }
+  else if (id === "chevre" && etat.phase === "tourner") tourne(q);
+  else if (id === "piquet" && (etat.phase === "regler" || etat.phase === "piquer" || etat.phase === "tourner") && !etat.chemin.length) { etat.p = q; placeCompas(); }
+  else if (id === "drapeau") { tient.el.setAttribute("transform", "translate(" + (q[0] - 1700) + " " + (q[1] - 640) + ")"); }
+});
+$("pre").addEventListener("pointerup", ev => {
+  const t = tient; tient = null; if (!t) return; const q = versPre(ev);
+  if (t.bouge && t.el) return lacher(t.el.id, q);
+  if (t.el && !t.bouge) { if (t.el.id === "chevre" && etat.phase === "tourner") return; choisir(choix === t.el ? null : t.el); return; }
+  // un toucher sur le pré ou la règle
+  if (etat.phase === "regler" && !etat.p && surRegle(q) && (!choix || choix.id === "chevre")) { choisir(null); reglerA(q[0]); return lacher("chevre", [REGLE.x0 + etat.r * K, REGLE.y]); }
+  if (choix && choix.id === "piquet") { choisir(null); etat.p = q; placeCompas(); return lacher("piquet", q); }
+  if (choix && choix.id === "chevre" && etat.phase === "tendre") { choisir(null); return lacher("chevre", q); }
+  if (choix && choix.id === "drapeau") { choisir(null); return lacher("drapeau", q); }
+});
+// une cible proche « aimante » le piquet ou la chèvre (16 px) ; sinon il reste où on l'a lâché
+function aimant(q) {
+  const E = ex(); let cibles = [];
+  if (etat.o === "triangle") { const S = sommets(); cibles = [S.J, S.K]; }
+  else { cibles = Object.values(E.pts).map(px); E.taches.forEach(T => { if (T.m) cibles.push(px(centreDe(T))); }); }
+  const c = cibles.find(c => dist(c, q) < 16); return c ? c.slice() : q;
+}
+function lacher(id, q) {
+  if (id === "chevre" && etat.phase === "regler" && !etat.p) {
+    const T = tache(); consigne("Plante le piquet sur <span class=\"q\">" + (etat.o === "triangle" ? ex().noms[etat.tri] : nomCentre(T)) + "</span>"); return;
+  }
+  if (id === "piquet" && !surRegle(q)) {
+    etat.p = aimant(q); placeCompas();
+    if (etat.phase === "piquer") { etat.phase = "tendre"; consigne("Tends la corde jusqu'au point <span class=\"q\">" + tache().par + "</span>"); }
+    else { etat.phase = "tourner"; etat.acc = 0; consigne(etat.o === "triangle" ? "Fais tourner la chèvre : <span class=\"q\">un arc</span>" : "Fais tourner la <span class=\"q\">chèvre</span>"); }
+    return;
+  }
+  if (id === "piquet" && surRegle(q)) { etat.p = null; etat.phase = tache() && tache().par ? "piquer" : "regler"; placeCompas(); return; }
+  if (id === "chevre" && etat.phase === "tendre") {
+    const a = aimant(q), P = etat.p; etat.r = dist(a, P) / K; etat.ang = Math.atan2(a[1] - P[1], a[0] - P[0]); placeCompas();
+    etat.phase = "tourner"; etat.acc = 0; consigne("Fais tourner la <span class=\"q\">chèvre</span>"); return;
+  }
+  if (id === "chevre" && etat.phase === "tourner") return finTour();
+  if (id === "drapeau") return poseSommet(q);
+}
+// ---------- tourner : la chèvre reste au bout de la corde ; l'herbe broutée dessine le cercle ----------
+function tourne(q) {
+  const P = etat.p, a = Math.atan2(q[1] - P[1], q[0] - P[0]);
+  let d = a - etat.prev; if (d > Math.PI) d -= 2 * Math.PI; if (d < -Math.PI) d += 2 * Math.PI;
+  if (!etat.chemin.length) { etat.a0 = etat.ang; etat.amin = etat.amax = 0; etat.ligne = el("path", { fill: "none", stroke: "#263b14", "stroke-width": 4, "stroke-linecap": "round" }, $("traits")); etat.herbe = el("path", { fill: "none", stroke: "#f1e6b8", "stroke-width": 26, "stroke-linecap": "round", opacity: .9 }, $("brout")); etat.chemin.push(etat.ang); }
+  etat.acc += d; etat.prev = a; etat.ang = etat.a0 + etat.acc; etat.amin = Math.min(etat.amin, etat.acc); etat.amax = Math.max(etat.amax, etat.acc);
+  etat.chemin.push(etat.ang); placeCompas();
+  const pts = etat.chemin.map(t => (P[0] + etat.r * K * Math.cos(t)).toFixed(1) + " " + (P[1] + etat.r * K * Math.sin(t)).toFixed(1));
+  const dd = "M" + pts.join(" L"); etat.ligne.setAttribute("d", dd); etat.herbe.setAttribute("d", dd);
+  if (etat.o !== "triangle" && Math.abs(etat.acc) >= 2 * Math.PI - .02) { tient = null; finTour(); }
+}
+function effaceTrait() { if (etat.ligne) etat.ligne.remove(); if (etat.herbe) etat.herbe.remove(); etat.ligne = etat.herbe = null; etat.chemin = []; }
+function finTour() {
+  if (!etat.chemin.length) return;
+  if (etat.o === "triangle") return finArc();
+  if (Math.abs(etat.acc) < 2 * Math.PI - .02) { verdict("🤪 Fais un tour complet, sans lâcher la chèvre.", "ko"); effaceTrait(); etat.acc = 0; return; }
+  const T = tache(), C = px(centreDe(T)), bonR = Math.abs(etat.r - rayonDe(T)) < .02, bonC = dist(etat.p, C) < 2;
+  if (!bonC) return rate("🤪 Le piquet n'est pas sur " + nomCentre(T) + ".");
+  if (!bonR) return rate(T.par ? "🤪 Le cercle ne passe pas par " + T.par + "." : T.d ? "🤪 Le diamètre fait " + virgule(T.d) + " cm : la corde, c'est la moitié." : "🤪 Le rayon n'est pas " + virgule(T.r) + " cm : regarde la règle.");
+  // le cercle est juste : on le garde
+  etat.ligne.setAttribute("d", "M" + (C[0] + etat.r * K) + " " + C[1] + " A" + etat.r * K + " " + etat.r * K + " 0 1 1 " + (C[0] - etat.r * K) + " " + C[1] + " A" + etat.r * K + " " + etat.r * K + " 0 1 1 " + (C[0] + etat.r * K) + " " + C[1]);
+  etat.ligne = etat.herbe = null; etat.chemin = [];
+  if (T.m) point("", centreDe(T));
+  if (etat.t < ex().taches.length - 1) { verdict("✅ Ce cercle est juste : au suivant.", "ok"); etat.t++; nouvelleTache(); return; }
+  verdict("✅ Tous les points du cercle sont à la même distance du centre.", "ok"); consigne("Bravo !");
+  montreModeleFini(); marque(); etat.phase = "fini"; plusTard(() => { etat.i++; nouvelExercice(); }, 2200);
+}
+function montreModeleFini() { if (etat.o === "defi") { etat.t = ex().taches.length; montreModele(); } }
+function rate(msg) { verdict(msg, "ko"); effaceTrait(); const T = tache(); etat.p = null; etat.ang = 0; etat.acc = 0; etat.phase = T && T.par ? "piquer" : "regler"; placeCompas();
+  consigne(T && T.par ? "Plante le piquet sur <span class=\"q\">" + nomCentre(T) + "</span>" : T && T.d ? "Le diamètre fait <span class=\"q\">" + virgule(T.d) + " cm</span> : règle la corde" : T ? "Règle la corde sur <span class=\"q\">" + virgule(T.r) + " cm</span>" : ""); }
+// l'arc du triangle : bonne corde, bon piquet, et il passe là où sera le sommet
+function finArc() {
+  const E = ex(), S = sommets(), de = etat.tri ? S.K : S.J, l = etat.tri ? E.d : E.g, n = E.noms;
+  const nonArc = m => { verdict(m, "ko"); effaceTrait(); etat.p = null; etat.ang = 0; etat.acc = 0; etat.phase = "regler"; placeCompas(); consigne("Piquet en <span class=\"q\">" + n[etat.tri] + "</span>, corde de <span class=\"q\">" + virgule(l) + " cm</span> : fais un arc"); };
+  if (dist(etat.p, de) > 2) return nonArc("🤪 Le piquet doit être en " + n[etat.tri] + ".");
+  if (Math.abs(etat.r - l) > .02) return nonArc("🤪 La corde n'est pas réglée sur " + virgule(l) + " cm.");
+  let cible = Math.atan2(S.I[1] - de[1], S.I[0] - de[0]) - etat.a0;   // l'angle du sommet, ramené près du départ
+  while (cible > Math.PI) cible -= 2 * Math.PI; while (cible < -Math.PI) cible += 2 * Math.PI;
+  const dans = c => c > etat.amin + .08 && c < etat.amax - .08;
+  if (!(dans(cible) || dans(cible + 2 * Math.PI) || dans(cible - 2 * Math.PI))) return nonArc("🤪 Fais l'arc là où sera le sommet, au-dessus de la base.");
+  etat.ligne = etat.herbe = null; etat.chemin = []; verdict("");
+  etat.tri++; triEtape();
+}
+function poseSommet(q) {
+  const S = sommets(), E = ex(), d = $("drapeau");
+  if (dist(q, S.I) > 24) { verdict("🤪 " + E.noms[2] + " est là où les deux arcs se croisent.", "ko"); d.removeAttribute("transform"); return; }
+  d.remove(); verdict("✅ Le triangle est juste : " + E.noms[0] + E.noms[2] + " = " + virgule(E.g) + " cm et " + E.noms[1] + E.noms[2] + " = " + virgule(E.d) + " cm.", "ok");
+  [S.J, S.K].forEach(p => el("line", { x1: p[0], y1: p[1], x2: S.I[0], y2: S.I[1], stroke: "#263b14", "stroke-width": 5 }, $("figure")));
+  const g = el("g", { class: "point" }, $("figure")); el("text", { x: S.I[0] - 10, y: S.I[1] - 22 }, g).textContent = E.noms[2];
+  consigne("Bravo !"); marque(); etat.phase = "fini"; plusTard(() => { etat.i++; nouvelExercice(); }, 2400);
+}
+// l'indice donne la méthode de la classe, jamais la réponse
+$("indice").onclick = () => {
+  const T = tache();
+  if (etat.o === "triangle") bulle(etat.phase === "sommet" ? "Le sommet est à la bonne distance des deux bouts de la base : il est sur les deux arcs à la fois." : "Pointe du compas sur le 0 de la règle, mine sur la longueur du côté ; puis pointe sur le bout de la base, et un arc au-dessus.");
+  else if (T && T.par) bulle("Pointe sur le centre, mine sur le point : la corde va du piquet jusqu'au point, sans mesurer.");
+  else if (T && T.m) bulle("Le centre d'un cercle de diamètre [" + T.m.join("") + "], c'est le milieu de [" + T.m.join("") + "].");
+  else if (T && T.d) bulle("Le diamètre traverse tout le cercle en passant par le centre : le rayon, c'est la moitié du diamètre.");
+  else bulle("Pointe du compas sur le 0 de la règle, mine sur le rayon : ici, le piquet sur le 0 et la chèvre sur le nombre. Puis je pique sur le centre et je tourne sans changer l'écartement.");
+};
+// ---------- démarrer ----------
+function ouvre(o) {
+  etat.o = o; etat.i = 0; etat.score = 0; choisir(null);
+  document.querySelectorAll(".onglets button").forEach(b => b.classList.toggle("on", b.dataset.o === o));
+  history.replaceState(null, "", "#" + o);
+  afficheScore(); $("bulle").style.display = "none"; nouvelExercice();
+}
+document.querySelectorAll(".onglets button").forEach(b => b.onclick = () => ouvre(b.dataset.o));
+function ajuste() {
+  const e = Math.min(innerWidth / 1920, innerHeight / 1080), s = $("scene");
+  s.style.transform = "scale(" + e + ")"; s.style.left = ((innerWidth - 1920 * e) / 2) + "px"; s.style.top = ((innerHeight - 1080 * e) / 2) + "px"; s.dataset.ech = e;
+}
+addEventListener("resize", ajuste); ajuste();
+function depuisLien() { const m = location.hash.slice(1); ouvre(LISTES[m] ? m : "rayon"); }
+addEventListener("hashchange", depuisLien);
+depuisLien();
+window.COMPAS_API = { LISTES, ex, tache, centreDe, rayonDe, sommets, px, REGLE, K };
+</script>
+</body>
+</html>

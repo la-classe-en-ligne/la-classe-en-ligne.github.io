@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>L'équerre et les angles</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700&family=Quicksand:wght@500;600;700&display=swap">
+<style>
+  :root{ --bg-deep:#0a1f2e; --bg-panel:#123246; --panel-border:#2d6079; --ink:#eaf6ff; --moon:#ffe9a8;
+    --good:#5be08a; --bad:#ff77bb; --tile:#173b52; --tile-border:#2d6079; }
+  *{box-sizing:border-box;}
+  body{margin:0; min-height:100vh; color:var(--ink); font-family:"Quicksand",ui-sans-serif,system-ui,sans-serif;
+    background:radial-gradient(circle at 88% 6%, rgba(255,233,168,0.25), transparent 42%), var(--bg-deep);
+    padding:18px 16px; display:flex; justify-content:center; user-select:none; -webkit-user-select:none; touch-action:none;}
+  .page{width:100%; max-width:1150px; background:var(--bg-panel); border:2px solid var(--panel-border); border-radius:22px; padding:18px 24px 24px; box-shadow:0 14px 40px rgba(0,0,0,.45);}
+  h1{font-family:"Baloo 2",cursive; font-size:clamp(1.6rem,4vw,2.3rem); margin:0;}
+  .barre-haut{display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;}
+  .droite{display:flex; align-items:center; gap:12px;}
+  .etoiles{font-family:"Baloo 2",cursive; font-size:1.5rem; color:var(--moon);}
+  .btn,.niveaux button{font:inherit; font-weight:700; border-radius:999px; border:2px solid var(--tile-border); background:var(--tile); color:var(--ink); padding:8px 16px; cursor:pointer; font-size:1rem;}
+  .niveaux{display:flex; gap:8px; margin-top:6px;} .niveaux button.actif{background:#4fd1c5; color:#0a1f2e; border-color:#4fd1c5;}
+  .btn.principal{background:var(--moon); color:#0a1f2e; border-color:var(--moon); font-size:1.4rem; padding:8px 26px;}
+  .btn[hidden]{display:none;}
+  svg#plan.survol{border-color:var(--moon); border-style:solid;}
+  svg#plan{display:block; width:100%; height:auto; margin:10px 0; background:#0f2a3b; border-radius:18px; border:2px dashed #25506a; touch-action:none;}
+  #gabarit{cursor:grab;} #poignee{cursor:grab;}
+  .choix{display:flex; justify-content:center; gap:18px; flex-wrap:wrap;}
+  .choix button{font:inherit; font-family:"Baloo 2",cursive; font-size:1.8rem; padding:8px 26px; border-radius:18px; border:3px solid var(--tile-border); background:var(--tile); color:var(--ink); cursor:pointer; display:flex; align-items:center; gap:10px;}
+  .choix button.juste{border-color:var(--good); background:#1e3a2c;} .choix button.faux{border-color:var(--bad); background:#3d2145;}
+  .message{min-height:1.5em; text-align:center; font-size:2rem; margin:8px 0 4px;}
+  .bas{display:flex; justify-content:center; gap:12px;}
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="barre-haut">
+    <h1>📐 L'équerre et les angles</h1>
+    <div class="droite"><span class="etoiles" id="etoiles">⭐ 0</span><button class="btn" id="btnSon" type="button">🔊</button></div>
+  </div>
+  <div class="niveaux" id="niveaux">
+    <button type="button" data-niveau="decouverte" class="actif">Découverte</button>
+    <button type="button" data-niveau="defi">Défi</button>
+  </div>
+  <svg id="plan" viewBox="0 0 1000 520" aria-label="Angle à mesurer">
+    <g id="angle"></g>
+    <!-- Équerre d'écolier : angle droit en (0,0), côté gradué vers la droite, autre côté vers le haut, trou triangulaire au centre.
+         La poignée au bout du côté gradué fait tourner l'équerre. -->
+    <g id="gabarit">
+      <path d="M0,0 L240,0 L0,-170 Z M28,-28 L28,-115.8 L152,-28 Z" fill="#9fd3ff" fill-opacity=".55" fill-rule="evenodd" stroke="#1b4f86" stroke-width="3" stroke-linejoin="round"/>
+      <line x1="0" y1="0" x2="0" y2="-13" stroke="#12304f" stroke-width="1.6"/><line x1="10" y1="0" x2="10" y2="-7" stroke="#12304f" stroke-width="1"/><line x1="20" y1="0" x2="20" y2="-13" stroke="#12304f" stroke-width="1.6"/><text x="20" y="-15" text-anchor="middle" font-size="10" font-family="Quicksand, sans-serif" font-weight="700" fill="#12304f">1</text><line x1="30" y1="0" x2="30" y2="-7" stroke="#12304f" stroke-width="1"/><line x1="40" y1="0" x2="40" y2="-13" stroke="#12304f" stroke-width="1.6"/><text x="40" y="-15" text-anchor="middle" font-size="10" font-family="Quicksand, sans-serif" font-weight="700" fill="#12304f">2</text><line x1="50" y1="0" x2="50" y2="-7" stroke="#12304f" stroke-width="1"/><line x1="60" y1="0" x2="60" y2="-13" stroke="#12304f" stroke-width="1.6"/><text x="60" y="-15" text-anchor="middle" font-size="10" font-family="Quicksand, sans-serif" font-weight="700" fill="#12304f">3</text><line x1="70" y1="0" x2="70" y2="-7" stroke="#12304f" stroke-width="1"/><line x1="80" y1="0" x2="80" y2="-13" stroke="#12304f" stroke-width="1.6"/><text x="80" y="-15" text-anchor="middle" font-size="10" font-family="Quicksand, sans-serif" font-weight="700" fill="#12304f">4</text><line x1="90" y1="0" x2="90" y2="-7" stroke="#12304f" stroke-width="1"/><line x1="100" y1="0" x2="100" y2="-13" stroke="#12304f" stroke-width="1.6"/><text x="100" y="-15" text-anchor="middle" font-size="10" font-family="Quicksand, sans-serif" font-weight="700" fill="#12304f">5</text><line x1="110" y1="0" x2="110" y2="-7" stroke="#12304f" stroke-width="1"/><line x1="120" y1="0" x2="120" y2="-13" stroke="#12304f" stroke-width="1.6"/><text x="120" y="-15" text-anchor="middle" font-size="10" font-family="Quicksand, sans-serif" font-weight="700" fill="#12304f">6</text><line x1="130" y1="0" x2="130" y2="-7" stroke="#12304f" stroke-width="1"/><line x1="140" y1="0" x2="140" y2="-13" stroke="#12304f" stroke-width="1.6"/><text x="140" y="-15" text-anchor="middle" font-size="10" font-family="Quicksand, sans-serif" font-weight="700" fill="#12304f">7</text><line x1="150" y1="0" x2="150" y2="-7" stroke="#12304f" stroke-width="1"/><line x1="160" y1="0" x2="160" y2="-13" stroke="#12304f" stroke-width="1.6"/><text x="160" y="-15" text-anchor="middle" font-size="10" font-family="Quicksand, sans-serif" font-weight="700" fill="#12304f">8</text><line x1="170" y1="0" x2="170" y2="-7" stroke="#12304f" stroke-width="1"/><line x1="180" y1="0" x2="180" y2="-13" stroke="#12304f" stroke-width="1.6"/><text x="180" y="-15" text-anchor="middle" font-size="10" font-family="Quicksand, sans-serif" font-weight="700" fill="#12304f">9</text><line x1="190" y1="0" x2="190" y2="-7" stroke="#12304f" stroke-width="1"/><line x1="200" y1="0" x2="200" y2="-13" stroke="#12304f" stroke-width="1.6"/><text x="200" y="-15" text-anchor="middle" font-size="10" font-family="Quicksand, sans-serif" font-weight="700" fill="#12304f">10</text><line x1="210" y1="0" x2="210" y2="-7" stroke="#12304f" stroke-width="1"/><line x1="220" y1="0" x2="220" y2="-13" stroke="#12304f" stroke-width="1.6"/><text x="220" y="-15" text-anchor="middle" font-size="10" font-family="Quicksand, sans-serif" font-weight="700" fill="#12304f">11</text><line x1="230" y1="0" x2="230" y2="-7" stroke="#12304f" stroke-width="1"/>
+      <path d="M0,-18 L18,-18 L18,0" fill="none" stroke="#c0392b" stroke-width="3"/>
+      <circle id="poignee" cx="262" cy="-10" r="22" fill="#ffe9a8" stroke="#7a3a10" stroke-width="3"/>
+      <text x="262" y="-3" text-anchor="middle" font-size="22" pointer-events="none">⟳</text>
+    </g>
+  </svg>
+  <div class="choix" id="choix">
+    <button type="button" data-rep="aigu"><svg width="48" height="40"><path d="M6,34 L44,34 M6,34 L36,6" stroke="currentColor" stroke-width="4" fill="none"/></svg>aigu</button>
+    <button type="button" data-rep="droit"><svg width="48" height="40"><path d="M8,34 L44,34 M8,34 L8,4" stroke="currentColor" stroke-width="4" fill="none"/><path d="M8,24 L18,24 L18,34" stroke="currentColor" stroke-width="2" fill="none"/></svg>droit</button>
+    <button type="button" data-rep="obtus"><svg width="48" height="40"><path d="M22,34 L46,34 M22,34 L2,8" stroke="currentColor" stroke-width="4" fill="none"/></svg>obtus</button>
+  </div>
+  <div class="message" id="message"></div>
+  <div class="bas"><button class="btn principal" id="btnSuivant" type="button" hidden>➜</button></div>
+</div>
+<script>
+(function () {
+  // a = ouverture de l'angle (degrés), r = orientation du 1er côté (degrés, sens inverse des aiguilles), l1/l2 = longueurs des côtés.
+  var ITEMS = {
+    decouverte: [
+      { a: 45, r: 10, l1: 300, l2: 260 }, { a: 90, r: 0, l1: 260, l2: 220 }, { a: 130, r: 15, l1: 280, l2: 240 },
+      { a: 30, r: 35, l1: 320, l2: 300 }, { a: 90, r: 35, l1: 240, l2: 260 }, { a: 150, r: 5, l1: 260, l2: 300 },
+      { a: 60, r: -20, l1: 280, l2: 200 }, { a: 110, r: 55, l1: 220, l2: 260 },
+      { a: 90, r: -15, l1: 280, l2: 240 }, { a: 50, r: 70, l1: 260, l2: 280 }, { a: 120, r: -30, l1: 240, l2: 260 },
+      { a: 20, r: 0, l1: 320, l2: 320 }
+    ],
+    defi: [
+      { a: 80, r: 25, l1: 300, l2: 140 }, { a: 100, r: 15, l1: 150, l2: 300 }, { a: 90, r: 62, l1: 180, l2: 320 },
+      { a: 75, r: -10, l1: 320, l2: 120 }, { a: 105, r: 40, l1: 140, l2: 280 }, { a: 85, r: 5, l1: 260, l2: 260 },
+      { a: 95, r: -5, l1: 280, l2: 160 }, { a: 88, r: 30, l1: 160, l2: 300 }, { a: 92, r: 50, l1: 300, l2: 180 },
+      { a: 90, r: -25, l1: 130, l2: 300 }
+    ]
+  };
+  var SOMMET = { x: 440, y: 400 };
+  var el = function (id) { return document.getElementById(id); };
+  var niveau = "decouverte", index = 0, etoiles = 0, sonActif = true, repondu = false;
+  var gab = { x: 740, y: 300, rot: 0 };   // position du coin et rotation (degrés, sens des aiguilles en SVG)
+  var svg = el("plan");
+
+  var ctx = null;
+  function son(type) {
+    if (!sonActif) return;
+    try {
+      ctx = ctx || new (window.AudioContext || window.webkitAudioContext)();
+      var o = ctx.createOscillator(), g = ctx.createGain(), t = ctx.currentTime;
+      o.connect(g); g.connect(ctx.destination);
+      if (type === "bien") { o.type = "triangle"; o.frequency.setValueAtTime(660, t); o.frequency.setValueAtTime(990, t + .12); }
+      else if (type === "clic") { o.type = "square"; o.frequency.setValueAtTime(1200, t); }
+      else { o.type = "sine"; o.frequency.setValueAtTime(400, t); o.frequency.exponentialRampToValueAtTime(90, t + .4); }
+      g.gain.setValueAtTime(.12, t); g.gain.exponentialRampToValueAtTime(.001, t + .35); o.start(t); o.stop(t + .4);
+    } catch (e) { /* pas de son */ }
+  }
+  function I() { return ITEMS[niveau][index]; }
+  function rad(d) { return d * Math.PI / 180; }
+  function pointSVG(ev) { var p = svg.createSVGPoint(); p.x = ev.clientX; p.y = ev.clientY; return p.matrixTransform(svg.getScreenCTM().inverse()); }
+
+  function dessinerAngle() {
+    var it = I(), s = SOMMET;
+    var x1 = s.x + it.l1 * Math.cos(rad(it.r)), y1 = s.y - it.l1 * Math.sin(rad(it.r));
+    var x2 = s.x + it.l2 * Math.cos(rad(it.r + it.a)), y2 = s.y - it.l2 * Math.sin(rad(it.r + it.a));
+    el("angle").innerHTML =
+      '<line x1="' + s.x + '" y1="' + s.y + '" x2="' + x1 + '" y2="' + y1 + '" stroke="#eaf6ff" stroke-width="7" stroke-linecap="round"/>' +
+      '<line x1="' + s.x + '" y1="' + s.y + '" x2="' + x2 + '" y2="' + y2 + '" stroke="#eaf6ff" stroke-width="7" stroke-linecap="round"/>' +
+      '<circle cx="' + s.x + '" cy="' + s.y + '" r="9" fill="#4fd1c5"/>';
+  }
+  function placerGabarit() { el("gabarit").setAttribute("transform", "translate(" + gab.x + "," + gab.y + ") rotate(" + gab.rot + ")"); }
+
+  // Déplacer le gabarit (on le prend par le corps) ; aimanté sur le sommet quand on arrive tout près.
+  el("gabarit").addEventListener("pointerdown", function (ev) {
+    if (ev.target.id === "poignee") return;
+    ev.preventDefault();
+    var d = pointSVG(ev), dx = gab.x - d.x, dy = gab.y - d.y;
+    function bouge(e) {
+      var p = pointSVG(e); gab.x = p.x + dx; gab.y = p.y + dy;
+      if (Math.hypot(gab.x - SOMMET.x, gab.y - SOMMET.y) < 34) { gab.x = SOMMET.x; gab.y = SOMMET.y; }
+      placerGabarit();
+    }
+    function lache() {
+      document.removeEventListener("pointermove", bouge); document.removeEventListener("pointerup", lache);
+      if (gab.x === SOMMET.x && gab.y === SOMMET.y) son("clic");
+    }
+    document.addEventListener("pointermove", bouge); document.addEventListener("pointerup", lache);
+  });
+  // Tourner le gabarit par sa poignée ; aimanté sur le premier côté de l'angle.
+  el("poignee").addEventListener("pointerdown", function (ev) {
+    ev.preventDefault(); ev.stopPropagation();
+    function bouge(e) {
+      var p = pointSVG(e);
+      var ang = Math.atan2(p.y - gab.y, p.x - gab.x) * 180 / Math.PI;   // angle SVG de la poignée
+      ang -= Math.atan2(-10, 262) * 180 / Math.PI;                       // la poignée n'est pas exactement sur l'axe
+      // Aimant des DEUX côtés : l'un ou l'autre côté de l'équerre (le côté gradué = rot, l'autre = rot - 90)
+      // vient se coller contre l'un ou l'autre côté de l'angle (orientations SVG -r et -(r + a)).
+      var it = I(), c1 = -it.r, c2 = -(it.r + it.a);
+      var candidats = [c1, c2, c1 + 90, c2 + 90];
+      var meilleur = null, ecartMin = 7;
+      candidats.forEach(function (c) {
+        var ecart = Math.abs(((ang - c) % 360 + 540) % 360 - 180);
+        if (ecart < ecartMin) { ecartMin = ecart; meilleur = c; }
+      });
+      gab.rot = meilleur !== null ? meilleur : ang;
+      placerGabarit();
+    }
+    function lache() { document.removeEventListener("pointermove", bouge); document.removeEventListener("pointerup", lache); }
+    document.addEventListener("pointermove", bouge); document.addEventListener("pointerup", lache);
+  });
+
+  function afficher() {
+    repondu = false;
+    gab = { x: 740, y: 300, rot: 0 }; placerGabarit();
+    dessinerAngle();
+    el("message").textContent = ""; el("btnSuivant").hidden = true;
+    Array.prototype.forEach.call(document.querySelectorAll("#choix button"), function (b) { b.className = ""; });
+  }
+  // Glisser (doigt, souris, stylet) : un clone suit le doigt, le dépôt sur la cible vaut réponse.
+  function glisserVers(objet, trouverCible, auDepot) {
+    objet.style.touchAction = "none"; objet.style.cursor = "grab";
+    objet.addEventListener("pointerdown", function (ev) {
+      ev.preventDefault();
+      var clone = objet.cloneNode(true); clone.style.position = "fixed"; clone.style.zIndex = 50; clone.style.pointerEvents = "none"; clone.style.transform = "scale(1.1)";
+      document.body.appendChild(clone);
+      function place(x, y) { clone.style.left = (x - clone.offsetWidth / 2) + "px"; clone.style.top = (y - clone.offsetHeight / 2) + "px"; }
+      place(ev.clientX, ev.clientY);
+      var survol = null;
+      function bouge(e) { place(e.clientX, e.clientY); var c = trouverCible(e.clientX, e.clientY); if (survol && survol !== c && survol.classList) survol.classList.remove("survol"); if (c && c.classList) c.classList.add("survol"); survol = c; }
+      function lache(e) {
+        document.removeEventListener("pointermove", bouge); document.removeEventListener("pointerup", lache);
+        clone.remove(); if (survol && survol.classList) survol.classList.remove("survol");
+        var c = trouverCible(e.clientX, e.clientY); if (c) auDepot(c);
+      }
+      document.addEventListener("pointermove", bouge); document.addEventListener("pointerup", lache);
+    });
+  }
+  function surAngle(x, y) {
+    var r = svg.getBoundingClientRect(), k = r.width / 1000;
+    var sx = r.left + SOMMET.x * k, sy = r.top + SOMMET.y * k;
+    return Math.hypot(x - sx, y - sy) < 190 * k ? svg : null;
+  }
+  Array.prototype.forEach.call(document.querySelectorAll("#choix button"), function (b) {
+    glisserVers(b, surAngle, function () {
+      if (repondu) return;
+      var a = I().a, attendu = a < 90 ? "aigu" : (a === 90 ? "droit" : "obtus");
+      if (b.dataset.rep === attendu) {
+        repondu = true; b.className = "juste"; son("bien"); el("message").textContent = "✅";
+        etoiles++; el("etoiles").textContent = "⭐ " + etoiles; el("btnSuivant").hidden = false;
+      } else { b.className = "faux"; son("non"); el("message").textContent = "🤪"; }
+    });
+  });
+  el("btnSuivant").addEventListener("click", function () { index = (index + 1) % ITEMS[niveau].length; afficher(); });
+  el("btnSon").addEventListener("click", function () { sonActif = !sonActif; el("btnSon").textContent = sonActif ? "🔊" : "🔇"; });
+  function choisirNiveau(n) {
+    var b = document.querySelector('#niveaux button[data-niveau="' + n + '"]'); if (!b) return false;
+    niveau = n; index = 0;
+    Array.prototype.forEach.call(document.querySelectorAll("#niveaux button"), function (x) { x.classList.toggle("actif", x === b); });
+    afficher(); return true;
+  }
+  Array.prototype.forEach.call(document.querySelectorAll("#niveaux button"), function (b) {
+    b.addEventListener("click", function () { choisirNiveau(b.dataset.niveau); });
+  });
+  // Class Flow ouvre le jeu sur un niveau : …html#defi
+  if (!(location.hash && choisirNiveau(location.hash.slice(1)))) afficher();
+})();
+</script>
+<!-- DEUX GESTES -->
+<script>
+/* ==== DEUX GESTES (GTH) : chaque jeu se joue en glissant OU en touchant (demande de Karim du 01/10) ====
+   REGLES  : jeu au glisser-déposer → on peut aussi toucher l'objet (il s'entoure), puis toucher sa place ; s'il n'a qu'une place
+             possible (une case réponse), un seul toucher le pose (10/10) :
+             le module rejoue exactement le même glisser-déposer, le jeu garde ses règles.
+   INVERSE : jeu au toucher (toucher la carte, puis la zone) → on peut aussi glisser la carte sur la zone.
+   Installé par .claude/outils/deux-gestes/injecter.py ; ne pas modifier dans le jeu, mais dans ce fichier. */
+(function () {
+  var REGLES = [{"source": "#choix button", "cible": "#plan"}], INVERSE = [];
+  // setPointerCapture refuse les pointeurs rejoués : on ignore l'erreur
+  ["setPointerCapture", "releasePointerCapture"].forEach(function (m) {
+    var o = Element.prototype[m]; if (!o) return;
+    Element.prototype[m] = function (id) { try { return o.call(this, id); } catch (e) { return undefined; } };
+  });
+  var st = document.createElement("style");
+  st.textContent = ".dg-choisi{outline:7px solid #1f7a8c !important; outline-offset:4px !important;}" +
+    ".dg-vol{position:fixed !important; z-index:9999; pointer-events:none; opacity:.92; transform:scale(1.05) rotate(-2deg); margin:0 !important;}";
+  document.head.appendChild(st);
+
+  var choix = null, bas = null, rejeu = false, avalerClic = 0;
+  function sous(x, y) { return document.elementFromPoint(x, y); }
+  function trouver(el, liste, cle) {
+    if (!el || !el.closest) return null;
+    for (var i = 0; i < liste.length; i++) { var e = el.closest(liste[i][cle]); if (e) return { regle: liste[i], el: e }; }
+    return null;
+  }
+  function oublier() { if (choix) choix.el.classList.remove("dg-choisi"); choix = null; }
+  function evt(type, cible, x, y) {
+    var e = new PointerEvent(type, { bubbles: true, cancelable: true, composed: true, clientX: x, clientY: y, pointerId: 777,
+      pointerType: "touch", isPrimary: true, button: 0, buttons: type === "pointerup" ? 0 : 1 });
+    (cible && cible.isConnected ? cible : document).dispatchEvent(e);
+  }
+  // Rejoue le glisser-déposer du jeu : de l'objet jusqu'au point touché
+  function rejouer(src, x, y) {
+    if (!src.isConnected) return;
+    var r = src.getBoundingClientRect(), x0 = r.left + r.width / 2, y0 = r.top + r.height / 2;
+    var depart = sous(x0, y0); if (!depart || !src.contains(depart)) depart = src;
+    rejeu = true;
+    try {
+      evt("pointerdown", depart, x0, y0);
+      for (var k = 1; k <= 12; k++) evt("pointermove", depart, x0 + (x - x0) * k / 12, y0 + (y - y0) * k / 12);
+      evt("pointerup", depart, x, y);
+    } finally { rejeu = false; }
+  }
+
+  // ---------- REGLES : toucher l'objet, puis sa place ----------
+  document.addEventListener("pointerdown", function (e) {
+    if (rejeu || !e.isTrusted || !REGLES.length) return;
+    if (choix && !choix.el.isConnected) oublier();
+    // l'objet touché est repéré dès que le doigt se pose : ensuite, le jeu le cache pour le faire glisser
+    bas = { x: e.clientX, y: e.clientY, cible: null, src: trouver(e.target, REGLES, "source") };
+    if (choix) {
+      var c = e.target.closest && e.target.closest(choix.regle.cible);
+      if (c && !(e.target.closest(choix.regle.source))) { bas.cible = c; e.stopImmediatePropagation(); e.preventDefault(); }
+    }
+  }, true);
+  document.addEventListener("pointerup", function (e) {
+    if (rejeu || !e.isTrusted || !bas || !REGLES.length) return;
+    var b = bas; bas = null;
+    var tap = Math.hypot(e.clientX - b.x, e.clientY - b.y) < 12;
+    if (b.cible) {   // le toucher sur la place : le jeu ne le voit pas, on rejoue le glisser à cet endroit
+      e.stopImmediatePropagation(); e.preventDefault(); avalerClic = Date.now();
+      if (tap && choix) { var s = choix.el; oublier(); var x = e.clientX, y = e.clientY; setTimeout(function () { rejouer(s, x, y); }, 0); }
+      return;
+    }
+    if (!tap) { oublier(); return; }   // un vrai glisser : le jeu s'en occupe
+    var src = b.src;
+    setTimeout(function () {   // après le jeu : l'objet touché est choisi (ou ne l'est plus)
+      if (!src || !src.el.isConnected) { return; }
+      // une seule place où le poser (une case réponse) : un toucher suffit, la réponse part dans la case (Karim, 10/10)
+      var places = Array.prototype.filter.call(document.querySelectorAll(src.regle.cible), function (c) {
+        var r = c.getBoundingClientRect(); return r.width > 0 && r.height > 0 && !src.el.contains(c) && getComputedStyle(c).visibility !== "hidden"; });
+      if (places.length === 1) { oublier(); var r = places[0].getBoundingClientRect(); rejouer(src.el, r.left + r.width / 2, r.top + r.height / 2); return; }
+      if (choix && choix.el === src.el) { oublier(); return; }
+      oublier(); choix = src; src.el.classList.add("dg-choisi");
+    }, 0);
+  }, true);
+  document.addEventListener("click", function (e) {
+    if (Date.now() - avalerClic < 500 && e.isTrusted) { e.stopImmediatePropagation(); e.preventDefault(); }
+  }, true);
+
+  // ---------- INVERSE : glisser la carte sur la zone = la toucher, puis toucher la zone ----------
+  var g = null;
+  document.addEventListener("pointerdown", function (e) {
+    if (rejeu || !e.isTrusted || !INVERSE.length) return;
+    var src = trouver(e.target, INVERSE, "source"); if (!src) return;
+    g = { src: src, x: e.clientX, y: e.clientY, vol: null };
+  }, true);
+  document.addEventListener("pointermove", function (e) {
+    if (!g || rejeu) return;
+    if (!g.vol && Math.hypot(e.clientX - g.x, e.clientY - g.y) < 12) return;
+    if (!g.vol) {
+      var r = g.src.el.getBoundingClientRect();
+      g.vol = g.src.el.cloneNode(true); g.vol.classList.add("dg-vol"); g.vol.style.width = r.width + "px";
+      g.dx = g.x - r.left; g.dy = g.y - r.top; document.body.appendChild(g.vol);
+    }
+    g.vol.style.left = (e.clientX - g.dx) + "px"; g.vol.style.top = (e.clientY - g.dy) + "px";
+  }, true);
+  document.addEventListener("pointerup", function (e) {
+    if (!g || rejeu || !e.isTrusted) return;
+    var d = g; g = null;
+    if (!d.vol) return;   // simple toucher : le jeu s'en occupe
+    d.vol.remove(); e.stopImmediatePropagation(); e.preventDefault(); avalerClic = Date.now();
+    var dessous = sous(e.clientX, e.clientY), zone = dessous && dessous.closest ? dessous.closest(d.src.regle.cible) : null;
+    if (!zone) return;
+    rejeu = true;
+    try { evt("pointerup", d.src.el, e.clientX, e.clientY); evt("pointerup", zone, e.clientX, e.clientY); }
+    finally { rejeu = false; }
+  }, true);
+})();
+</script>
+<!-- /DEUX GESTES -->
+<!-- MENU -->
+<script>
+/* ==== LE MENU ☰ (GTH, 10/10) : interface épurée — à l'écran, seulement le titre, le score, la consigne et l'activité ====
+   Tout le reste (niveaux, onglets de méthode, ✏️, 🔊, 🖨️, aide…) part dans un menu ☰, ouvert d'un toucher.
+   Réglage par outil (CONF, posé par l'injecteur) : ancre = où mettre le bouton ☰ (sinon en haut à droite de l'écran) ;
+   cacher = ce qui part dans le menu (sinon : tout ce qui, dans « .barre .droite », n'est pas un score).
+   Installé par .claude/outils/menu-outil/injecter.py ; ne pas modifier dans l'outil, mais dans ce fichier. */
+(function () {
+  var CONF = {"ancre": ".barre-haut .droite", "cacher": ["#niveaux", "#btnSon"]};
+  var st = document.createElement("style");
+  st.textContent =
+    ".menu-btn{width:58px; height:58px; border-radius:16px; border:2px solid rgba(0,0,0,.15); background:#fff; color:#1f2a33; font-size:2rem; line-height:1; cursor:pointer; flex:none; padding:0;}" +
+    ".menu-btn.fixe{position:fixed; top:10px; right:12px; z-index:150; box-shadow:0 4px 14px rgba(0,0,0,.15);}" +
+    ".menu-btn.ouvert{background:#1f2a33; color:#fff;}" +
+    ".menu-panneau{position:fixed; top:76px; right:16px; z-index:200; background:#fff; color:#1f2a33; border-radius:18px; box-shadow:0 18px 50px rgba(0,0,0,.28); padding:16px 18px;" +
+    "  display:flex; flex-direction:column; align-items:flex-start; gap:12px; max-width:min(620px, 92vw); max-height:80vh; overflow:auto;}" +
+    ".menu-panneau[hidden]{display:none !important;}" +
+    ".menu-panneau h4{margin:0; font-family:sans-serif; font-size:.85rem; text-transform:uppercase; letter-spacing:.6px; color:#6d7a85;}" +
+    ".menu-panneau > *{position:static !important; margin:0 !important;}" +
+    ".menu-panneau > div,.menu-panneau > nav{display:flex; flex-wrap:wrap; gap:8px;}";
+  document.head.appendChild(st);
+  function installer() {
+    var autres = [];
+    if (CONF.cacher) CONF.cacher.forEach(function (s) { document.querySelectorAll(s).forEach(function (e) { if (autres.indexOf(e) === -1) autres.push(e); }); });
+    else { var d = document.querySelector(".barre .droite"); if (d) autres = Array.prototype.filter.call(d.children, function (e) { return !e.classList.contains("score"); }); }
+    if (!autres.length) return;
+    var btn = document.createElement("button"); btn.type = "button"; btn.className = "menu-btn"; btn.title = "Niveaux et réglages"; btn.textContent = "☰";
+    var pan = document.createElement("div"); pan.className = "menu-panneau"; pan.hidden = true;
+    var t = document.createElement("h4"); t.textContent = "Niveaux et réglages"; pan.appendChild(t);
+    autres.forEach(function (e) { pan.appendChild(e); });
+    var ancre = document.querySelector(CONF.ancre || ".barre .droite");
+    if (ancre) ancre.appendChild(btn); else { btn.classList.add("fixe"); document.body.appendChild(btn); }
+    document.body.appendChild(pan);
+    function ouvrir(o) { pan.hidden = !o; btn.classList.toggle("ouvert", o); }
+    btn.addEventListener("click", function (e) { e.stopPropagation(); ouvrir(pan.hidden); });
+    // un niveau choisi, ou une fenêtre ouverte (✏️, 🖨️) : le menu se referme ; on garde le menu ouvert pour choisir un type de jeu
+    pan.addEventListener("click", function (e) { var b = e.target.closest("button"); if (b && !b.closest(CONF.garderOuvert || ".types")) setTimeout(function () { ouvrir(false); }, 120); });
+    document.addEventListener("pointerdown", function (e) { if (!pan.hidden && !pan.contains(e.target) && e.target !== btn) ouvrir(false); });
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", installer); else installer();
+})();
+</script>
+<!-- /MENU -->
+</body>
+</html>

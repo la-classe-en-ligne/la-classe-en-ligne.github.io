@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Plier la bande</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect x='4' y='34' width='56' height='20' rx='3' fill='%23fff6e0' stroke='%233a2b10' stroke-width='3'/%3E%3Crect x='4' y='34' width='28' height='20' rx='3' fill='%23ff9a3d' stroke='%233a2b10' stroke-width='3'/%3E%3Ccircle cx='20' cy='14' r='7' fill='none' stroke='%23d23b3b' stroke-width='4'/%3E%3Ccircle cx='44' cy='14' r='7' fill='none' stroke='%23d23b3b' stroke-width='4'/%3E%3Cpath d='M25 18 L36 40 M39 18 L28 40' stroke='%2326323f' stroke-width='4' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Quicksand:wght@600;700&display=swap">
+<style>
+  /* Univers de ce jeu : la papeterie. Un tapis de coupe vert quadrillé, une règle, des bandes de papier qu'on plie, qu'on coupe
+     aux ciseaux et qu'on colorie. Méthodes de classe : plier pour les demis, quarts, huitièmes ; compter les carreaux pour les autres. */
+  :root{ --encre:#26323f; --gris:#6b7785; --bord:#d9c9a8; --tapis:#2f7d5b; --tapis-ligne:rgba(255,255,255,.13); --papier:#fff6e0;
+    --couleur:#ff9a3d; --bien:#1a8f5c; --faux:#d6455d; --talbot:#1f7a8c; }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{margin:0; color:var(--encre); font-family:"Quicksand",system-ui,sans-serif; overflow:hidden; height:100vh; display:flex; flex-direction:column;
+    background:#e9dcc3; user-select:none; -webkit-user-select:none; touch-action:none;}
+
+  /* ---------- Barre du haut ---------- */
+  .barre{display:grid; grid-template-columns:1fr auto 1fr; align-items:center; gap:16px; padding:10px 26px; background:#fffaf0; border-bottom:3px solid var(--bord);}
+  .titre{display:flex; align-items:center; gap:12px;}
+  .titre svg{width:50px; height:50px; flex:none;}
+  .titre h1{font-family:"Baloo 2",cursive; font-weight:800; font-size:1.9rem; margin:0;}
+  .navigation{display:flex; align-items:center; gap:8px; font-family:"Baloo 2",cursive; font-weight:700; font-size:1.3rem; color:var(--gris);}
+  .navigation button{font:inherit; width:44px; height:40px; border-radius:12px; border:2px solid var(--bord); background:#fff; cursor:pointer; color:var(--encre);}
+  .droite{justify-self:end; display:flex; align-items:center; gap:12px;}
+  .score{display:flex; flex-direction:column; align-items:center; padding:2px 14px; border-radius:12px; background:#fff; border:2px solid var(--bord); min-width:130px;}
+  .score small{font-size:.8rem; font-weight:700; color:var(--gris); text-transform:uppercase; letter-spacing:.5px;}
+  .score b{font-family:"Baloo 2",cursive; font-size:1.8rem; line-height:1.05;}
+  .niveaux{display:flex; flex-direction:column; gap:4px;}
+  .niveaux button{font:inherit; font-weight:700; font-size:.85rem; padding:2px 12px; border-radius:999px; cursor:pointer; background:#fff; color:var(--gris); border:2px solid var(--bord);}
+  .niveaux button.actif{background:var(--encre); color:#fff; border-color:var(--encre);}
+  .btn-son{width:44px; height:44px; border-radius:50%; font-size:1.2rem; cursor:pointer; background:#fff; border:2px solid var(--bord);}
+
+  /* ---------- Consigne ---------- */
+  .consigne{display:flex; justify-content:center; padding:12px 20px 0;}
+  .consigne p{margin:0; font-family:"Baloo 2",cursive; font-weight:700; font-size:2.1rem; text-align:center; background:#fffaf0; padding:2px 24px; border-radius:16px; box-shadow:0 4px 0 rgba(0,0,0,.12);}
+
+  /* ---------- Le tapis de coupe ---------- */
+  .tapis{flex:1; min-height:0; margin:12px 30px 0; border-radius:18px; position:relative; overflow:hidden;
+    background-color:var(--tapis);
+    background-image:linear-gradient(var(--tapis-ligne) 2px, transparent 2px), linear-gradient(90deg, var(--tapis-ligne) 2px, transparent 2px),
+      linear-gradient(rgba(255,255,255,.06) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.06) 1px, transparent 1px);
+    background-size:100px 100px, 100px 100px, 20px 20px, 20px 20px; box-shadow:inset 0 0 0 6px #25664a, 0 10px 24px rgba(60,40,10,.3);
+    display:flex; align-items:center; justify-content:center; gap:56px; padding:20px 70px;}   /* centré (Karim, 21/10) */
+  /* la règle en haut du tapis */
+  .regle{position:absolute; left:40px; right:40px; top:0; height:30px; border-radius:0 0 8px 8px; background:#f3e3b6;
+    background-image:repeating-linear-gradient(90deg, #8a6a2a 0 2px, transparent 2px 20px), repeating-linear-gradient(90deg, #8a6a2a 0 2px, transparent 2px 100px);
+    background-size:100% 10px, 100% 20px; background-repeat:no-repeat; box-shadow:0 3px 0 rgba(0,0,0,.2);}
+
+  .fraction{display:inline-flex; flex-direction:column; align-items:center; font-family:"Baloo 2",cursive; font-weight:800; font-size:5rem; line-height:1; color:#fff;}
+  .fraction .barreF{width:100%; min-width:1.4em; height:9px; background:#fff; border-radius:5px; margin:6px 0;}
+  .fraction.carte{background:var(--papier); color:var(--encre); padding:10px 28px; border-radius:14px; box-shadow:0 8px 0 #c9b98f; cursor:grab; touch-action:none; transform:rotate(-3deg);}
+  .fraction.carte .barreF{background:var(--encre);}
+  .fraction.carte.choisi{outline:7px solid #ffd23f; outline-offset:4px;}
+  .fraction.carte.pose{box-shadow:0 0 0 6px var(--bien), 0 8px 0 #c9b98f; cursor:default;}
+  .case{width:1.4em; height:1.15em; border:5px dashed #fff; border-radius:14px; display:flex; align-items:center; justify-content:center; color:#fff; cursor:pointer;}
+  .case.remplie{border-style:solid; background:rgba(255,255,255,.15);}
+  .case.choisie{outline:7px solid #ffd23f; outline-offset:3px;}
+  .case.survol{box-shadow:0 0 0 8px rgba(255,210,63,.45);}
+  .case.faux{border-color:#ffb3c1; animation:secoue .4s ease 2;}
+  @keyframes secoue{0%,100%{transform:translateX(0)}25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
+
+  /* Bandes de papier quadrillées : on voit les carreaux ; entre deux carreaux, une ligne où l'on peut couper. */
+  .bandes{display:flex; flex-direction:column; gap:22px; align-items:flex-start;}
+  .bandes.survol{outline:5px dashed #ffd23f; outline-offset:12px; border-radius:12px;}
+  .rangee{display:flex; align-items:center; gap:16px;}
+  .etiquette-unite{font-family:"Baloo 2",cursive; font-weight:700; font-size:1.25rem; color:#e6f5ec; width:84px; flex-shrink:0; text-align:right;}
+  .bande{position:relative; height:88px; display:flex; background:var(--papier); border:4px solid #3a2b10; border-radius:4px; box-shadow:0 7px 0 rgba(0,0,0,.28);
+    transform-origin:left center;}
+  .carreau{height:100%; border-right:1.5px solid rgba(58,43,16,.35); pointer-events:none;}
+  .carreau:last-child{border-right:none;}
+  .bande.coloriee{background:var(--couleur);}
+  .bande.inegale{animation:clignote .5s ease 4;}
+  @keyframes clignote{50%{background:#ffb3c1}}
+  .ligne{position:absolute; top:-16px; bottom:-16px; width:34px; margin-left:-17px; cursor:pointer; display:flex; justify-content:center; z-index:2;}
+  .ligne::before{content:""; width:3px; height:100%; background:transparent; border-radius:2px;}
+  .ligne:hover::before{background:rgba(255,210,63,.7);}
+  .ligne.pli::before{background:repeating-linear-gradient(#1f5fbf 0 8px, transparent 8px 14px); width:4px;}
+  /* à lire : chaque unité reste entière, les parts collées */
+  .unite-lue{display:flex; height:88px; border:4px solid #3a2b10; border-radius:4px; overflow:hidden; box-shadow:0 7px 0 rgba(0,0,0,.28);}
+  .unite-lue .part{background:var(--papier); height:100%;}
+  .unite-lue .part + .part{border-left:3px solid #3a2b10;}
+  .unite-lue .part.coloriee{background:var(--couleur);}
+  .coin{position:absolute; right:-20px; top:50%; transform:translateY(-50%); width:40px; height:66px; border-radius:0 12px 12px 0; background:#f0e2bd;
+    border:3px solid #3a2b10; cursor:grab; z-index:3; display:flex; align-items:center; justify-content:center; font-size:1.4rem; touch-action:none;}
+  .coin[hidden]{display:none;}
+  .bande.plie{animation:plie .9s ease;}
+  @keyframes plie{0%{transform:scaleX(1)}45%,55%{transform:scaleX(.5)}100%{transform:scaleX(1)}}
+  .ajout-bande{height:56px; border:4px dashed rgba(255,255,255,.6); border-radius:10px; display:flex; align-items:center; justify-content:center; gap:10px;
+    font-family:"Baloo 2",cursive; font-weight:700; font-size:1.5rem; color:#fff; cursor:pointer; margin-left:100px;}
+  .ajout-bande[hidden]{display:none;}
+  /* les ciseaux qui passent sur la ligne coupée */
+  .ciseaux{position:fixed; z-index:60; pointer-events:none; font-size:3rem; transform:translate(-50%,-50%) rotate(90deg); animation:coupe .45s ease forwards;}
+  @keyframes coupe{0%{opacity:1; margin-top:-50px}100%{opacity:0; margin-top:50px}}
+  /* le tracé des ciseaux, comme dans ✂️ Les ciseaux de la phrase : un trait en pointillés qui suit le doigt */
+  .trace{position:fixed; left:0; top:0; width:100vw; height:100vh; pointer-events:none; z-index:60; overflow:visible;}
+  .trace polyline{fill:none; stroke:#ffd23f; stroke-width:7; stroke-linecap:round; stroke-linejoin:round; stroke-dasharray:14 10; filter:drop-shadow(0 0 6px rgba(255,210,63,.8));}
+  .ligne.marquee::before{background:#ffd23f; width:7px;}
+
+  /* étiquettes-nombres, comme des étiquettes de papeterie */
+  .nombres{display:grid; grid-template-columns:repeat(6, 76px); gap:12px; align-content:center;}
+  .nombre{font-family:"Baloo 2",cursive; font-weight:800; font-size:2.3rem; height:70px; border-radius:12px 12px 12px 30px; background:var(--papier); color:var(--encre);
+    display:flex; align-items:center; justify-content:center; cursor:pointer; touch-action:none; box-shadow:0 5px 0 #c9b98f; position:relative;}
+  .nombre::before{content:""; position:absolute; left:8px; top:8px; width:9px; height:9px; border-radius:50%; background:var(--tapis);}
+  .nombre.choisi{outline:6px solid #ffd23f; outline-offset:3px;}
+  .en-vol{position:fixed !important; z-index:50; pointer-events:none; transform:scale(1.1) rotate(-4deg);}
+
+  /* ---------- Bas : indice, verdict, suivant ---------- */
+  .bas{display:flex; flex-direction:column; align-items:center; gap:6px; padding:8px 0 14px;}
+  .boutons{display:flex; gap:12px;}
+  .btn-indice{font:inherit; font-weight:700; font-size:1.2rem; padding:6px 16px; border-radius:999px; cursor:pointer; background:#fff8dc; border:2px solid #f1d27a; color:#7a5b00;}
+  .btn-reprendre{font:inherit; font-weight:700; font-size:1.2rem; padding:6px 16px; border-radius:999px; cursor:pointer; background:#fff; border:2px solid var(--bord); color:var(--gris);}
+  .verdict{min-height:2.8rem; font-family:"Baloo 2",cursive; font-size:2.1rem; font-weight:800; text-align:center;}
+  .verdict:not(:empty){background:#fffaf0; padding:0 24px; border-radius:14px;}
+  .verdict.bien{color:var(--bien);} .verdict.faux{color:var(--faux);}
+  .btn-suivant{font:inherit; font-family:"Baloo 2",cursive; font-weight:800; font-size:1.8rem; padding:2px 34px; border-radius:999px; cursor:pointer; background:var(--encre); color:#fff; border:none;}
+  .btn-suivant[hidden]{display:none;}
+</style>
+</head>
+<body>
+<div class="barre">
+  <div class="titre">
+    <svg viewBox="0 0 64 64" aria-hidden="true"><rect x="4" y="34" width="56" height="20" rx="3" fill="#fff6e0" stroke="#3a2b10" stroke-width="3"/><rect x="4" y="34" width="28" height="20" rx="3" fill="#ff9a3d" stroke="#3a2b10" stroke-width="3"/><circle cx="20" cy="14" r="7" fill="none" stroke="#d23b3b" stroke-width="4"/><circle cx="44" cy="14" r="7" fill="none" stroke="#d23b3b" stroke-width="4"/><path d="M25 18 L36 40 M39 18 L28 40" stroke="#26323f" stroke-width="4" stroke-linecap="round"/></svg>
+    <h1>Plier la bande</h1>
+  </div>
+  <div class="navigation" title="Changer de question">
+    <button type="button" id="btnPrec">◀</button><span id="compteur">1 / 1</span><button type="button" id="btnSuiv">▶</button>
+  </div>
+  <div class="droite">
+    <div class="score" title="Bandes réussies du premier coup"><small>Bandes réussies</small><b id="score">0</b></div>
+    <div class="score" title="Le meilleur score à ce niveau, gardé sur cet ordinateur"><small>🏆 Record</small><b id="record">0</b></div>
+    <div class="niveaux" id="niveaux">
+      <button type="button" data-niveau="un" class="actif" title="Une seule unité">≤ 1</button>
+      <button type="button" data-niveau="plus1" title="Plusieurs unités">&gt; 1</button>
+      <button type="button" data-niveau="defi" title="Jusqu'à 4 unités">Défi</button>
+    </div>
+    <button class="btn-son" id="btnSon" type="button" title="Son">🔊</button>
+  </div>
+</div>
+<div class="consigne"><p id="consigne"></p></div>
+<div class="tapis" id="zone"><div class="regle"></div></div>
+<div class="bas">
+  <div class="boutons">
+    <button class="btn-indice" id="btnIndice" type="button">💡 Indice</button>
+    <button class="btn-reprendre" id="btnReset" type="button" title="Une bande neuve">↺ Recommencer</button>
+  </div>
+  <div class="verdict" id="message"></div>
+  <button class="btn-suivant" id="btnSuivant" type="button" hidden>➜</button>
+</div>
+<script>
+(function () {
+  // Deux méthodes pour partager en parts égales, comme en classe :
+  //  - PLIER (demis, quarts, huitièmes) : on tire le coin de la bande sur l'autre bout (ou on le touche) ; un pli apparaît ;
+  //  - COMPTER LES CARREAUX (tiers, cinquièmes…) : la bande est quadrillée, on coupe tous les « carreaux ÷ parts ».
+  // Couper : passer le doigt à travers une ligne, comme des ciseaux (un toucher colorie : il ne coupe jamais). Colorier : toucher une part. Valider : glisser la fraction
+  // sur la bande (ou la toucher). À lire : glisser un nombre dans sa case (ou toucher la case, puis le nombre).
+  // En tête de chaque niveau, les fractions de la fiche NUM 6 de la banque (exercices différenciés P1, p. 6) ;
+  // les suivantes sont des exemples en plus, pour avoir assez de questions.
+  var ITEMS = {
+    un: [
+      { t: "faire", n: 5, k: 3 }, { t: "faire", n: 4, k: 4 },   // NUM 6, ex. 2 a et b (CM1)
+      { t: "faire", n: 2, k: 1 }, { t: "lire", n: 4, k: 1 }, { t: "faire", n: 4, k: 3 }, { t: "lire", n: 8, k: 3 }, { t: "faire", n: 8, k: 1 }, { t: "lire", n: 2, k: 1 }, { t: "faire", n: 8, k: 5 }, { t: "lire", n: 4, k: 3 },
+      { t: "faire", n: 3, k: 1 }, { t: "lire", n: 5, k: 2 }, { t: "faire", n: 3, k: 2 }, { t: "lire", n: 6, k: 1 }, { t: "faire", n: 5, k: 3 }, { t: "lire", n: 6, k: 5 }, { t: "faire", n: 6, k: 4 }, { t: "lire", n: 10, k: 7 }, { t: "faire", n: 10, k: 3 }, { t: "lire", n: 3, k: 3 }
+    ],
+    plus1: [
+      { t: "faire", n: 2, k: 3 }, { t: "faire", n: 3, k: 4 }, { t: "faire", n: 5, k: 9 }, { t: "lire", n: 7, k: 9 },   // NUM 6, ex. 2 c, d, e et ex. 1 e (CM1)
+      { t: "lire", n: 2, k: 3 }, { t: "faire", n: 4, k: 5 }, { t: "lire", n: 3, k: 4 }, { t: "lire", n: 4, k: 7 }, { t: "faire", n: 5, k: 6 }, { t: "lire", n: 8, k: 11 }, { t: "faire", n: 3, k: 5 },
+      { t: "lire", n: 6, k: 7 }, { t: "faire", n: 8, k: 13 }, { t: "lire", n: 5, k: 8 }
+    ],
+    defi: [
+      { t: "faire", n: 9, k: 15 }, { t: "faire", n: 3, k: 11 }, { t: "faire", n: 6, k: 17 }, { t: "faire", n: 2, k: 8 }, { t: "lire", n: 7, k: 23 },   // NUM 6 (CM2)
+      { t: "faire", n: 4, k: 9 }, { t: "lire", n: 3, k: 7 }, { t: "faire", n: 3, k: 8 }, { t: "lire", n: 5, k: 11 }, { t: "faire", n: 2, k: 5 }, { t: "lire", n: 4, k: 10 }, { t: "faire", n: 6, k: 12 },
+      { t: "faire", n: 5, k: 13 }, { t: "lire", n: 6, k: 11 }, { t: "faire", n: 4, k: 11 }, { t: "lire", n: 5, k: 12 }
+    ]
+  };
+  // nombre de carreaux de la bande : 8 pour plier (demis, quarts, huitièmes), sinon un multiple du nombre de parts
+  function carreauxPour(n) { if (n === 2 || n === 4 || n === 8) return 8; if (n === 5 || n === 10) return 10; if (n === 9) return 18; if (n === 7) return 14; return 12; }
+  var MAX_UNITES = 4;
+
+  var el = function (id) { return document.getElementById(id); };
+  var niveau = "un", index = 0, score = 0, sonActif = true, rate = false;
+  var L = 8, coupes = {}, plis = {}, nbPlis = 0, nbBandes = 1, coloriees = {}, reponse = { haut: null, bas: null }, fini = false;
+  var caseChoisie = null, nombreChoisi = null;
+
+  // ---------- Sons : vrais bruits de papier (bruit filtré), pas de bips ----------
+  var ctx = null, bruit = null;
+  function audio() {
+    ctx = ctx || new (window.AudioContext || window.webkitAudioContext)();
+    if (!bruit) { bruit = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate); var d = bruit.getChannelData(0); for (var i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; }
+    return ctx;
+  }
+  function souffle(t, duree, freq, q, gain, freqFin) {
+    var s = ctx.createBufferSource(), f = ctx.createBiquadFilter(), g = ctx.createGain();
+    s.buffer = bruit; f.type = "bandpass"; f.frequency.setValueAtTime(freq, t); if (freqFin) f.frequency.exponentialRampToValueAtTime(freqFin, t + duree); f.Q.value = q;
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(gain, t + 0.006); g.gain.exponentialRampToValueAtTime(0.0001, t + duree);
+    s.connect(f); f.connect(g); g.connect(ctx.destination); s.start(t, Math.random() * 0.5); s.stop(t + duree + 0.02);
+  }
+  function note(t, freq, duree, gain, type) {
+    var o = ctx.createOscillator(), g = ctx.createGain(); o.type = type || "triangle"; o.frequency.setValueAtTime(freq, t);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(gain, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + duree);
+    o.connect(g); g.connect(ctx.destination); o.start(t); o.stop(t + duree + 0.02);
+  }
+  function son(type) {
+    if (!sonActif) return;
+    try {
+      audio(); var t = ctx.currentTime;
+      if (type === "couper") {   // cric-crac des ciseaux dans le papier
+        souffle(t, 0.07, 3800, 1.2, 0.35); souffle(t + 0.02, 0.12, 1400, 0.8, 0.12);
+        souffle(t + 0.13, 0.06, 4200, 1.2, 0.3); souffle(t + 0.15, 0.1, 1600, 0.8, 0.1);
+      } else if (type === "plier") { souffle(t, 0.35, 700, 0.7, 0.12, 2600); }   // le papier qu'on plie
+      else if (type === "colorier") { souffle(t, 0.09, 2400, 2, 0.08); }        // un coup de feutre
+      else if (type === "bien") { note(t, 660, 0.18, 0.1); note(t + 0.12, 990, 0.25, 0.1); }
+      else { note(t, 220, 0.25, 0.1, "sine"); }
+    } catch (e) { /* pas de son */ }
+  }
+  function cleRecord() { return "plier-bande-record-" + niveau; }
+  function lireRecord() { try { return parseInt(localStorage.getItem(cleRecord()), 10) || 0; } catch (e) { return 0; } }
+  function majScore() {
+    var r = lireRecord();
+    if (score > r) { r = score; try { localStorage.setItem(cleRecord(), String(r)); } catch (e) {} }
+    el("score").textContent = score; el("record").textContent = r;
+  }
+
+  function I() { return ITEMS[niveau][index]; }
+  function message(t, cls) { el("message").textContent = t; el("message").className = "verdict" + (cls ? " " + cls : ""); }
+  function largeurCarreau() { return Math.floor(Math.min(90, 900 / L)); }
+  function positionsCoupes() { return Object.keys(coupes).map(Number).sort(function (a, b) { return a - b; }); }
+  function segments() {
+    var bornes = [0].concat(positionsCoupes(), [L]), s = [];
+    for (var i = 0; i < bornes.length - 1; i++) s.push({ a: bornes[i], b: bornes[i + 1] });
+    return s;
+  }
+  function peutPlier() { return nbPlis < 3 && L % Math.pow(2, nbPlis + 1) === 0 && !positionsCoupes().length; }
+
+  // ---------- Dessin des bandes ----------
+  function dessinerBandes() {
+    var zoneB = el("bandes"); zoneB.innerHTML = "";
+    var w = largeurCarreau(), segs = segments();
+    for (var b = 0; b < nbBandes; b++) {
+      var rangee = document.createElement("div"); rangee.className = "rangee"; rangee.dataset.b = b;
+      var etiq = document.createElement("span"); etiq.className = "etiquette-unite"; etiq.textContent = "1 unité"; rangee.appendChild(etiq);
+      if (I().t === "lire") {
+        var u = document.createElement("div"); u.className = "unite-lue";
+        segs.forEach(function (s) { var m = document.createElement("div"); m.className = "part" + (coloriees[b + ":" + s.a] ? " coloriee" : ""); m.style.width = ((s.b - s.a) * w) + "px"; u.appendChild(m); });
+        rangee.appendChild(u); zoneB.appendChild(rangee); continue;
+      }
+      segs.forEach(function (s) {
+        var m = document.createElement("div"); m.className = "bande" + (coloriees[b + ":" + s.a] ? " coloriee" : "");
+        m.dataset.cle = b + ":" + s.a; m.dataset.a = s.a;
+        m.style.width = (w * (s.b - s.a) + 8) + "px";
+        for (var i = s.a; i < s.b; i++) { var c = document.createElement("div"); c.className = "carreau"; c.style.width = w + "px"; m.appendChild(c); }
+        for (var j = s.a + 1; j < s.b; j++) {
+          var l = document.createElement("div"); l.className = "ligne" + (plis[j] ? " pli" : "");
+          l.style.left = ((j - s.a) * w) + "px"; l.dataset.pos = j; m.appendChild(l);
+        }
+        if (b === 0 && segs.length === 1) {   // le coin à tirer (ou à toucher) pour plier, tant que la bande n'est pas coupée
+          var coin = document.createElement("div"); coin.className = "coin"; coin.textContent = "↩"; coin.title = "Tire le coin jusqu'à l'autre bout, ou touche-le, pour plier";
+          coin.hidden = !peutPlier() || fini; activerPliage(coin, m); m.appendChild(coin);
+        }
+        rangee.appendChild(m);
+      });
+      zoneB.appendChild(rangee);
+    }
+    var ajout = el("ajoutBande");
+    if (ajout) { ajout.style.width = (w * L + 8) + "px"; ajout.hidden = I().t !== "faire" || niveau === "un" || !positionsCoupes().length || fini || nbBandes >= MAX_UNITES; }
+  }
+
+  // ---------- Couper (tracé) et colorier (toucher) : branchés une seule fois ----------
+  // Comme dans ✂️ Les ciseaux de la phrase : le doigt trace une ligne en pointillés, n'importe où sur le tapis ; les lignes
+  // traversées s'allument ; au lever du doigt, on coupe à l'endroit traversé (un tracé = une coupe). Un toucher sur une part la colorie.
+  var geste = null;
+  function couper(pos, x, y) {
+    if (coupes[pos]) return;
+    coupes[pos] = true; coloriees = {}; son("couper");
+    var c = document.createElement("div"); c.className = "ciseaux"; c.textContent = "✂️"; c.style.left = x + "px"; c.style.top = y + "px";
+    document.body.appendChild(c); setTimeout(function () { c.remove(); }, 500);
+    dessinerBandes();
+  }
+  document.addEventListener("pointerdown", function (ev) {
+    var zone = el("zone");
+    if (!el("bandes") || fini || I().t !== "faire" || !zone.contains(ev.target)) return;
+    if (ev.target.closest && ev.target.closest(".coin, .fraction, .ajout-bande, button")) return;
+    ev.preventDefault();
+    geste = { points: [[ev.clientX, ev.clientY]], longueur: 0, traversees: {}, part: ev.target.closest(".bande"), dernier: null,
+      trace: document.createElementNS("http://www.w3.org/2000/svg", "svg") };
+    geste.trace.setAttribute("class", "trace"); geste.trace.innerHTML = '<polyline points="' + ev.clientX + "," + ev.clientY + '"/>';
+    document.body.appendChild(geste.trace);
+  });
+  document.addEventListener("pointermove", function (e) {
+    if (!geste) return;
+    var d = geste.points[geste.points.length - 1];
+    geste.longueur += Math.hypot(e.clientX - d[0], e.clientY - d[1]);
+    geste.points.push([e.clientX, e.clientY]); geste.dernier = [e.clientX, e.clientY];
+    geste.trace.firstChild.setAttribute("points", geste.points.map(function (q) { return q[0] + "," + q[1]; }).join(" "));
+    var l = document.elementsFromPoint(e.clientX, e.clientY);
+    for (var k = 0; k < l.length; k++) if (l[k].classList && l[k].classList.contains("ligne")) {
+      // une même coupe sur toutes les unités : on retient la position, pas l'unité
+      geste.traversees[l[k].dataset.pos] = true; l[k].classList.add("marquee");
+    }
+  });
+  document.addEventListener("pointerup", function (e) {
+    if (!geste) return;
+    var g = geste; geste = null; g.trace.remove();
+    document.querySelectorAll(".ligne.marquee").forEach(function (x) { x.classList.remove("marquee"); });
+    var ou = Object.keys(g.traversees);
+    if (g.longueur < 20) {   // un toucher : on colorie la part touchée
+      if (!g.part) return;
+      var cle = g.part.dataset.cle; coloriees[cle] = !coloriees[cle]; son("colorier"); dessinerBandes(); return;
+    }
+    if (!ou.length) return;
+    if (ou.length > 1) { son("non"); message("✂️ Coupe à un seul endroit à la fois", "faux"); return; }
+    message("");
+    couper(+ou[0], e.clientX, e.clientY);
+  });
+
+  // ---------- Plier : tirer le coin vers la gauche, au-delà de la moitié, ou le toucher ----------
+  function activerPliage(coin, bande) {
+    coin.addEventListener("pointerdown", function (ev) {
+      ev.preventDefault(); ev.stopPropagation();
+      var rect = bande.getBoundingClientRect(), x0 = ev.clientX, y0 = ev.clientY;
+      function bouge(e) { var d = Math.max(0, Math.min(rect.width, x0 - e.clientX)); bande.style.transform = "scaleX(" + (1 - d / rect.width / 2) + ")"; }
+      function lache(e) {
+        document.removeEventListener("pointermove", bouge); document.removeEventListener("pointerup", lache);
+        bande.style.transform = "";
+        var toucher = Math.hypot(e.clientX - x0, e.clientY - y0) < 12;
+        if ((toucher || x0 - e.clientX > rect.width * 0.45) && peutPlier()) plier();
+      }
+      document.addEventListener("pointermove", bouge); document.addEventListener("pointerup", lache);
+    });
+  }
+  function plier() {
+    nbPlis++;
+    var pas = L / Math.pow(2, nbPlis);
+    for (var p = pas; p < L; p += pas) plis[p] = true;
+    son("plier"); dessinerBandes();
+    document.querySelectorAll("#bandes .bande").forEach(function (b) { b.classList.add("plie"); });
+  }
+
+  // ---------- Affichage d'une question ----------
+  function afficher() {
+    var it = I(); rate = false;
+    L = carreauxPour(it.n); coupes = {}; plis = {}; nbPlis = 0; nbBandes = 1; coloriees = {}; reponse = { haut: null, bas: null }; fini = false;
+    caseChoisie = null; nombreChoisi = null;
+    el("btnSuivant").hidden = true; message("");
+    el("compteur").textContent = (index + 1) + " / " + ITEMS[niveau].length;
+    var zone = el("zone"); zone.innerHTML = '<div class="regle"></div>';
+    if (it.t === "faire") {
+      el("consigne").textContent = "Fabrique cette fraction";
+      zone.insertAdjacentHTML("beforeend", '<div class="fraction carte" id="fracFaire"><span>' + it.k + '</span><span class="barreF"></span><span>' + it.n + '</span></div>' +
+        '<div class="bandes"><div id="bandes" class="bandes"></div><div class="ajout-bande" id="ajoutBande" title="Ajouter une unité">＋ 1 unité</div></div>');
+      el("ajoutBande").addEventListener("click", function () { if (nbBandes < MAX_UNITES && !fini) { nbBandes++; son("plier"); dessinerBandes(); } });
+      dessinerBandes();
+      activerValidation(el("fracFaire"));
+    } else {
+      el("consigne").textContent = "Quelle fraction est coloriée ?";
+      nbBandes = Math.ceil(it.k / it.n);
+      for (var p = L / it.n; p < L; p += L / it.n) coupes[p] = true;
+      var segs = segments();
+      for (var c = 0; c < it.k; c++) coloriees[Math.floor(c / it.n) + ":" + segs[c % it.n].a] = true;
+      zone.insertAdjacentHTML("beforeend", '<div id="bandes" class="bandes"></div>' +
+        '<div class="fraction"><div class="case" id="caseHaut" data-case="haut"></div><span class="barreF"></span><div class="case" id="caseBas" data-case="bas"></div></div>' +
+        '<div class="nombres" id="nombres"></div>');
+      dessinerBandes();
+      var max = niveau === "defi" ? 24 : (niveau === "plus1" ? 18 : 12);
+      for (var v = 1; v <= max; v++) {
+        var t = document.createElement("div"); t.className = "nombre"; t.textContent = v; el("nombres").appendChild(t); activerNombre(t, v);
+      }
+      ["caseHaut", "caseBas"].forEach(function (id) {
+        el(id).addEventListener("click", function () {
+          if (fini) return;
+          var c = el(id);
+          if (nombreChoisi) { var n = nombreChoisi; n.t.classList.remove("choisi"); nombreChoisi = null; poserNombre(c.dataset.case, n.v); return; }
+          if (caseChoisie) caseChoisie.classList.remove("choisie");
+          caseChoisie = caseChoisie === c ? null : c; if (caseChoisie) c.classList.add("choisie");
+        });
+      });
+    }
+    majScore();
+  }
+
+  // ---------- Lire : un nombre se pose en le glissant dans sa case, ou en touchant la case puis le nombre ----------
+  function poserNombre(caseCle, v) {
+    reponse[caseCle] = v;
+    var c = el(caseCle === "haut" ? "caseHaut" : "caseBas"); c.textContent = v; c.className = "case remplie";
+    if (caseChoisie) { caseChoisie.classList.remove("choisie"); caseChoisie = null; }
+    if (reponse.haut !== null && reponse.bas !== null) verifierLecture();
+  }
+  function activerNombre(t, v) {
+    t.addEventListener("pointerdown", function (ev) {
+      if (fini) return;
+      ev.preventDefault();
+      var x0 = ev.clientX, y0 = ev.clientY, clone = null, survole = null;
+      function cible(x, y) { var l = document.elementsFromPoint(x, y); for (var k = 0; k < l.length; k++) if (l[k].classList && l[k].classList.contains("case")) return l[k]; return null; }
+      function bouge(e) {
+        if (!clone && Math.hypot(e.clientX - x0, e.clientY - y0) < 10) return;
+        if (!clone) { clone = t.cloneNode(true); clone.classList.add("en-vol"); clone.style.width = t.offsetWidth + "px"; document.body.appendChild(clone); }
+        clone.style.left = (e.clientX - 38) + "px"; clone.style.top = (e.clientY - 35) + "px";
+        var c = cible(e.clientX, e.clientY); if (survole && survole !== c) survole.classList.remove("survol"); if (c) c.classList.add("survol"); survole = c;
+      }
+      function lache(e) {
+        document.removeEventListener("pointermove", bouge); document.removeEventListener("pointerup", lache);
+        if (survole) survole.classList.remove("survol");
+        if (!clone) {   // simple toucher
+          if (caseChoisie) { poserNombre(caseChoisie.dataset.case, v); return; }
+          if ((reponse.haut === null) !== (reponse.bas === null)) { poserNombre(reponse.haut === null ? "haut" : "bas", v); return; }   // une seule case vide : un toucher suffit
+          if (nombreChoisi) nombreChoisi.t.classList.remove("choisi");
+          nombreChoisi = nombreChoisi && nombreChoisi.t === t ? null : { t: t, v: v }; if (nombreChoisi) t.classList.add("choisi");
+          return;
+        }
+        clone.remove();
+        var c = cible(e.clientX, e.clientY); if (c) poserNombre(c.dataset.case, v);
+      }
+      document.addEventListener("pointermove", bouge); document.addEventListener("pointerup", lache);
+    });
+  }
+
+  function reussite() {
+    fini = true; if (!rate) score++; majScore(); son("bien");
+    var it = I(); message("✅ " + it.k + "/" + it.n + (it.k > it.n ? " : plus grand que 1" : (it.k === it.n ? " = 1 unité" : "")), "bien");
+    el("btnSuivant").hidden = false;
+  }
+  function echec(txt) { rate = true; son("non"); message(txt || "🤪", "faux"); }
+
+  // ---------- Valider : glisser la fraction sur sa bande (« voilà mes 3/4 »), ou la toucher ----------
+  function activerValidation(frac) {
+    frac.addEventListener("pointerdown", function (ev) {
+      if (fini) return;
+      ev.preventDefault();
+      var x0 = ev.clientX, y0 = ev.clientY, clone = null, cible = el("bandes");
+      function sur(x, y) { var r = cible.getBoundingClientRect(); return x >= r.left - 30 && x <= r.right + 30 && y >= r.top - 30 && y <= r.bottom + 30; }
+      function bouge(e) {
+        if (!clone && Math.hypot(e.clientX - x0, e.clientY - y0) < 12) return;
+        if (!clone) { clone = frac.cloneNode(true); clone.removeAttribute("id"); clone.classList.add("en-vol"); document.body.appendChild(clone); }
+        clone.style.left = (e.clientX - clone.offsetWidth / 2) + "px"; clone.style.top = (e.clientY - clone.offsetHeight / 2) + "px";
+        cible.classList.toggle("survol", sur(e.clientX, e.clientY));
+      }
+      function lache(e) {
+        document.removeEventListener("pointermove", bouge); document.removeEventListener("pointerup", lache);
+        cible.classList.remove("survol");
+        if (!clone) { verifierFaire(); return; }   // toucher la fraction = « voilà ma bande »
+        clone.remove();
+        if (sur(e.clientX, e.clientY)) verifierFaire();
+      }
+      document.addEventListener("pointermove", bouge); document.addEventListener("pointerup", lache);
+    });
+  }
+  function verifierFaire() {
+    var it = I(), segs = segments(), taille = L / it.n;
+    var nbCol = Object.keys(coloriees).filter(function (k) { return coloriees[k]; }).length;
+    var inegales = segs.filter(function (s) { return s.b - s.a !== taille; });
+    var unites = Math.max(1, Math.ceil(it.k / it.n));
+    if (segs.length === it.n && !inegales.length && nbCol === it.k && nbBandes === unites) {
+      el("fracFaire").classList.add("pose"); reussite(); dessinerBandes(); return;
+    }
+    // 4/4 (ou 2/2, 8/8…) : la bande entière coloriée, sans la plier, est juste aussi ; on le précise (Karim, 21/10)
+    if (it.k === it.n && segs.length === 1 && nbCol === 1 && nbBandes === 1) {
+      el("fracFaire").classList.add("pose"); reussite(); dessinerBandes();
+      message("✅ Juste : " + it.k + "/" + it.n + " = 1 unité entière. Plie-la en " + it.n + " pour voir les " + it.n + " parts.", "bien"); return;
+    }
+    if (segs.length !== it.n || inegales.length) {
+      echec("🤪 Les parts ne sont pas égales, ou pas assez nombreuses");
+      document.querySelectorAll("#bandes .bande").forEach(function (m) {
+        var a = parseInt(m.dataset.a, 10), s = segs.filter(function (x) { return x.a === a; })[0];
+        if (segs.length !== it.n || s.b - s.a !== taille) m.classList.add("inegale");
+      });
+    } else if (nbBandes !== unites) echec(nbBandes < unites ? "🤪 Il faut plus d'une unité" : "🤪 Il y a une unité de trop");
+    else echec("🤪 Compte les parts coloriées");
+  }
+  function verifierLecture() {
+    var it = I();
+    if (reponse.haut === it.k && reponse.bas === it.n) { reussite(); return; }
+    echec();
+    ["caseHaut", "caseBas"].forEach(function (id) { el(id).classList.add("faux"); });
+    setTimeout(function () {
+      reponse = { haut: null, bas: null };
+      ["caseHaut", "caseBas"].forEach(function (id) { var c = el(id); if (c) { c.className = "case"; c.textContent = ""; } });
+    }, 1000);
+  }
+
+  // ---------- Indice ----------
+  el("btnIndice").addEventListener("click", function () {
+    if (fini) return;
+    var it = I();
+    if (it.t === "lire") { message("💡 En bas : en combien de parts l'unité est coupée. En haut : combien sont coloriées."); return; }
+    var pas = L / it.n;
+    if (!positionsCoupes().length && (it.n === 2 || it.n === 4 || it.n === 8)) message("💡 Plie la bande : tire le coin ↩ jusqu'à l'autre bout");
+    else if (!positionsCoupes().length) message("💡 " + L + " carreaux ÷ " + it.n + " parts = " + pas + " carreaux par part");
+    else if (it.k > it.n && nbBandes < Math.ceil(it.k / it.n)) message("💡 " + it.k + " parts, c'est plus d'une unité : ＋ 1 unité");
+    else message("💡 Colorie " + it.k + " parts, puis donne ta fraction à la bande");
+  });
+
+  function aller(i) { index = (i + ITEMS[niveau].length) % ITEMS[niveau].length; afficher(); }
+  el("btnReset").addEventListener("click", afficher);
+  el("btnSuivant").addEventListener("click", function () { aller(index + 1); });
+  el("btnPrec").addEventListener("click", function () { aller(index - 1); });
+  el("btnSuiv").addEventListener("click", function () { aller(index + 1); });
+  el("btnSon").addEventListener("click", function () { sonActif = !sonActif; el("btnSon").textContent = sonActif ? "🔊" : "🔇"; });
+  function choisirNiveau(n) {
+    var b = document.querySelector('#niveaux button[data-niveau="' + n + '"]'); if (!b) return false;
+    niveau = n; index = 0; score = 0;
+    document.querySelectorAll("#niveaux button").forEach(function (x) { x.classList.toggle("actif", x === b); });
+    afficher(); return true;
+  }
+  document.querySelectorAll("#niveaux button").forEach(function (b) { b.addEventListener("click", function () { choisirNiveau(b.dataset.niveau); }); });
+  // Class Flow ouvre le jeu sur un niveau : …html#plus1
+  if (!(location.hash && choisirNiveau(location.hash.slice(1)))) afficher();
+})();
+</script>
+<!-- MENU -->
+<script>
+/* ==== LE MENU ☰ (GTH, 10/10) : interface épurée — à l'écran, seulement le titre, le score, la consigne et l'activité ====
+   Tout le reste (niveaux, onglets de méthode, ✏️, 🔊, 🖨️, aide…) part dans un menu ☰, ouvert d'un toucher.
+   Réglage par outil (CONF, posé par l'injecteur) : ancre = où mettre le bouton ☰ (sinon en haut à droite de l'écran) ;
+   cacher = ce qui part dans le menu (sinon : tout ce qui, dans « .barre .droite », n'est pas un score).
+   Installé par .claude/outils/menu-outil/injecter.py ; ne pas modifier dans l'outil, mais dans ce fichier. */
+(function () {
+  var CONF = {};
+  var st = document.createElement("style");
+  st.textContent =
+    ".menu-btn{width:58px; height:58px; border-radius:16px; border:2px solid rgba(0,0,0,.15); background:#fff; color:#1f2a33; font-size:2rem; line-height:1; cursor:pointer; flex:none; padding:0;}" +
+    ".menu-btn.fixe{position:fixed; top:10px; right:12px; z-index:150; box-shadow:0 4px 14px rgba(0,0,0,.15);}" +
+    ".menu-btn.ouvert{background:#1f2a33; color:#fff;}" +
+    ".menu-panneau{position:fixed; top:76px; right:16px; z-index:200; background:#fff; color:#1f2a33; border-radius:18px; box-shadow:0 18px 50px rgba(0,0,0,.28); padding:16px 18px;" +
+    "  display:flex; flex-direction:column; align-items:flex-start; gap:12px; max-width:min(620px, 92vw); max-height:80vh; overflow:auto;}" +
+    ".menu-panneau[hidden]{display:none !important;}" +
+    ".menu-panneau h4{margin:0; font-family:sans-serif; font-size:.85rem; text-transform:uppercase; letter-spacing:.6px; color:#6d7a85;}" +
+    ".menu-panneau > *{position:static !important; margin:0 !important;}" +
+    ".menu-panneau > div,.menu-panneau > nav{display:flex; flex-wrap:wrap; gap:8px;}";
+  document.head.appendChild(st);
+  function installer() {
+    var autres = [];
+    if (CONF.cacher) CONF.cacher.forEach(function (s) { document.querySelectorAll(s).forEach(function (e) { if (autres.indexOf(e) === -1) autres.push(e); }); });
+    else { var d = document.querySelector(".barre .droite"); if (d) autres = Array.prototype.filter.call(d.children, function (e) { return !e.classList.contains("score"); }); }
+    if (!autres.length) return;
+    var btn = document.createElement("button"); btn.type = "button"; btn.className = "menu-btn"; btn.title = "Niveaux et réglages"; btn.textContent = "☰";
+    var pan = document.createElement("div"); pan.className = "menu-panneau"; pan.hidden = true;
+    var t = document.createElement("h4"); t.textContent = "Niveaux et réglages"; pan.appendChild(t);
+    autres.forEach(function (e) { pan.appendChild(e); });
+    var ancre = document.querySelector(CONF.ancre || ".barre .droite");
+    if (ancre) ancre.appendChild(btn); else { btn.classList.add("fixe"); document.body.appendChild(btn); }
+    document.body.appendChild(pan);
+    function ouvrir(o) { pan.hidden = !o; btn.classList.toggle("ouvert", o); }
+    btn.addEventListener("click", function (e) { e.stopPropagation(); ouvrir(pan.hidden); });
+    // un niveau choisi, ou une fenêtre ouverte (✏️, 🖨️) : le menu se referme ; on garde le menu ouvert pour choisir un type de jeu
+    pan.addEventListener("click", function (e) { var b = e.target.closest("button"); if (b && !b.closest(CONF.garderOuvert || ".types")) setTimeout(function () { ouvrir(false); }, 120); });
+    document.addEventListener("pointerdown", function (e) { if (!pan.hidden && !pan.contains(e.target) && e.target !== btn) ouvrir(false); });
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", installer); else installer();
+})();
+</script>
+<!-- /MENU -->
+<!-- INDICE-COTE -->
+<script>
+/* 💡 sur le côté (Karim, 21/10) : dans les jeux qui ont un bouton « 💡 Indice » (.btn-indice), le bouton devient une ampoule seule,
+   collée au bord droit de l'écran, à mi-hauteur ; l'indice s'ouvre dans une bulle à côté d'elle, jamais sous le jeu.
+   Le jeu garde son propre code : au toucher, on regarde quel texte il vient d'écrire (zone #indice, ou la ligne de message),
+   on le reprend dans la bulle et on remet la zone comme avant. Installé par injecter.py. */
+(function () {
+  var b = document.querySelector(".btn-indice"); if (!b) return;
+  var st = document.createElement("style");
+  st.textContent =
+    ".btn-indice.cote{position:fixed !important; right:18px; top:50%; transform:translateY(-50%); width:76px; height:76px; padding:0 !important; border-radius:50% !important;" +
+    " font-size:40px !important; line-height:1; z-index:60; margin:0 !important; display:flex; align-items:center; justify-content:center}" +
+    "#bulle-cote{position:fixed; right:110px; top:50%; transform:translateY(-50%); max-width:520px; background:#fff8c4; border:2px solid #d4b106; border-radius:18px;" +
+    " padding:16px 22px; font-size:26px; line-height:1.35; z-index:60; box-shadow:0 6px 18px rgba(0,0,0,.15); display:none}" +
+    "#bulle-cote::after{content:''; position:absolute; right:-14px; top:50%; margin-top:-12px; border:12px solid transparent; border-left:14px solid #d4b106; border-right:none}";
+  document.head.appendChild(st);
+  b.classList.add("cote"); b.textContent = "💡"; b.title = "Indice"; document.body.appendChild(b);
+  var bulle = document.createElement("div"); bulle.id = "bulle-cote"; document.body.appendChild(bulle);
+  var zones = function () { return Array.prototype.slice.call(document.querySelectorAll("#indice, .indice, #message, .message, #verdict, .verdict, #consigne-aide")); };
+  var avant = [], minuteur = null;
+  b.addEventListener("click", function () { avant = zones().map(function (z) { return [z, z.textContent, z.className]; }); }, true);   // avant le code du jeu
+  b.addEventListener("click", function () {
+    setTimeout(function () {
+      var txt = "";
+      avant.forEach(function (a) {
+        var z = a[0], neuf = z.textContent;
+        if (neuf !== a[1] && neuf.trim()) { txt = neuf; z.textContent = a[1]; z.className = a[2]; }
+      });
+      if (!txt) return;   // le jeu montre l'indice autrement : on le laisse faire
+      bulle.textContent = txt.replace(/^\s*💡\s*/, ""); bulle.style.display = "block";
+      clearTimeout(minuteur); minuteur = setTimeout(function () { bulle.style.display = "none"; }, 8000);
+    }, 0);
+  });
+  document.addEventListener("pointerdown", function (e) { if (e.target !== b && e.target !== bulle) bulle.style.display = "none"; });
+})();
+</script>
+<!-- /INDICE-COTE -->
+</body>
+</html>

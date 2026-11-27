@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>La fabrique de mots</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath d='M4 58V30l14-10v10l14-10v10l14-10V8h10v50z' fill='%235c6570'/%3E%3Crect x='10' y='40' width='12' height='12' fill='%23f08a12'/%3E%3Crect x='26' y='40' width='12' height='12' fill='%232f86d6'/%3E%3Crect x='42' y='40' width='12' height='12' fill='%2346a34a'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&display=swap">
+<style>
+  /* 🏭 La fabrique de mots, l'usine (maquette validée par Karim le 23/10 : « une usine avec deux bras robots qui travaillent sur le mot,
+     le découpent au laser… »). Le mot arrive sur un tapis roulant, une plaque d'acier par lettre ; la couleur dit la règle une fois
+     le mot coupé ou soudé (préfixe orange, radical bleu, suffixe vert) ; les robots sont gris pour ne pas se confondre avec elles.
+     Je coupe : faire glisser le laser (le portique du plafond) entre deux lettres, il tire en se posant ; on peut aussi passer le doigt
+     sur le mot (fiche P2 p. 5 : re|démarrage, mal|chance…). Les morceaux tombent dans les caisses Préfixes / Radicaux.
+     J'assemble : prendre un suffixe dans le casier, le portique l'apporte contre le radical, le bras au sol le soude ; si le mot n'existe
+     pas, la soudure lâche et la pièce tombe (fiche P2 p. 16 : chant- + eur, beau- + té…). Le sens : ranger le mot dans la caisse
+     de ce que veut dire le préfixe (mémo VOC 3). Défi : deux coups de laser, préfixe ET suffixe (ir|respect|ueux, mémo VOC 4).
+     Les sens des mots fabriqués (« celui qui chante ») sont écrits par moi. La scène fait 1920 × 840 et se met à l'échelle. */
+  :root{ --encre:#2c3540; --gris:#6b747f; --bord:#e1e5ea; --bien:#2e7d32; --faux:#c62828;
+    --riv:radial-gradient(circle at 9px 11px, rgba(0,0,0,.25) 2.5px, transparent 3.5px), radial-gradient(circle at calc(100% - 9px) 11px, rgba(0,0,0,.25) 2.5px, transparent 3.5px),
+      radial-gradient(circle at 9px calc(100% - 11px), rgba(0,0,0,.25) 2.5px, transparent 3.5px), radial-gradient(circle at calc(100% - 9px) calc(100% - 11px), rgba(0,0,0,.25) 2.5px, transparent 3.5px); }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{margin:0; color:var(--encre); font-family:"Baloo 2",system-ui,sans-serif; overflow:hidden; height:100vh; display:flex; flex-direction:column; background:#eef1f4; user-select:none; -webkit-user-select:none; touch-action:none;}
+  [hidden]{display:none !important;}
+  .barre{display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:20px; padding:8px 26px; background:#fff; border-bottom:3px solid var(--bord);}
+  .titre{display:flex; align-items:center; gap:12px;} .titre svg{width:50px; height:50px;}
+  .titre h1{font-weight:800; font-size:1.9rem; margin:0;}
+  .onglets{display:flex; gap:10px; justify-content:center;}
+  .onglets button{font:inherit; font-weight:800; font-size:1.35rem; padding:3px 22px; border-radius:999px; cursor:pointer; background:#eceff2; color:var(--encre); border:none;}
+  .onglets button.actif{background:#c62828; color:#fff;}
+  .droite{display:flex; align-items:center; gap:12px;}
+  .score{display:flex; flex-direction:column; align-items:center; padding:2px 14px; border-radius:12px; background:#fff; border:2px solid var(--bord); min-width:130px;}
+  .score small{font-size:.8rem; font-weight:700; color:var(--gris); text-transform:uppercase; letter-spacing:.5px;}
+  .score b{font-size:1.7rem; line-height:1.05;}
+  .btn-son{width:44px; height:44px; border-radius:50%; font-size:1.2rem; cursor:pointer; background:#fff; border:2px solid var(--bord);}
+  .consigne{display:flex; justify-content:center; padding:14px 20px 0;}
+  .consigne p{margin:0; font-weight:800; font-size:2.7rem; text-align:center; background:#fff; padding:0 34px; border-radius:16px; border:3px solid var(--bord);}
+  .jeu{flex:1; min-height:0; position:relative; overflow:hidden;}
+  /* la scène de l'usine */
+  .scene{position:absolute; left:0; top:0; width:1920px; height:840px; transform-origin:0 0;}
+  .decor,.robots{position:absolute; left:0; top:0; width:1920px; height:840px; pointer-events:none;}
+  .calque{position:absolute; left:0; top:0; width:1920px; height:840px; pointer-events:none;} .calque > *{pointer-events:auto;}
+  #caisses{z-index:2;} #bac{z-index:3;} #poste{z-index:4;} .robots{z-index:5;}
+  .tapis{position:absolute; left:110px; top:555px; width:1700px; height:34px; border-radius:17px; z-index:1;
+    background:radial-gradient(circle at 30px 17px, #6b747f 9px, #3c434b 10px 12px, transparent 13px) 0 0 / 60px 34px repeat-x, #4d5560;}
+  .tapis.roule{animation:roule .22s linear infinite;} @keyframes roule{to{background-position:60px 0, 0 0}}
+  /* les plaques : une par lettre */
+  .piece{position:absolute; top:420px; display:flex; gap:6px; touch-action:none;}
+  .piece .l{width:66px; height:128px; border:4px solid; border-radius:8px; display:flex; align-items:center; justify-content:center; padding-top:12px;
+    font-weight:800; font-size:84px; line-height:1; color:#fff; text-shadow:0 2px 0 rgba(0,0,0,.18);}
+  .acier .l{color:var(--encre); text-shadow:none; border-color:#98a3ae; background:var(--riv), linear-gradient(#f3f5f7, #d9dfe5 50%, #c3cbd3);}
+  .prefixe .l{border-color:#c96a00; background:var(--riv), linear-gradient(#ffc067, #f08a12);}
+  .radical .l{border-color:#1d64a8; background:var(--riv), linear-gradient(#6fb6f5, #2f86d6);}
+  .suffixe .l{border-color:#2e7d32; background:var(--riv), linear-gradient(#8fd48f, #46a34a);}
+  .piece.coupable{cursor:col-resize;}
+  .piece.petite{display:flex; align-items:center; justify-content:center; width:136px; height:84px; padding-top:8px; border:4px solid #2e7d32; border-radius:10px;
+    font-weight:800; font-size:48px; line-height:1; color:#fff; text-shadow:0 2px 0 rgba(0,0,0,.18); background:var(--riv), linear-gradient(#8fd48f, #46a34a); cursor:grab;}
+  .piece.porte{z-index:3; cursor:grabbing;}
+  .groupe{position:absolute; top:420px; display:flex; gap:14px; transform-origin:50% 0; cursor:grab; touch-action:none;}
+  .groupe .piece{position:static;} .groupe.porte{transform:scale(.5);}
+  .arrive{animation:arrive .7s ease-out;} @keyframes arrive{from{transform:translateX(-1500px)}}
+  .secoue{animation:secoue .45s ease;} @keyframes secoue{0%,100%{transform:none}25%{transform:translateX(-14px)}75%{transform:translateX(14px)}}
+  /* le casier des suffixes */
+  .casier{position:absolute; left:1310px; top:74px; width:500px; height:252px; background:#a9b3bd; border:5px solid #6f7983; border-radius:10px;}
+  .case{position:absolute; width:152px; height:112px; background:#e6eaee; border:4px solid #6f7983; border-radius:8px;}
+  /* les caisses */
+  .caisse{position:absolute; top:650px; height:130px; border:5px solid #8a6232; border-radius:8px;
+    background:repeating-linear-gradient(#c99b62 0 38px, #a57a43 38px 42px);}
+  .caisse .etiq{position:absolute; left:50%; top:30px; transform:translateX(-50%); background:#fff; border:4px solid; border-radius:10px; padding:2px 18px 0;
+    font-size:34px; font-weight:800; white-space:nowrap;}
+  .caisse .minis{position:absolute; left:-20px; right:-20px; top:-50px; display:flex; justify-content:center; z-index:-1;}
+  .mini{font-size:26px; font-weight:800; color:#fff; padding:4px 12px 0; border-radius:6px; border:3px solid; white-space:nowrap; transform:rotate(-5deg);}
+  .mini + .mini{margin-left:8px; transform:rotate(4deg);}
+  .m-pre{background:#f5a03c; border-color:#c96a00;} .m-rad{background:#4a9de4; border-color:#1d64a8;} .m-suf{background:#5fb862; border-color:#2e7d32;}
+  .m-acier{background:#e4e9ee; border-color:#98a3ae; color:var(--encre);} .m-mot{background:#fff; border-color:#2e7d32; color:#1d64a8;}
+  .boite{cursor:pointer;} .boite.cible{outline:6px solid #ffca28; outline-offset:4px;}
+  .boite.bonne .etiq{border-color:var(--bien) !important; color:var(--bien) !important; background:#e8f5e9;}
+  /* le laser, sa visée, les étincelles */
+  .poignee{position:absolute; top:0; width:200px; margin-left:-100px; cursor:grab; z-index:7;}
+  .mire{position:absolute; top:344px; height:72px; width:0; margin-left:-2px; border-left:4px dashed rgba(229,57,53,.85); z-index:6; pointer-events:none;}
+  .rayon{position:absolute; width:8px; margin-left:-4px; border-radius:4px; background:#ff3b3b; box-shadow:0 0 18px 8px rgba(255,50,50,.45); z-index:6; pointer-events:none;}
+  .pof{position:absolute; width:100px; height:100px; margin:-50px 0 0 -50px; z-index:7; pointer-events:none; animation:pof .5s ease-out forwards;}
+  @keyframes pof{from{transform:scale(.3); opacity:1} to{transform:scale(1.3); opacity:0}}
+  /* ce que veut dire le mot */
+  .sens{position:absolute; top:280px; transform:translateX(-50%); z-index:6; background:#fff; border:3px solid #d5dbe1; border-radius:18px; padding:8px 28px 6px;
+    font-size:40px; font-weight:700; line-height:1.25; white-space:nowrap; box-shadow:0 6px 18px rgba(0,0,0,.08); pointer-events:none;}
+  .sens:empty{display:none;}
+  .sens b{color:#1d64a8;} .sens small{display:block; font-size:26px; color:var(--gris); font-weight:700;}
+  .bas{display:flex; align-items:center; justify-content:center; gap:18px; padding:4px 0 12px; min-height:70px;}
+  .btn-indice{font:inherit; font-weight:700; font-size:1.2rem; padding:6px 16px; border-radius:999px; cursor:pointer; background:#fff8dc; border:2px solid #f1d27a; color:#7a5b00;}
+  .verdict{min-height:3rem; font-size:2rem; font-weight:800; text-align:center;}
+  .verdict:not(:empty){background:#fff; padding:0 24px; border-radius:14px;}
+  .verdict.bien{color:var(--bien);} .verdict.faux{color:var(--faux);} .verdict.indice{color:#7a5b00;}
+  .btn-suivant{font:inherit; font-weight:800; font-size:1.8rem; padding:2px 34px; border-radius:999px; cursor:pointer; background:var(--encre); color:#fff; border:none;}
+</style>
+</head>
+<body>
+<div class="barre">
+  <div class="titre">
+    <svg viewBox="0 0 64 64" aria-hidden="true"><path d="M4 58V30l14-10v10l14-10v10l14-10V8h10v50z" fill="#5c6570"/><rect x="10" y="40" width="12" height="12" fill="#f08a12"/><rect x="26" y="40" width="12" height="12" fill="#2f86d6"/><rect x="42" y="40" width="12" height="12" fill="#46a34a"/></svg>
+    <h1>La fabrique de mots</h1>
+  </div>
+  <div class="onglets" id="onglets">
+    <button type="button" data-onglet="coupe" class="actif">Je coupe</button>
+    <button type="button" data-onglet="assemble">J'assemble</button>
+    <button type="button" data-onglet="sens">Le sens</button>
+    <button type="button" data-onglet="defi">Défi</button>
+  </div>
+  <div class="droite">
+    <div class="score"><small>Mots fabriqués</small><b id="score">0</b></div>
+    <div class="score" title="Le meilleur score dans cet onglet, gardé sur cet ordinateur"><small>🏆 Record</small><b id="record">0</b></div>
+    <button class="btn-son" id="btnSon" type="button" title="Son">🔊</button>
+  </div>
+</div>
+<div class="consigne"><p id="consigne"></p></div>
+<div class="jeu" id="jeu">
+  <div class="scene" id="scene">
+    <svg class="decor" id="decor" viewBox="0 0 1920 840" aria-hidden="true"></svg>
+    <div class="tapis" id="tapis"></div>
+    <div class="calque" id="caisses"></div>
+    <div class="calque bac" id="bac"></div>
+    <div class="calque" id="poste"></div>
+    <svg class="robots" id="robots" viewBox="0 0 1920 840" aria-hidden="true"></svg>
+    <div class="poignee" id="poignee" hidden title="Glisse le laser"></div>
+    <div class="mire" id="mire" hidden></div>
+    <div class="rayon" id="rayon" hidden></div>
+    <div class="sens" id="sens"></div>
+  </div>
+</div>
+<div class="bas">
+  <button class="btn-indice" id="btnIndice" type="button">💡 Indice</button>
+  <div class="verdict" id="verdict"></div>
+  <button class="btn-suivant" id="btnSuivant" type="button" hidden>➜</button>
+</div>
+<script>
+(function () {
+  // Je coupe : fiche P2 p. 5 (CM1 et CM2), « mets une barre entre le radical et le préfixe » : [mot, longueur du préfixe]
+  var COUPE = [["redémarrage", 2], ["désavantage", 3], ["malchance", 3], ["impatience", 2], ["découragement", 2], ["surmonter", 3], ["réorganisation", 2],
+    ["inattention", 2], ["réapparition", 2], ["surchauffe", 3], ["imprécision", 2], ["relecture", 2], ["repositionnement", 2], ["déchargement", 2],
+    ["maladresse", 3], ["inactivité", 2], ["imprévu", 2], ["désaccord", 3], ["prévoyance", 3], ["surentraînement", 3], ["désorganisation", 3],
+    ["malformation", 3], ["insécurité", 2], ["dévalorisation", 2], ["préchauffage", 3], ["surévaluation", 3]];
+  // J'assemble : fiche P2 p. 16, ex. 2 (radicaux et suffixes) et ex. 3 (verbe + suffixe) : [radical, suffixe, mot, sens, autres mots justes]
+  // Chaque radical a été essayé avec les 5 suffixes : quand deux mots existent (organisation, organiseur), les deux sont acceptés.
+  var SUFFIXES = ["eur", "esse", "té", "elle", "ation"];
+  var ASSEMBLE = [["chant", "eur", "chanteur", "celui qui chante"], ["beau", "té", "beauté", "le fait d'être beau"], ["trist", "esse", "tristesse", "le fait d'être triste"],
+    ["admir", "ation", "admiration", "le fait d'admirer"], ["natur", "elle", "naturelle", "qui vient de la nature"], ["personn", "elle", "personnelle", "qui est à une personne"],
+    ["lect", "eur", "lecteur", "celui qui lit"], ["simplici", "té", "simplicité", "le fait d'être simple"], ["gentill", "esse", "gentillesse", "le fait d'être gentil"],
+    ["explor", "ation", "exploration", "le fait d'explorer"], ["jeun", "esse", "jeunesse", "le fait d'être jeune"], ["cultur", "elle", "culturelle", "qui concerne la culture"],
+    ["véri", "té", "vérité", "ce qui est vrai"], ["dans", "eur", "danseur", "celui qui danse"], ["cré", "ation", "création", "le fait de créer"],
+    ["organis", "ation", "organisation", "le fait d'organiser", { eur: ["organiseur", "celui qui organise"] }], ["réalis", "ation", "réalisation", "le fait de réaliser"], ["liber", "té", "liberté", "le fait d'être libre"],
+    ["vend", "eur", "vendeur", "celui qui vend"]];
+  // Le sens : mémo VOC 3 (tableau des préfixes) et mots de la fiche p. 5 : [préfixe, radical, sens, ce que veut dire le mot]
+  var SENS_LISTE = ["le contraire", "avec", "trois", "répétition", "contre", "de soi-même", "plusieurs"];
+  var SENS = [["dis", "paraître", "le contraire", "le contraire de paraître"], ["co", "équipier", "avec", "un équipier qui joue avec moi"], ["im", "possible", "le contraire", "le contraire de possible"],
+    ["ir", "réel", "le contraire", "le contraire de réel"], ["tri", "angle", "trois", "une figure à trois angles"], ["r", "envoyer", "répétition", "envoyer encore"],
+    ["re", "partir", "répétition", "partir encore"], ["anti", "vol", "contre", "contre le vol"], ["auto", "biographie", "de soi-même", "la biographie de soi-même"],
+    ["multi", "nationale", "plusieurs", "dans plusieurs nations"], ["im", "patience", "le contraire", "le contraire de la patience"], ["in", "attention", "le contraire", "le contraire de l'attention"],
+    ["re", "lecture", "répétition", "lire encore"], ["ré", "apparition", "répétition", "apparaître encore"], ["in", "sécurité", "le contraire", "le contraire de la sécurité"],
+    ["in", "activité", "le contraire", "le contraire de l'activité"]];
+  // Défi : mémo VOC 4 (ir / respect / ueux) et mots de la fiche p. 5 : [mot, longueur du préfixe, débuts de suffixe acceptés]
+  var DEFI = [["irrespectueux", 2, [9]], ["redémarrage", 2, [8]], ["découragement", 2, [9, 8]], ["déchargement", 2, [8, 7]], ["réorganisation", 2, [10, 9]],
+    ["impatience", 2, [6, 5]], ["préchauffage", 3, [9]], ["dévalorisation", 2, [10, 9]], ["surévaluation", 3, [9, 8]], ["relecture", 2, [6]], ["réapparition", 2, [7, 8]]];
+  var el = function (id) { return document.getElementById(id); }, scene = el("scene");
+  var onglet = "coupe", liste = [], idx = 0, score = 0, erreurs = 0, item = null, fini = false, coupes = [], sonActif = true, ctx = null, fabriques = [];
+  var occupe = false, S = 1, contenu = {}, gaucheMot = 0, finMot = 0, depart = null;
+  var LARG = 72, RAD_FIN = 1000, CENTRE = 820;   // une plaque tous les 72 px ; J'assemble : le radical finit en 1000, la soudure se fait là
+  var G = { x: 1750, y: 170, outil: "rien" };      // le portique du plafond : laser ou aimant
+  var A = { outil: "repos", x: 0, y: 0, feu: false }; // le bras au sol : pince (il tient le mot) ou chalumeau
+  function largeur(n) { return n * LARG - 6; }
+  function son(type) {
+    if (!sonActif) return;
+    try {
+      ctx = ctx || new (window.AudioContext || window.webkitAudioContext)();
+      var t = ctx.currentTime, notes = type === "bien" ? [[523, 0, .15], [659, .1, .15], [784, .2, .35]] : type === "laser" ? [[1500, 0, .4, "sawtooth", 500]]
+        : type === "soudure" ? [[90, 0, .06, "square"], [140, .09, .06, "square"], [110, .18, .06, "square"], [160, .27, .06, "square"]] : [[200, 0, .3, "sawtooth", 120]];
+      notes.forEach(function (q) { var o = ctx.createOscillator(), g = ctx.createGain(); o.type = q[3] || "triangle"; o.frequency.setValueAtTime(q[0], t + q[1]);
+        if (q[4]) o.frequency.exponentialRampToValueAtTime(q[4], t + q[1] + q[2]);
+        o.connect(g); g.connect(ctx.destination); g.gain.setValueAtTime(.0001, t + q[1]); g.gain.exponentialRampToValueAtTime(.08, t + q[1] + .01);
+        g.gain.exponentialRampToValueAtTime(.0001, t + q[1] + q[2]); o.start(t + q[1]); o.stop(t + q[1] + q[2] + .05); });
+    } catch (e) {}
+  }
+  function majScore() {
+    var r = 0, k = "fabrique-mots-record-" + onglet; try { r = parseInt(localStorage.getItem(k), 10) || 0; } catch (e) {}
+    if (score > r) { r = score; try { localStorage.setItem(k, String(r)); } catch (e) {} }
+    el("score").textContent = score; el("record").textContent = r;
+  }
+  function verdict(t, c) { el("verdict").textContent = t; el("verdict").className = "verdict" + (c ? " " + c : ""); }
+  function consigne(t) { el("consigne").textContent = t; }
+  function secoue(x) { x.classList.remove("secoue"); void x.offsetWidth; x.classList.add("secoue"); }
+  function melange(t) { for (var i = t.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)), w = t[i]; t[i] = t[j]; t[j] = w; } return t; }
+  var gen = 0;
+  function tween(ms, f, fin) { var t0 = null, g0 = gen; function pas(t) { if (g0 !== gen) return; if (t0 === null) t0 = t; var u = Math.min(1, (t - t0) / ms), e = u < .5 ? 2 * u * u : 1 - Math.pow(-2 * u + 2, 2) / 2; f(e); if (u < 1) requestAnimationFrame(pas); else if (fin) fin(); } requestAnimationFrame(pas); }
+  function pt(e) { var r = scene.getBoundingClientRect(); return { x: (e.clientX - r.left) / S, y: (e.clientY - r.top) / S }; }
+  function ajuster() { var j = el("jeu"), w = j.clientWidth, h = j.clientHeight; S = Math.min(w / 1920, h / 840) || 1;
+    scene.style.transform = "scale(" + S + ")"; scene.style.left = ((w - 1920 * S) / 2) + "px"; scene.style.top = Math.max(0, (h - 840 * S) / 2) + "px"; }
+  function piece(txt, cls, lettres, debut) {
+    var d = document.createElement("div"); d.className = "piece " + cls;
+    if (lettres) txt.split("").forEach(function (c, j) { var s = document.createElement("div"); s.className = "l"; s.textContent = c; s.dataset.i = (debut || 0) + j; d.appendChild(s); }); else d.textContent = txt;
+    return d;
+  }
+  function placer(p) { p.style.left = p.dataset.x + "px"; p.style.top = p.dataset.y + "px"; }
+  function carte(html, cx) { el("sens").innerHTML = html; el("sens").style.left = cx + "px"; }
+  function pof(x, y) {   // une gerbe d'étincelles
+    var s = document.createElementNS("http://www.w3.org/2000/svg", "svg"), h = '<circle cx="50" cy="50" r="14" fill="#fff6c8"/>';
+    for (var i = 0; i < 12; i++) { var a = i / 12 * Math.PI * 2 + Math.random() * .4, l = 26 + (i % 3) * 12; h += '<line x1="50" y1="50" x2="' + (50 + Math.cos(a) * l) + '" y2="' + (50 + Math.sin(a) * l) + '" stroke="' + (i % 2 ? "#ffd23f" : "#ff8a1f") + '" stroke-width="4" stroke-linecap="round"/>'; }
+    s.setAttribute("viewBox", "0 0 100 100"); s.setAttribute("class", "pof"); s.style.left = x + "px"; s.style.top = y + "px"; s.innerHTML = h; scene.appendChild(s);
+    setTimeout(function () { s.remove(); }, 520);
+  }
+
+  // ---------- le décor : mur, fenêtres d'usine, rail du plafond, sol, pieds du tapis ----------
+  (function () {
+    var h = '<defs><linearGradient id="mur" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f4f6f8"/><stop offset="1" stop-color="#e3e8ed"/></linearGradient>' +
+      '<linearGradient id="vitre" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e9f3fb"/><stop offset="1" stop-color="#d3e3f0"/></linearGradient>' +
+      '<pattern id="hachures" width="28" height="28" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="14" height="28" fill="#f2c230"/><rect x="14" width="14" height="28" fill="#3a3f45"/></pattern></defs>' +
+      '<rect width="1920" height="840" fill="url(#mur)"/>';
+    for (var i = 0; i < 5; i++) {
+      var x = 150 + i * 340; h += '<rect x="' + x + '" y="74" width="260" height="226" rx="6" fill="url(#vitre)" stroke="#c7d2dc" stroke-width="6"/>';
+      for (var k = 1; k < 4; k++) h += '<line x1="' + (x + k * 65) + '" y1="74" x2="' + (x + k * 65) + '" y2="300" stroke="#c7d2dc" stroke-width="3"/>';
+      for (k = 1; k < 3; k++) h += '<line x1="' + x + '" y1="' + (74 + k * 75) + '" x2="' + (x + 260) + '" y2="' + (74 + k * 75) + '" stroke="#c7d2dc" stroke-width="3"/>';
+    }
+    h += '<rect y="780" width="1920" height="60" fill="#d5dbe1"/><rect y="778" width="1920" height="5" fill="#c3cad1"/>';
+    h += '<rect x="90" y="22" width="1740" height="26" rx="4" fill="#8d97a2"/><rect x="90" y="48" width="1740" height="8" fill="url(#hachures)" opacity=".8"/>';
+    [190, 560, 960, 1360, 1730].forEach(function (x) { h += '<rect x="' + (x - 12) + '" y="589" width="24" height="191" fill="#9aa4ae"/>'; });
+    el("decor").innerHTML = h;
+  })();
+
+  // ---------- les deux robots ----------
+  function seg(a, b, w) {
+    var l = 'x1="' + a.x + '" y1="' + a.y + '" x2="' + b.x + '" y2="' + b.y + '" stroke-linecap="round"';
+    return '<line ' + l + ' stroke="#3c434b" stroke-width="' + (w + 8) + '"/><line ' + l + ' stroke="#e4e9ee" stroke-width="' + w + '"/><line ' + l + ' stroke="#1f7a8c" stroke-width="4"/>';
+  }
+  function art(p, r) { return '<circle cx="' + p.x + '" cy="' + p.y + '" r="' + r + '" fill="#5c6570" stroke="#3c434b" stroke-width="4"/><circle cx="' + p.x + '" cy="' + p.y + '" r="' + Math.round(r / 3) + '" fill="#c3cbd3"/>'; }
+  function coude(s, w, L, gauche) {   // le coude d'un bras à deux segments de longueur L : vers le haut (bras au sol) ou vers la gauche (bras suspendu)
+    var dx = w.x - s.x, dy = w.y - s.y, d = Math.hypot(dx, dy) || 1, m = Math.min(d, 2 * L - 2), a = Math.atan2(dy, dx), o = Math.acos(m / (2 * L));
+    var e1 = { x: s.x + L * Math.cos(a + o), y: s.y + L * Math.sin(a + o) }, e2 = { x: s.x + L * Math.cos(a - o), y: s.y + L * Math.sin(a - o) };
+    return gauche ? (e1.x < e2.x ? e1 : e2) : (e1.y < e2.y ? e1 : e2);
+  }
+  function dessinerRobots() {
+    var h = "", bx = 1560, s = { x: bx, y: 712 };
+    if (A.outil === "chalumeau") {   // J'assemble : le soudeur est suspendu au rail, il descend sur la jointure sans traverser le mot
+      var T0 = { x: A.x, y: A.y }, W0 = { x: T0.x - 40, y: T0.y - 100 }, s0 = { x: 840, y: 64 }, E0 = coude(s0, W0, 190, true);
+      h += '<rect x="770" y="12" width="140" height="52" rx="10" fill="#5c6570" stroke="#3c434b" stroke-width="4"/><circle cx="800" cy="38" r="9" fill="#c3cbd3"/><circle cx="880" cy="38" r="9" fill="#c3cbd3"/>' +
+        seg(s0, E0, 32) + seg(E0, W0, 26) + art(s0, 20) + art(E0, 17) + art(W0, 14) +
+        '<line x1="' + W0.x + '" y1="' + W0.y + '" x2="' + T0.x + '" y2="' + T0.y + '" stroke="#3c434b" stroke-width="20" stroke-linecap="round"/>' +
+        '<line x1="' + (T0.x - 10) + '" y1="' + (T0.y - 25) + '" x2="' + T0.x + '" y2="' + T0.y + '" stroke="#9aa4ae" stroke-width="9" stroke-linecap="round"/>';
+      if (A.feu) h += '<circle cx="' + T0.x + '" cy="' + T0.y + '" r="16" fill="#7fd3ff" opacity=".7"/><circle cx="' + T0.x + '" cy="' + T0.y + '" r="7" fill="#fff"/>';
+    } else {
+    // le bras au sol
+    h += '<rect x="' + (bx - 80) + '" y="738" width="160" height="44" rx="10" fill="#5c6570" stroke="#3c434b" stroke-width="4"/><rect x="' + (bx - 40) + '" y="700" width="80" height="44" rx="8" fill="#6b747f" stroke="#3c434b" stroke-width="4"/>';
+    var T = { x: A.x, y: A.y }, W = A.outil === "pince" ? { x: T.x + 40, y: T.y - 90 } : { x: 1470, y: 430 };
+    var d = Math.hypot(W.x - s.x, W.y - s.y); if (d > 658) W = { x: s.x + (W.x - s.x) * 658 / d, y: s.y + (W.y - s.y) * 658 / d };
+    var E = coude(s, W, 330);
+    h += seg(s, E, 40) + seg(E, W, 32) + art(s, 24) + art(E, 20) + art(W, 16);
+    if (A.outil === "pince") {
+      h += '<line x1="' + W.x + '" y1="' + W.y + '" x2="' + (T.x + 18) + '" y2="' + (T.y - 26) + '" stroke="#3c434b" stroke-width="18" stroke-linecap="round"/>' +
+        '<rect x="' + T.x + '" y="' + (T.y - 26) + '" width="36" height="52" rx="6" fill="#5c6570" stroke="#3c434b" stroke-width="4"/>' +
+        '<rect x="' + (T.x - 30) + '" y="' + (T.y - 34) + '" width="36" height="14" rx="3" fill="#7d8792" stroke="#3c434b" stroke-width="3"/>' +
+        '<rect x="' + (T.x - 30) + '" y="' + (T.y + 20) + '" width="36" height="14" rx="3" fill="#7d8792" stroke="#3c434b" stroke-width="3"/>';
+    } else h += '<rect x="' + (W.x - 14) + '" y="' + W.y + '" width="28" height="40" rx="5" fill="#5c6570" stroke="#3c434b" stroke-width="4"/>';
+    }
+    // le portique du plafond
+    var gx = G.x, tip = G.y, bas = G.outil === "laser" ? tip - 84 : G.outil === "aimant" ? tip - 30 : Math.max(tip, 120), mid = 64 + (bas - 64) / 2;
+    h += '<rect x="' + (gx - 17) + '" y="60" width="34" height="' + Math.max(0, mid - 58) + '" fill="#e4e9ee" stroke="#3c434b" stroke-width="4"/>' +
+      '<rect x="' + (gx - 11) + '" y="' + mid + '" width="22" height="' + Math.max(0, bas - mid) + '" fill="#cfd6dd" stroke="#3c434b" stroke-width="4"/>' +
+      '<rect x="' + (gx - 70) + '" y="12" width="140" height="52" rx="10" fill="#5c6570" stroke="#3c434b" stroke-width="4"/><circle cx="' + (gx - 40) + '" cy="38" r="9" fill="#c3cbd3"/><circle cx="' + (gx + 40) + '" cy="38" r="9" fill="#c3cbd3"/>';
+    if (G.outil === "laser") h += '<rect x="' + (gx - 32) + '" y="' + (tip - 86) + '" width="64" height="76" rx="10" fill="#3c434b"/><circle cx="' + gx + '" cy="' + (tip - 60) + '" r="7" fill="#ff5252"/>' +
+      '<rect x="' + (gx - 12) + '" y="' + (tip - 12) + '" width="24" height="12" fill="#c62828"/>';
+    else if (G.outil === "aimant") h += '<rect x="' + (gx - 60) + '" y="' + (tip - 30) + '" width="120" height="30" rx="6" fill="#3c434b"/><rect x="' + (gx - 60) + '" y="' + (tip - 8) + '" width="120" height="8" fill="#c62828"/>';
+    el("robots").innerHTML = h;
+    var pg = el("poignee"); pg.hidden = G.outil !== "laser" || fini; pg.style.left = gx + "px"; pg.style.height = (tip + 10) + "px";
+  }
+  function garer() {   // le portique retourne au repos, hors du chemin
+    var x0 = G.x, x1 = onglet === "assemble" ? 1200 : 1750, y0 = G.y, y1 = G.outil === "laser" ? 340 : 170;
+    tween(400, function (e) { G.x = x0 + (x1 - x0) * e; G.y = y0 + (y1 - y0) * e; dessinerRobots(); });
+  }
+
+  // ---------- les caisses ----------
+  var COUL = { pre: "#c96a00", rad: "#1d64a8", suf: "#2e7d32", mots: "#2e7d32" };
+  function caisses(defs) {
+    var C = el("caisses"); C.innerHTML = "";
+    defs.forEach(function (d) {
+      var c = document.createElement("div"), coul = COUL[d.cle] || "#3c434b"; c.className = "caisse" + (d.sens ? " boite" : ""); c.dataset.cle = d.cle;
+      c.style.left = d.x + "px"; c.style.width = d.w + "px"; if (d.sens) c.dataset.sens = d.titre;
+      c.innerHTML = '<div class="minis"></div><div class="etiq" style="color:' + coul + '; border-color:' + coul + '">' + d.titre + "</div>";
+      C.appendChild(c); remplir(c);
+      if (d.sens) c.addEventListener("click", function () { ranger(c); });
+    });
+  }
+  function caisse(cle) { return [].filter.call(el("caisses").children, function (c) { return c.dataset.cle === cle; })[0]; }
+  function remplir(c) { c.querySelector(".minis").innerHTML = (contenu[c.dataset.cle] || []).slice(-2).map(function (m) { return '<span class="mini m-' + m[1] + '">' + m[0] + "</span>"; }).join(""); }
+  function deposer(cle, txt, style) { (contenu[cle] = contenu[cle] || []).push([txt, style]); var c = caisse(cle); if (c) remplir(c); }
+  function jeter(p, cle, style, txt) {   // la pièce tombe dans sa caisse
+    var c = caisse(cle); if (!c) return;
+    var cl = p.cloneNode(true), l = p.offsetLeft, t = p.offsetTop, w = p.offsetWidth, h = p.offsetHeight; cl.removeAttribute("id"); cl.style.left = l + "px"; cl.style.top = t + "px"; cl.style.zIndex = 6; scene.appendChild(cl);
+    var dx = c.offsetLeft + c.offsetWidth / 2 - (l + w / 2), dy = 690 - (t + h / 2);
+    requestAnimationFrame(function () { cl.style.transition = "transform .55s ease-in, opacity .55s ease-in"; cl.style.transform = "translate(" + dx + "px," + dy + "px) scale(.25)"; cl.style.opacity = ".3"; });
+    setTimeout(function () { cl.remove(); if (txt) deposer(cle, txt, style); }, 580);
+  }
+
+  // ---------- Je coupe / Défi : le laser entre deux lettres ----------
+  function estSuf(x) { return onglet === "defi" && item[2].indexOf(x) !== -1 && coupes.indexOf(x) !== -1; }
+  function dessinerCoupe() {
+    var mot = item[0], pre = item[1], P = el("poste"); P.innerHTML = "";
+    var cs = [0].concat(coupes.slice().sort(function (a, b) { return a - b; })).concat([mot.length]);
+    var complet = coupes.indexOf(pre) !== -1 && (onglet === "coupe" || coupes.some(estSuf));
+    var x = Math.round(CENTRE - (largeur(mot.length) + (cs.length - 2) * 40) / 2); gaucheMot = x;
+    for (var i = 0; i < cs.length - 1; i++) {
+      var a = cs[i], b = cs[i + 1], cls;
+      if (a === 0 && b === pre && coupes.indexOf(pre) !== -1) cls = "prefixe";
+      else if (estSuf(a)) cls = "suffixe";
+      else cls = complet ? "radical" : "acier coupable";
+      var p = piece(mot.slice(a, b), cls, true, a); p.dataset.debut = a; p.style.left = x + "px"; P.appendChild(p);
+      x += largeur(b - a) + 40;
+    }
+    finMot = x - 40; A.outil = "pince"; A.x = finMot + 26; A.y = 484;
+  }
+  function gaps() {
+    var r = []; [].forEach.call(el("poste").querySelectorAll(".piece.coupable"), function (p) { var d = +p.dataset.debut, x0 = parseFloat(p.style.left);
+      for (var j = 1; j < p.children.length; j++) r.push({ k: d + j, x: x0 + j * LARG - 3 }); });
+    return r;
+  }
+  function proche(x) { var best = null; gaps().forEach(function (g) { if (!best || Math.abs(g.x - x) < Math.abs(best.x - x)) best = g; }); return best; }
+  function mire(x) { var m = el("mire"); m.hidden = x === null; if (x !== null) m.style.left = x + "px"; }
+  function viser(k, x, ms) { occupe = true; var x0 = G.x; tween(ms, function (e) { G.x = x0 + (x - x0) * e; dessinerRobots(); }, function () { tirer(k); }); }
+  function tirer(k) {
+    son("laser"); var r = el("rayon"); r.style.left = G.x + "px"; r.style.top = "340px"; r.style.height = "212px"; r.hidden = false;
+    pof(G.x, 420); setTimeout(function () { pof(G.x, 548); }, 150);
+    setTimeout(function () { r.hidden = true; occupe = false; couper(k); }, 450);
+  }
+  // passer le doigt sur le mot (ou le toucher entre deux lettres) : le laser y va et tire
+  el("poste").addEventListener("pointerdown", function (ev) { if (!ev.target.closest(".piece.coupable") || fini || occupe) return; ev.preventDefault(); depart = { x: ev.clientX }; });
+  document.addEventListener("pointerup", function (ev) {
+    if (!depart) return; var d = depart; depart = null; if (fini || occupe || Math.abs(ev.clientX - d.x) > 40) return;
+    var g = proche(pt({ clientX: (ev.clientX + d.x) / 2, clientY: ev.clientY }).x); if (g) viser(g.k, g.x, 220);
+  });
+  // glisser le laser le long du rail : il s'aimante entre deux lettres et tire quand on le lâche
+  el("poignee").addEventListener("pointerdown", function (ev) {
+    if (fini || occupe) return; ev.preventDefault(); var x0 = ev.clientX, gx0 = G.x, px0 = pt(ev).x, bouge = false;
+    function mv(e) { if (Math.abs(e.clientX - x0) > 10) bouge = true; G.x = Math.max(gaucheMot - 90, Math.min(finMot + 90, gx0 + pt(e).x - px0)); dessinerRobots(); var g = proche(G.x); mire(g ? g.x : null); }
+    function up() {
+      document.removeEventListener("pointermove", mv); document.removeEventListener("pointerup", up); mire(null);
+      var g = proche(G.x); if (bouge && g && Math.abs(g.x - G.x) < 60) viser(g.k, g.x, 120); else if (bouge) consigne("Place le laser entre deux lettres.");
+    }
+    document.addEventListener("pointermove", mv); document.addEventListener("pointerup", up);
+  });
+  function couper(k) {
+    var mot = item[0], pre = item[1], ok = k === pre || (onglet === "defi" && item[2].indexOf(k) !== -1 && !coupes.some(function (c) { return item[2].indexOf(c) !== -1; }));
+    if (!ok) {
+      erreurs++; son("non"); secoue(el("poste"));
+      verdict(onglet === "defi" && k > pre ? "🤪 Ce n'est pas le suffixe : coupe juste après le radical." : "🤪 « " + mot.slice(0, k) + " » n'est pas le préfixe de ce mot.", "faux"); return;
+    }
+    if (coupes.indexOf(k) !== -1) return;
+    coupes.push(k); verdict(""); dessinerCoupe(); dessinerRobots();
+    var prefOk = coupes.indexOf(pre) !== -1, sufOk = coupes.some(function (c) { return onglet === "defi" && item[2].indexOf(c) !== -1; });
+    if (onglet === "coupe" || (prefOk && sufOk)) {
+      var s = coupes.filter(function (c) { return c !== pre; })[0];
+      consigne("Le mot est coupé !"); fabriques.push(mot);
+      bravo("✅ <b style='color:#c96a00'>" + mot.slice(0, pre) + "</b> | <b>" + (s ? mot.slice(pre, s) + "</b> | <b style='color:#2e7d32'>" + mot.slice(s) + "</b>" : mot.slice(pre) + "</b>") +
+        "<small>" + (s ? "préfixe | radical | suffixe" : "préfixe | radical") + "</small>", CENTRE);
+      garer();
+    } else consigne(prefOk ? "Coupe maintenant le suffixe." : "Coupe maintenant le préfixe.");
+  }
+
+  // ---------- porter une pièce : le portique la suit, aimantée ----------
+  function poserA(p, l, t) { p.style.left = l + "px"; p.style.top = t + "px"; G.x = l + p.offsetWidth / 2; G.y = t; dessinerRobots(); }
+  function porter(p, lacher, toucher, centrer) {
+    p.addEventListener("pointerdown", function (ev) {
+      if (fini || occupe) return; ev.preventDefault();
+      var a = pt(ev), l0 = parseFloat(p.style.left), t0 = parseFloat(p.style.top), x0 = ev.clientX, y0 = ev.clientY, bouge = false;
+      if (centrer) { l0 = a.x - p.offsetWidth / 2; t0 = a.y - 30; }
+      function mv(e) { var b = pt(e); if (Math.hypot(e.clientX - x0, e.clientY - y0) > 12) { bouge = true; p.classList.add("porte"); } if (bouge) { poserA(p, l0 + b.x - a.x, t0 + b.y - a.y); lacher(b, true); } }
+      function up(e) { document.removeEventListener("pointermove", mv); document.removeEventListener("pointerup", up); if (bouge) lacher(pt(e), false); else toucher(); }
+      document.addEventListener("pointermove", mv); document.addEventListener("pointerup", up);
+    });
+  }
+  function retour(p) {   // la pièce revient à sa place
+    occupe = true; var l0 = parseFloat(p.style.left), t0 = parseFloat(p.style.top), l1 = +p.dataset.x, t1 = +p.dataset.y;
+    tween(280, function (e) { poserA(p, l0 + (l1 - l0) * e, t0 + (t1 - t0) * e); }, function () { p.classList.remove("porte"); occupe = false; garer(); });
+  }
+
+  // ---------- J'assemble : le suffixe soudé contre le radical ----------
+  var CASES = [[1322, 86], [1484, 86], [1646, 86], [1322, 208], [1484, 208]];
+  function dessinerAssemble() {
+    var R = piece(item[0], "radical", true); R.id = "radical"; R.style.left = (RAD_FIN - largeur(item[0].length)) + "px"; el("poste").appendChild(R);
+    var B = el("bac"); B.innerHTML = '<div class="casier"></div>' + CASES.map(function (c) { return '<div class="case" style="left:' + c[0] + "px; top:" + c[1] + 'px"></div>'; }).join("");
+    melange(SUFFIXES.slice()).forEach(function (sf, i) {
+      var p = piece(sf, "suffixe petite", false); p.dataset.s = sf; p.dataset.x = CASES[i][0] + 8; p.dataset.y = CASES[i][1] + 14; placer(p); B.appendChild(p);
+      porter(p, function (b, enCours) { if (enCours) return; var gR = RAD_FIN - largeur(item[0].length);
+        if (b.x > gR - 60 && b.x < RAD_FIN + 340 && b.y > 330 && b.y < 640) souder(p, sf); else retour(p); }, function () { souder(p, sf); });
+    });
+    G.outil = "aimant"; G.x = 1200; G.y = 170; A.outil = "chalumeau"; A.x = RAD_FIN + 3; A.y = 330; A.feu = false;
+  }
+  function souder(p, sf) {
+    if (fini || occupe) return; occupe = true; p.classList.add("porte");
+    var l0 = parseFloat(p.style.left), t0 = parseFloat(p.style.top), l1 = RAD_FIN + 6, t1 = 420;
+    tween(300, function (e) { poserA(p, l0 + (l1 - l0) * e, t0 + (t1 - t0) * e); }, function () {
+      // arrivée contre le radical : la pièce devient des plaques, le bras au sol soude
+      p.style.visibility = "hidden"; var L = piece(sf, "suffixe", true); L.style.left = l1 + "px"; el("poste").appendChild(L); G.x = l1 + L.offsetWidth / 2; G.y = 420;
+      tween(160, function (e) { A.y = 330 + 100 * e; dessinerRobots(); }, function () {
+        A.feu = true; son("soudure"); dessinerRobots(); pof(RAD_FIN + 3, 450); setTimeout(function () { pof(RAD_FIN + 3, 500); }, 140); setTimeout(function () { pof(RAD_FIN + 3, 540); }, 280);
+        setTimeout(function () {
+          A.feu = false; tween(160, function (e) { A.y = 430 - 100 * e; dessinerRobots(); });
+          var autre = item[4] && item[4][sf];
+          if (sf === item[1] || autre) {
+            var mot = autre ? autre[0] : item[2], def = autre ? autre[1] : item[3];
+            var aussi = [item[2]].concat(Object.keys(item[4] || {}).map(function (k) { return item[4][k][0]; })).filter(function (m) { return m !== mot; });
+            p.remove(); occupe = false; consigne("Le mot existe : " + mot + " !"); fabriques.push(mot);
+            bravo("✅ <b>" + mot + "</b> : " + def + "<small>-" + sf + " : un suffixe" + (sf === "elle" ? " d'adjectif" : " de nom") + (aussi.length ? " · on peut aussi fabriquer : " + aussi.join(", ") : "") + "</small>", CENTRE);
+            garer();
+          } else {
+            erreurs++; son("non"); secoue(el("radical")); verdict("🤪 « " + item[0] + sf + " » n'existe pas.", "faux");
+            L.style.transition = "transform .6s ease-in, opacity .6s ease-in"; L.style.transform = "translate(60px, 330px) rotate(28deg)"; L.style.opacity = "0"; garer();
+            setTimeout(function () { L.remove(); placer(p); p.classList.remove("porte"); p.style.visibility = ""; occupe = false; }, 650);
+          }
+        }, 450);
+      });
+    });
+  }
+
+  // ---------- Le sens : ranger le mot dans la caisse de son préfixe ----------
+  function dessinerSens() {
+    var g = document.createElement("div"); g.className = "groupe"; g.id = "motSens";
+    g.appendChild(piece(item[0], "prefixe", true)); g.appendChild(piece(item[1], "radical", true));
+    var w = largeur(item[0].length) + 14 + largeur(item[1].length); g.dataset.x = Math.round(CENTRE - w / 2); g.dataset.y = 420; placer(g); el("poste").appendChild(g);
+    porter(g, function (b, enCours) {
+      var c = [].filter.call(document.querySelectorAll(".boite"), function (x) { return b.x > x.offsetLeft - 30 && b.x < x.offsetLeft + x.offsetWidth + 30 && b.y > 590 && b.y < 800; })[0];
+      [].forEach.call(document.querySelectorAll(".boite"), function (x) { x.classList.toggle("cible", enCours && x === c); });
+      if (!enCours) { if (c) ranger(c); else retour(g); }
+    }, function () { consigne("Glisse le mot dans la bonne caisse."); }, true);
+    var autres = melange(SENS_LISTE.filter(function (x) { return x !== item[2]; })).slice(0, 3);
+    caisses(melange([item[2]].concat(autres)).map(function (s, i) { return { cle: "sens:" + s, titre: s, sens: true, x: 160 + i * 330, w: 300 }; }));
+    G.outil = "aimant"; G.x = CENTRE; G.y = 400; A.outil = "repos";
+  }
+  function ranger(c) {
+    var g = el("motSens"); if (fini || occupe || !g) return; occupe = true; g.classList.add("porte");
+    var w = g.offsetWidth, l0 = parseFloat(g.style.left), t0 = parseFloat(g.style.top), l1 = c.offsetLeft + c.offsetWidth / 2 - w / 2, t1 = 540;
+    tween(320, function (e) { poserA(g, l0 + (l1 - l0) * e, t0 + (t1 - t0) * e); }, function () {
+      [].forEach.call(document.querySelectorAll(".boite"), function (x) { x.classList.remove("cible"); });
+      if (c.dataset.sens === item[2]) {
+        c.classList.add("bonne"); consigne(item[0] + "- veut dire : " + item[2]);
+        g.style.transition = "transform .4s ease-in, opacity .4s ease-in"; g.style.transform = "translateY(150px) scale(.25)"; g.style.opacity = "0";
+        var mot = item[0] + item[1]; setTimeout(function () { g.remove(); deposer(c.dataset.cle, mot, "acier"); }, 420);
+        occupe = false; fabriques.push(mot); bravo("✅ <b>" + mot + "</b> : " + item[3] + "<small>" + item[0] + "- : " + item[2] + "</small>", CENTRE); garer();
+      } else {
+        erreurs++; son("non"); secoue(c); verdict("🤪 " + item[0] + "- ne veut pas dire « " + c.dataset.sens + " ».", "faux"); retour(g);
+      }
+    });
+  }
+
+  // ---------- un nouveau mot arrive sur le tapis ----------
+  function bravo(html, cx) { fini = true; son("bien"); score++; majScore(); verdict(erreurs ? "✅" : "✅ Bravo !", "bien"); el("btnSuivant").hidden = false; carte(html, cx); dessinerRobots(); }
+  function nouveau() {
+    item = liste[idx % liste.length]; fini = false; erreurs = 0; coupes = []; gen++;
+    el("poste").innerHTML = ""; el("bac").innerHTML = ""; carte("", CENTRE); verdict(""); el("btnSuivant").hidden = true; mire(null);
+    if (onglet === "coupe" || onglet === "defi") { consigne(onglet === "coupe" ? "Coupe le préfixe." : "Coupe le préfixe et le suffixe."); dessinerCoupe(); G.outil = "laser"; G.x = gaucheMot - 70; G.y = 340; }
+    else if (onglet === "assemble") { consigne("Fabrique un mot."); dessinerAssemble(); }
+    else { consigne("Que veut dire le préfixe ?"); dessinerSens(); }
+    occupe = true; var outil = A.outil; A.outil = "repos"; dessinerRobots();
+    var ps = [].slice.call(el("poste").children); ps.forEach(function (p) { p.classList.add("arrive"); }); el("tapis").classList.add("roule");
+    setTimeout(function () { el("tapis").classList.remove("roule"); ps.forEach(function (p) { p.classList.remove("arrive"); }); A.outil = outil; dessinerRobots(); occupe = false; }, 720);
+  }
+  el("btnSuivant").addEventListener("click", function () {
+    if (occupe) return;
+    if (onglet === "coupe" || onglet === "defi") [].forEach.call(el("poste").querySelectorAll(".piece"), function (p) {
+      var c = p.classList.contains("prefixe") ? "pre" : p.classList.contains("suffixe") ? "suf" : "rad"; jeter(p, c, c, p.textContent); });
+    else if (onglet === "assemble") [].forEach.call(el("poste").querySelectorAll(".piece"), function (p, i) { jeter(p, "mots", "mot", i ? "" : fabriques[fabriques.length - 1]); });
+    idx++; nouveau();
+  });
+  el("btnIndice").addEventListener("click", function () {
+    var t = onglet === "coupe" ? "Cherche le mot de départ caché dans le mot : ce qui est devant, c'est le préfixe."
+      : onglet === "defi" ? "Le préfixe est devant le radical, le suffixe est derrière (ir | respect | ueux)."
+      : onglet === "assemble" ? "Dis le mot à voix haute avec chaque pièce : lequel existe ?"
+      : "Pense à un autre mot avec le même préfixe (re- : refaire, revenir…).";
+    verdict("💡 " + t, "indice");
+  });
+  el("btnSon").addEventListener("click", function () { sonActif = !sonActif; el("btnSon").textContent = sonActif ? "🔊" : "🔇"; });
+  function lancer() {
+    score = 0; idx = 0; fabriques = []; contenu = {};
+    document.querySelectorAll("#onglets button").forEach(function (b) { b.classList.toggle("actif", b.dataset.onglet === onglet); });
+    liste = melange((onglet === "coupe" ? COUPE : onglet === "defi" ? DEFI : onglet === "assemble" ? ASSEMBLE : SENS).slice());
+    caisses(onglet === "coupe" ? [{ cle: "pre", titre: "préfixes", x: 200, w: 360 }, { cle: "rad", titre: "radicaux", x: 980, w: 360 }]
+      : onglet === "defi" ? [{ cle: "pre", titre: "préfixes", x: 150, w: 330 }, { cle: "rad", titre: "radicaux", x: 590, w: 330 }, { cle: "suf", titre: "suffixes", x: 1030, w: 330 }]
+      : onglet === "assemble" ? [{ cle: "mots", titre: "mots fabriqués", x: 200, w: 440 }] : []);
+    majScore(); nouveau();
+  }
+  document.querySelectorAll("#onglets button").forEach(function (b) { b.addEventListener("click", function () { if (!occupe) { onglet = b.dataset.onglet; lancer(); } }); });
+  function lireHash() { var h = decodeURIComponent(location.hash.slice(1)); if (["coupe", "assemble", "sens", "defi"].indexOf(h) !== -1) onglet = h; lancer(); }
+  window.addEventListener("hashchange", lireHash); window.addEventListener("resize", ajuster);
+  ajuster(); if (document.fonts) document.fonts.ready.then(ajuster);
+  lireHash();
+  window.__fabrique = { etat: function () { return { onglet: onglet, item: item, fini: fini, occupe: occupe, coupes: coupes.slice(), score: score, n: liste.length, verdict: el("verdict").textContent,
+    poste: [].map.call(el("poste").querySelectorAll(".piece"), function (p) { return [p.textContent, p.className]; }), fait: fabriques.slice(), listes: { coupe: COUPE, assemble: ASSEMBLE, sens: SENS, defi: DEFI } }; },
+    borne: function (k) {   // position à l'écran de la frontière avant la lettre k (pour les tests)
+      var a = el("poste").querySelector('.piece.coupable .l[data-i="' + (k - 1) + '"]'), b = el("poste").querySelector('.piece.coupable .l[data-i="' + k + '"]');
+      if (!a || !b || a.parentNode !== b.parentNode) return null; var ra = a.getBoundingClientRect(), rb = b.getBoundingClientRect(); return { x: (ra.right + rb.left) / 2, y1: ra.top + 10, y2: ra.bottom - 10 }; },
+    laser: function () { var r = el("poignee").getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height - 60 }; } };
+})();
+</script>
+<!-- MENU -->
+<script>
+/* ==== LE MENU ☰ (GTH, 10/10) : interface épurée — à l'écran, seulement le titre, le score, la consigne et l'activité ====
+   Tout le reste (niveaux, onglets de méthode, ✏️, 🔊, 🖨️, aide…) part dans un menu ☰, ouvert d'un toucher.
+   Réglage par outil (CONF, posé par l'injecteur) : ancre = où mettre le bouton ☰ (sinon en haut à droite de l'écran) ;
+   cacher = ce qui part dans le menu (sinon : tout ce qui, dans « .barre .droite », n'est pas un score).
+   Installé par .claude/outils/menu-outil/injecter.py ; ne pas modifier dans l'outil, mais dans ce fichier. */
+(function () {
+  var CONF = {};
+  var st = document.createElement("style");
+  st.textContent =
+    ".menu-btn{width:58px; height:58px; border-radius:16px; border:2px solid rgba(0,0,0,.15); background:#fff; color:#1f2a33; font-size:2rem; line-height:1; cursor:pointer; flex:none; padding:0;}" +
+    ".menu-btn.fixe{position:fixed; top:10px; right:12px; z-index:150; box-shadow:0 4px 14px rgba(0,0,0,.15);}" +
+    ".menu-btn.ouvert{background:#1f2a33; color:#fff;}" +
+    ".menu-panneau{position:fixed; top:76px; right:16px; z-index:200; background:#fff; color:#1f2a33; border-radius:18px; box-shadow:0 18px 50px rgba(0,0,0,.28); padding:16px 18px;" +
+    "  display:flex; flex-direction:column; align-items:flex-start; gap:12px; max-width:min(620px, 92vw); max-height:80vh; overflow:auto;}" +
+    ".menu-panneau[hidden]{display:none !important;}" +
+    ".menu-panneau h4{margin:0; font-family:sans-serif; font-size:.85rem; text-transform:uppercase; letter-spacing:.6px; color:#6d7a85;}" +
+    ".menu-panneau > *{position:static !important; margin:0 !important;}" +
+    ".menu-panneau > div,.menu-panneau > nav{display:flex; flex-wrap:wrap; gap:8px;}";
+  document.head.appendChild(st);
+  function installer() {
+    var autres = [];
+    if (CONF.cacher) CONF.cacher.forEach(function (s) { document.querySelectorAll(s).forEach(function (e) { if (autres.indexOf(e) === -1) autres.push(e); }); });
+    else { var d = document.querySelector(".barre .droite"); if (d) autres = Array.prototype.filter.call(d.children, function (e) { return !e.classList.contains("score"); }); }
+    if (!autres.length) return;
+    var btn = document.createElement("button"); btn.type = "button"; btn.className = "menu-btn"; btn.title = "Niveaux et réglages"; btn.textContent = "☰";
+    var pan = document.createElement("div"); pan.className = "menu-panneau"; pan.hidden = true;
+    var t = document.createElement("h4"); t.textContent = "Niveaux et réglages"; pan.appendChild(t);
+    autres.forEach(function (e) { pan.appendChild(e); });
+    var ancre = document.querySelector(CONF.ancre || ".barre .droite");
+    if (ancre) ancre.appendChild(btn); else { btn.classList.add("fixe"); document.body.appendChild(btn); }
+    document.body.appendChild(pan);
+    function ouvrir(o) { pan.hidden = !o; btn.classList.toggle("ouvert", o); }
+    btn.addEventListener("click", function (e) { e.stopPropagation(); ouvrir(pan.hidden); });
+    // un niveau choisi, ou une fenêtre ouverte (✏️, 🖨️) : le menu se referme ; on garde le menu ouvert pour choisir un type de jeu
+    pan.addEventListener("click", function (e) { var b = e.target.closest("button"); if (b && !b.closest(CONF.garderOuvert || ".types")) setTimeout(function () { ouvrir(false); }, 120); });
+    document.addEventListener("pointerdown", function (e) { if (!pan.hidden && !pan.contains(e.target) && e.target !== btn) ouvrir(false); });
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", installer); else installer();
+})();
+</script>
+<!-- /MENU -->
+<!-- INDICE-COTE -->
+<script>
+/* 💡 sur le côté (Karim, 21/10) : dans les jeux qui ont un bouton « 💡 Indice » (.btn-indice), le bouton devient une ampoule seule,
+   collée au bord droit de l'écran, à mi-hauteur ; l'indice s'ouvre dans une bulle à côté d'elle, jamais sous le jeu.
+   Le jeu garde son propre code : au toucher, on regarde quel texte il vient d'écrire (zone #indice, ou la ligne de message),
+   on le reprend dans la bulle et on remet la zone comme avant. Installé par injecter.py. */
+(function () {
+  var b = document.querySelector(".btn-indice"); if (!b) return;
+  var st = document.createElement("style");
+  st.textContent =
+    ".btn-indice.cote{position:fixed !important; right:18px; top:50%; transform:translateY(-50%); width:76px; height:76px; padding:0 !important; border-radius:50% !important;" +
+    " font-size:40px !important; line-height:1; z-index:60; margin:0 !important; display:flex; align-items:center; justify-content:center}" +
+    "#bulle-cote{position:fixed; right:110px; top:50%; transform:translateY(-50%); max-width:520px; background:#fff8c4; border:2px solid #d4b106; border-radius:18px;" +
+    " padding:16px 22px; font-size:26px; line-height:1.35; z-index:60; box-shadow:0 6px 18px rgba(0,0,0,.15); display:none}" +
+    "#bulle-cote::after{content:''; position:absolute; right:-14px; top:50%; margin-top:-12px; border:12px solid transparent; border-left:14px solid #d4b106; border-right:none}";
+  document.head.appendChild(st);
+  b.classList.add("cote"); b.textContent = "💡"; b.title = "Indice"; document.body.appendChild(b);
+  var bulle = document.createElement("div"); bulle.id = "bulle-cote"; document.body.appendChild(bulle);
+  var zones = function () { return Array.prototype.slice.call(document.querySelectorAll("#indice, .indice, #message, .message, #verdict, .verdict, #consigne-aide")); };
+  var avant = [], minuteur = null;
+  b.addEventListener("click", function () { avant = zones().map(function (z) { return [z, z.textContent, z.className]; }); }, true);   // avant le code du jeu
+  b.addEventListener("click", function () {
+    setTimeout(function () {
+      var txt = "";
+      avant.forEach(function (a) {
+        var z = a[0], neuf = z.textContent;
+        if (neuf !== a[1] && neuf.trim()) { txt = neuf; z.textContent = a[1]; z.className = a[2]; }
+      });
+      if (!txt) return;   // le jeu montre l'indice autrement : on le laisse faire
+      bulle.textContent = txt.replace(/^\s*💡\s*/, ""); bulle.style.display = "block";
+      clearTimeout(minuteur); minuteur = setTimeout(function () { bulle.style.display = "none"; }, 8000);
+    }, 0);
+  });
+  document.addEventListener("pointerdown", function (e) { if (e.target !== b && e.target !== bulle) bulle.style.display = "none"; });
+})();
+</script>
+<!-- /INDICE-COTE -->
+</body>
+</html>

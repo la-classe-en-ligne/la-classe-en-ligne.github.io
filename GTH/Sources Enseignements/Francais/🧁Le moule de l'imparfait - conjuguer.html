@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Le moule de l'imparfait</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath d='M14 34h36l-5 24H19z' fill='%23f48fb1'/%3E%3Cpath d='M12 34c0-12 8-20 20-20s20 8 20 20z' fill='%23fff3e0' stroke='%23e0a050' stroke-width='3'/%3E%3Ccircle cx='32' cy='12' r='5' fill='%23e53935'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&display=swap">
+<style>
+  /* 🧁 Le moule de l'imparfait (maquette validée par Karim le 23/10 : « mets un univers de pâtisserie »). La pâtisserie : mur carrelé,
+     plan de travail, la recette du jour, le bol de pâte, un moule de 6 caissettes (une par personne), le four, les cupcakes.
+     Je fabrique : « nous mangeons » → couper -ons : la pâte = le radical (mange-) ; poser chaque terminaison dans la caissette de sa
+     personne (ais, ais, ait, ions, iez, aient) ; verser la pâte ; au four ; les cupcakes sortent avec le verbe écrit dessus.
+     La méthode de la classe (séance 📅 6) : « je dis nous au présent, j'enlève -ons, j'ajoute -ais, -ais, -ait, -ions, -iez, -aient ».
+     Je reconnais (📅 3) : poser sur le présentoir le cupcake à l'imparfait (marque -ai- / -i-). Les pièges (📅 4-5) : -ger, -cer, -ier,
+     -yer, être (ét-), avoir. Défi (📅 7) : présent ou imparfait selon le moment de la phrase.
+     Verbes et formes : séances de conjugaison 📅 3 à 7 (fiches P2 p. 4, 8, 9, 15, 18-19, 24-25 ; mémo CONJ 6 à 9 ; révisions). Les autres
+     formes des cupcakes de « Je reconnais » (présent, futur) et 8 phrases du Défi sont écrites par moi. */
+  :root{ --encre:#4e342e; --gris:#8d6e63; --rose:#f48fb1; --rose-f:#c2185b; --creme:#fff3e0; --pate:#f6c27a; --pate-f:#c27c2c; --rouge:#c62828; --bien:#2e7d32; --faux:#c62828; }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{margin:0; color:var(--encre); font-family:"Baloo 2",system-ui,sans-serif; overflow:hidden; height:100vh; display:flex; flex-direction:column; user-select:none; -webkit-user-select:none; touch-action:none;
+    background:#fdeef3; background-image:linear-gradient(rgba(255,255,255,.75) 3px,transparent 3px),linear-gradient(90deg,rgba(255,255,255,.75) 3px,transparent 3px); background-size:70px 70px;}
+  [hidden]{display:none !important;}
+  .barre{display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:20px; padding:8px 26px; background:#fff; border-bottom:3px solid #f8d7e3;}
+  .titre{display:flex; align-items:center; gap:12px;} .titre svg{width:50px; height:50px;}
+  .titre h1{font-weight:800; font-size:1.9rem; margin:0;}
+  .onglets{display:flex; gap:10px; justify-content:center;}
+  .onglets button{font:inherit; font-weight:800; font-size:1.35rem; padding:3px 22px; border-radius:999px; cursor:pointer; background:#fce4ec; color:var(--encre); border:none;}
+  .onglets button.actif{background:var(--rose-f); color:#fff;}
+  .droite{display:flex; align-items:center; gap:12px;}
+  .score{display:flex; flex-direction:column; align-items:center; padding:2px 14px; border-radius:12px; background:#fff; border:2px solid #f8d7e3; min-width:130px;}
+  .score small{font-size:.8rem; font-weight:700; color:var(--gris); text-transform:uppercase; letter-spacing:.5px;}
+  .score b{font-size:1.7rem; line-height:1.05;}
+  .niveaux{display:flex; gap:4px;}
+  .niveaux button{font:inherit; font-weight:700; font-size:1rem; padding:3px 14px; border-radius:999px; cursor:pointer; background:#fff; color:var(--gris); border:2px solid #f8d7e3;}
+  .niveaux button.actif{background:var(--encre); color:#fff; border-color:var(--encre);}
+  .btn-son{width:44px; height:44px; border-radius:50%; font-size:1.2rem; cursor:pointer; background:#fff; border:2px solid #f8d7e3;}
+  .consigne{display:flex; justify-content:center; padding:14px 20px 0;}
+  .consigne p{margin:0; font-weight:800; font-size:2.6rem; text-align:center; background:#fff; padding:0 34px; border-radius:16px;}
+  .jeu{flex:1; min-height:0; position:relative;}
+  /* le plan de travail */
+  .plan{position:absolute; left:0; right:0; bottom:0; height:250px; background:linear-gradient(#f5e6d3,#e8d2b6); border-top:12px solid #d7b48a;}
+  /* la recette (le verbe) et le bol */
+  .recette{position:absolute; left:150px; top:16px; width:720px; min-height:150px; background:#fffdf7; border:4px solid #e0c9a6; border-radius:18px; padding:10px 26px; box-shadow:0 6px 0 rgba(141,110,99,.18);}
+  .recette small{display:block; font-size:1.6rem; color:var(--gris); font-weight:700;}
+  .recette .nous{font-size:4rem; font-weight:800; line-height:1.1; white-space:nowrap;}
+  .recette .nous .l{display:inline-block; cursor:col-resize;}
+  .recette .nous .enleve{color:#cfd8dc; text-decoration:line-through;}
+  .bol{position:absolute; left:960px; top:10px; width:380px; height:170px; display:flex; align-items:center; justify-content:center; touch-action:none;}
+  .bol svg{position:absolute; inset:0; width:100%; height:100%;}
+  .bol b{position:relative; font-size:3.6rem; color:#6d3e10; margin-top:30px;}
+  .bol.pret{cursor:grab;}
+  .bol.vide{opacity:.35;}
+  .choix-bols{position:absolute; left:960px; top:10px; display:flex; gap:20px;}
+  .choix-bols .bol{position:relative; left:auto; top:auto; width:240px; height:150px; cursor:pointer;}
+  .choix-bols .bol b{font-size:3rem;}
+  /* le four */
+  .four{position:absolute; right:150px; top:6px; width:330px; height:190px; border-radius:18px; background:#90a4ae; border:6px solid #546e7a;}
+  .four .vitre{position:absolute; left:24px; right:24px; top:44px; bottom:20px; border-radius:12px; background:#37474f; transition:background .3s, box-shadow .3s;}
+  .four.chaud .vitre{background:#ff8f00; box-shadow:0 0 40px 10px rgba(255,143,0,.7);}
+  .four .boutons{position:absolute; left:24px; top:10px; display:flex; gap:12px;} .four .boutons i{width:22px; height:22px; border-radius:50%; background:#eceff1; border:3px solid #546e7a;}
+  .four .mot{position:absolute; left:0; right:0; top:80px; text-align:center; font-size:2.2rem; font-weight:800; color:#fff; opacity:0;} .four.chaud .mot{opacity:1;}
+  /* le moule : 6 caissettes */
+  .moule{position:absolute; left:150px; right:150px; top:220px; height:300px; border-radius:30px; background:linear-gradient(#eceff1,#b0bec5); border:6px solid #90a4ae; display:flex; justify-content:space-around; align-items:flex-end; padding:0 20px 26px;}
+  .moule.cuit{animation:cuit 1.2s ease;} @keyframes cuit{30%{filter:brightness(1.25) sepia(.3)} 100%{filter:none}}
+  .case{position:relative; width:220px; height:250px; display:flex; flex-direction:column; align-items:center; justify-content:flex-end;}
+  .case .pers{position:absolute; top:0; font-size:2rem; font-weight:800; color:#546e7a;}
+  .case .caissette{width:190px; height:120px; border-radius:0 0 30px 30px; background:repeating-linear-gradient(90deg,#f8bbd0 0 12px,#f48fb1 12px 24px); clip-path:polygon(0 0,100% 0,88% 100%,12% 100%); display:flex; align-items:flex-start; justify-content:center; padding-top:16px;}
+  .case.cible .caissette{outline:6px solid #ffca28; outline-offset:4px;}
+  .case .gateau{position:absolute; bottom:110px; width:200px; height:100px; border-radius:100px 100px 18px 18px; background:var(--creme); border:4px solid #e0a050; display:none; align-items:center; justify-content:center;}
+  .case .gateau::before{content:""; position:absolute; top:-12px; width:22px; height:22px; border-radius:50%; background:#e53935;}
+  .case.cuite .gateau{display:flex; animation:monte .6s ease;} @keyframes monte{from{transform:translateY(30px) scale(.6); opacity:0}}
+  .case .forme{position:absolute; bottom:6px; left:50%; transform:translateX(-50%); text-align:center; font-size:1.7rem; font-weight:800; color:var(--encre); display:none; white-space:nowrap; background:#fff; border-radius:12px; padding:2px 12px 0; box-shadow:0 2px 0 rgba(0,0,0,.1);}
+  .case.cuite .forme{display:block;}
+  .forme .r{color:var(--rouge);} .forme .p{color:#1565c0; text-decoration:underline;}
+  .term{display:inline-flex; align-items:center; justify-content:center; min-width:120px; height:66px; padding:4px 18px 0; border-radius:16px; background:#fff; border:4px solid var(--rouge); color:var(--rouge); font-size:2.6rem; font-weight:800; cursor:grab; touch-action:none;}
+  .case .term{cursor:default; border-width:3px; height:58px; min-width:110px; font-size:2.3rem;}
+  .term.choisie{outline:6px solid #1f7a8c; outline-offset:3px;}
+  .term.parti{visibility:hidden;}
+  .plaques{position:absolute; left:150px; right:150px; bottom:40px; display:flex; justify-content:center; gap:30px; height:90px; align-items:center;}
+  /* Je reconnais / Défi : le présentoir, les cupcakes à choisir, la phrase */
+  .presentoir{position:absolute; left:50%; top:150px; transform:translateX(-50%); width:520px; height:230px; display:flex; flex-direction:column; align-items:center; justify-content:flex-end;}
+  .presentoir .plateau{width:520px; height:24px; border-radius:12px; background:#fff; border:5px solid #f8bbd0;} .presentoir .pied{width:40px; height:70px; background:#f8bbd0;}
+  .presentoir .titre-p{position:absolute; top:0; font-size:2.4rem; font-weight:800; color:var(--rose-f);}
+  .presentoir.cible .plateau{border-color:#ffca28; box-shadow:0 0 0 8px rgba(255,202,40,.35);}
+  .presentoir .pose{position:absolute; bottom:94px;}
+  .phrase{position:absolute; left:150px; right:150px; top:30px; background:#fffdf7; border:4px solid #e0c9a6; border-radius:18px; padding:16px 30px; font-size:3.4rem; font-weight:700; text-align:center; line-height:1.3;}
+  .phrase .trou{display:inline-block; min-width:240px; height:1em; border-bottom:6px dashed var(--rose-f); vertical-align:-.1em;}
+  .phrase .trou.cible{background:#fff8e1;}
+  .phrase .trou.plein{border:none; color:var(--bien); min-width:0;}
+  .phrase .temps{display:block; font-size:1.6rem; color:var(--gris);}
+  .cupcakes{position:absolute; left:150px; right:150px; bottom:30px; display:flex; justify-content:center; gap:90px;}
+  .cupcake{position:relative; width:260px; height:230px; cursor:grab; touch-action:none;}
+  .cupcake svg{position:absolute; inset:0; width:100%; height:100%;}
+  .cupcake .plaque{position:absolute; left:10px; right:10px; top:58px; text-align:center; font-size:2.1rem; font-weight:800; color:var(--encre); line-height:1.05; background:rgba(255,255,255,.88); border-radius:12px; padding:4px 4px 0;}
+  .cupcake.parti{visibility:hidden;}
+  .cupcake.tombe{animation:tombe .55s ease;} @keyframes tombe{30%{transform:translateY(-30px) rotate(-8deg)} 100%{transform:none}}
+  .secoue{animation:secoue .45s ease;} @keyframes secoue{0%,100%{transform:none}25%{transform:translateX(-12px)}75%{transform:translateX(12px)}}
+  .en-vol{position:fixed !important; z-index:50; pointer-events:none; margin:0 !important; transform:rotate(-5deg) scale(1.04);}
+  .note{position:absolute; right:150px; bottom:150px; width:640px; background:#fff; border-radius:18px; border:3px solid #f8d7e3; padding:10px 22px; font-size:1.7rem; line-height:1.3; font-weight:700;}
+  .note:empty{display:none;} .note .r{color:var(--rouge);}
+  .bas{display:flex; align-items:center; justify-content:center; gap:18px; padding:4px 0 12px; min-height:70px; background:#e8d2b6;}
+  .btn-indice{font:inherit; font-weight:700; font-size:1.2rem; padding:6px 16px; border-radius:999px; cursor:pointer; background:#fff8dc; border:2px solid #f1d27a; color:#7a5b00;}
+  .verdict{min-height:3rem; font-size:2rem; font-weight:800; text-align:center;}
+  .verdict:not(:empty){background:#fff; padding:0 24px; border-radius:14px;}
+  .verdict.bien{color:var(--bien);} .verdict.faux{color:var(--faux);} .verdict.indice{color:#7a5b00;}
+  .btn-suivant{font:inherit; font-weight:800; font-size:1.8rem; padding:2px 34px; border-radius:999px; cursor:pointer; background:var(--encre); color:#fff; border:none;}
+</style>
+</head>
+<body>
+<div class="barre">
+  <div class="titre">
+    <svg viewBox="0 0 64 64" aria-hidden="true"><path d="M14 34h36l-5 24H19z" fill="#f48fb1"/><path d="M12 34c0-12 8-20 20-20s20 8 20 20z" fill="#fff3e0" stroke="#e0a050" stroke-width="3"/><circle cx="32" cy="12" r="5" fill="#e53935"/></svg>
+    <h1>Le moule de l'imparfait</h1>
+  </div>
+  <div class="onglets" id="onglets">
+    <button type="button" data-onglet="reconnais">Je reconnais</button>
+    <button type="button" data-onglet="fabrique" class="actif">Je fabrique</button>
+    <button type="button" data-onglet="pieges">Les pièges</button>
+    <button type="button" data-onglet="defi">Défi</button>
+  </div>
+  <div class="droite">
+    <div class="score"><small>Verbes moulés</small><b id="score">0</b></div>
+    <div class="score" title="Le meilleur score dans cet onglet, gardé sur cet ordinateur"><small>🏆 Record</small><b id="record">0</b></div>
+    <div class="niveaux" id="niveaux">
+      <button type="button" data-niveau="1er" class="actif">1er groupe</button>
+      <button type="button" data-niveau="2e">2e groupe</button>
+      <button type="button" data-niveau="irr">Irréguliers</button>
+      <button type="button" data-niveau="tout">Tout</button>
+    </div>
+    <button class="btn-son" id="btnSon" type="button" title="Son">🔊</button>
+  </div>
+</div>
+<div class="consigne"><p id="consigne"></p></div>
+<div class="jeu" id="jeu">
+  <div class="plan"></div>
+  <div id="scene"></div>
+  <div class="note" id="note"></div>
+</div>
+<div class="bas">
+  <button class="btn-indice" id="btnIndice" type="button">💡 Indice</button>
+  <div class="verdict" id="verdict"></div>
+  <button class="btn-suivant" id="btnSuivant" type="button" hidden>➜</button>
+</div>
+<script>
+(function () {
+  var PERS = ["je", "tu", "il, elle", "nous", "vous", "ils, elles"], TERM = ["ais", "ais", "ait", "ions", "iez", "aient"];
+  // Je fabrique : [infinitif, « nous » au présent]. 1er groupe : fiches P2 p. 4 et 8 ; 2e groupe : séance 📅 4 et fiche p. 15 ; irréguliers : fiches p. 24-25 (mémo CONJ 9)
+  var FABRIQUE = {
+    "1er": [["chanter", "chantons"], ["regarder", "regardons"], ["dessiner", "dessinons"], ["marcher", "marchons"], ["parler", "parlons"], ["rêver", "rêvons"],
+      ["arriver", "arrivons"], ["distribuer", "distribuons"], ["visiter", "visitons"], ["jouer", "jouons"], ["danser", "dansons"], ["écouter", "écoutons"]],
+    "2e": [["finir", "finissons"], ["choisir", "choisissons"], ["grandir", "grandissons"], ["guérir", "guérissons"], ["bâtir", "bâtissons"], ["nourrir", "nourrissons"],
+      ["punir", "punissons"], ["réfléchir", "réfléchissons"], ["réussir", "réussissons"], ["rougir", "rougissons"]],
+    "irr": [["faire", "faisons"], ["dire", "disons"], ["aller", "allons"], ["venir", "venons"], ["prendre", "prenons"], ["voir", "voyons"],
+      ["vouloir", "voulons"], ["pouvoir", "pouvons"], ["avoir", "avons"], ["faire", "faisons"]]
+  };
+  FABRIQUE.irr.pop();
+  FABRIQUE.tout = FABRIQUE["1er"].concat(FABRIQUE["2e"], FABRIQUE.irr);
+  // Les pièges : fiche P2 p. 9 (-ger, -cer, -ier, -yer), fiches p. 18-19 (être, avoir) : [infinitif, « nous » au présent, piège]
+  var PIEGES = [["manger", "mangeons", "ger"], ["changer", "changeons", "ger"], ["nager", "nageons", "ger"], ["arranger", "arrangeons", "ger"], ["juger", "jugeons", "ger"],
+    ["lancer", "lançons", "cer"], ["balancer", "balançons", "cer"], ["bercer", "berçons", "cer"], ["tracer", "traçons", "cer"],
+    ["crier", "crions", "ier"], ["associer", "associons", "ier"], ["déplier", "déplions", "ier"], ["nettoyer", "nettoyons", "yer"], ["être", "sommes", "etre"], ["avoir", "avons", "avoir"]];
+  // Je reconnais : [la forme à l'imparfait (séance 📅 3 : fiche p. 4, ex. 1 à 3, défi du mémo), deux autres formes du même verbe écrites par moi]
+  var RECONNAIS = [["il regardait", "il regarde", "il regardera"], ["nous avancions", "nous avançons", "nous avancerons"], ["j'entendais", "j'entends", "j'entendrai"],
+    ["elles remuaient", "elles remuent", "elles remueront"], ["tu criais", "tu cries", "tu crieras"], ["vous nettoyiez", "vous nettoyez", "vous nettoierez"],
+    ["vous aimiez", "vous aimez", "vous aimerez"], ["nous donnions", "nous donnons", "nous donnerons"], ["ils écoutaient", "ils écoutent", "ils écouteront"],
+    ["il dessinait", "il dessine", "il dessinera"], ["je visitais", "je visite", "je visiterai"], ["ils parlaient", "ils parlent", "ils parleront"],
+    ["il jouait", "il joue", "il jouera"], ["tu lançais", "tu lances", "tu lanceras"], ["nous payions", "nous payons", "nous paierons"], ["ils dansaient", "ils dansent", "ils danseront"]];
+  // Défi : [phrase (« _ » = le verbe), infinitif, présent, imparfait, le bon temps]. Les 4 premières : séance 📅 7 ; les autres sont écrites par moi avec les verbes des séances.
+  var DEFI = [["Aujourd'hui, Persée _ les Gorgones.", "affronter", "affronte", "affrontait", "présent"], ["Autrefois, les Grecs _ aux dieux.", "croire", "croient", "croyaient", "imparfait"],
+    ["Maintenant, nous _ la période.", "finir", "finissons", "finissions", "présent"], ["Hier soir, tu _ fatigué.", "être", "es", "étais", "imparfait"],
+    ["Avant, les enfants _ à l'école à pied.", "aller", "vont", "allaient", "imparfait"], ["Aujourd'hui, je _ un gâteau.", "faire", "fais", "faisais", "présent"],
+    ["Hier, nous _ des crêpes.", "manger", "mangeons", "mangions", "imparfait"], ["Autrefois, le boulanger _ avant le jour.", "se lever", "se lève", "se levait", "imparfait"],
+    ["Hier, tu _ un rhume.", "avoir", "as", "avais", "imparfait"], ["Maintenant, elle _ ses devoirs.", "finir", "finit", "finissait", "présent"],
+    ["Avant, nous _ des contes le soir.", "dire", "disons", "disions", "imparfait"], ["En ce moment, ils _ la mer.", "voir", "voient", "voyaient", "présent"]];
+  var el = function (id) { return document.getElementById(id); };
+  var onglet = "fabrique", niveau = "1er", liste = [], idx = 0, score = 0, erreurs = 0, item = null, fini = false, etape = "", poses = [], sonActif = true, ctx = null, choisie = null;
+  function son(type) {
+    if (!sonActif) return;
+    try {
+      ctx = ctx || new (window.AudioContext || window.webkitAudioContext)();
+      var t = ctx.currentTime, notes = type === "bien" ? [[523, 0, .15], [659, .1, .15], [784, .2, .35]] : type === "coupe" ? [[1800, 0, .05, "square"], [900, .04, .06, "square"]]
+        : type === "pose" ? [[660, 0, .08], [880, .06, .1]] : type === "verse" ? [[300, 0, .5, "sine", 150]] : type === "ding" ? [[1320, 0, .5, "sine"], [1760, .12, .6, "sine"]] : [[200, 0, .3, "sawtooth", 120]];
+      notes.forEach(function (q) { var o = ctx.createOscillator(), g = ctx.createGain(); o.type = q[3] || "triangle"; o.frequency.setValueAtTime(q[0], t + q[1]);
+        if (q[4]) o.frequency.exponentialRampToValueAtTime(q[4], t + q[1] + q[2]);
+        o.connect(g); g.connect(ctx.destination); g.gain.setValueAtTime(.0001, t + q[1]); g.gain.exponentialRampToValueAtTime(.12, t + q[1] + .01);
+        g.gain.exponentialRampToValueAtTime(.0001, t + q[1] + q[2]); o.start(t + q[1]); o.stop(t + q[1] + q[2] + .05); });
+    } catch (e) {}
+  }
+  function cleRecord() { return "moule-imparfait-record-" + onglet + (onglet === "fabrique" ? "-" + niveau : ""); }
+  function majScore() {
+    var r = 0; try { r = parseInt(localStorage.getItem(cleRecord()), 10) || 0; } catch (e) {}
+    if (score > r) { r = score; try { localStorage.setItem(cleRecord(), String(r)); } catch (e) {} }
+    el("score").textContent = score; el("record").textContent = r;
+  }
+  function verdict(t, c) { el("verdict").textContent = t; el("verdict").className = "verdict" + (c ? " " + c : ""); }
+  function consigne(t) { el("consigne").textContent = t; }
+  function secoue(x) { x.classList.remove("secoue"); void x.offsetWidth; x.classList.add("secoue"); }
+  function melange(t) { for (var i = t.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)), w = t[i]; t[i] = t[j]; t[j] = w; } return t; }
+  function H(tag, cls, html) { var d = document.createElement(tag); if (cls) d.className = cls; if (html !== undefined) d.innerHTML = html; return d; }
+  function bravo(note) { fini = true; son("bien"); score++; majScore(); verdict(erreurs ? "✅" : "✅ Bravo !", "bien"); el("btnSuivant").hidden = false; if (note) el("note").innerHTML = note; }
+
+  // ---------- glisser (ou toucher) ----------
+  function glissable(d, cibles, poser, siTouche) {
+    d.addEventListener("pointerdown", function (ev) {
+      if (fini) return; ev.preventDefault();
+      var r = d.getBoundingClientRect(), vol = d.cloneNode(true); vol.classList.add("en-vol"); vol.style.left = r.left + "px"; vol.style.top = r.top + "px"; vol.style.width = r.width + "px";
+      document.body.appendChild(vol); d.classList.add("parti");
+      var x0 = ev.clientX, y0 = ev.clientY, dx = x0 - r.left, dy = y0 - r.top, bouge = false;
+      function sous(x, y) { return cibles().filter(function (c) { var b = c.getBoundingClientRect(); return x > b.left - 30 && x < b.right + 30 && y > b.top - 30 && y < b.bottom + 30; })[0]; }
+      function mv(e) { vol.style.left = (e.clientX - dx) + "px"; vol.style.top = (e.clientY - dy) + "px"; if (Math.hypot(e.clientX - x0, e.clientY - y0) > 12) bouge = true;
+        var s = sous(e.clientX, e.clientY); cibles().forEach(function (c) { c.classList.toggle("cible", c === s); }); }
+      function up(e) {
+        document.removeEventListener("pointermove", mv); document.removeEventListener("pointerup", up);
+        vol.remove(); d.classList.remove("parti"); cibles().forEach(function (c) { c.classList.remove("cible"); });
+        if (bouge) { var s = sous(e.clientX, e.clientY); if (s) poser(s); } else if (siTouche) siTouche();
+      }
+      document.addEventListener("pointermove", mv); document.addEventListener("pointerup", up);
+    });
+  }
+
+  // ---------- Je fabrique / Les pièges ----------
+  function radicalDe(it) { return it[2] === "etre" ? "ét" : it[1].slice(0, -3); }
+  function forme(it, k) {   // la forme à l'imparfait, et les lettres du piège en rouge
+    var r = radicalDe(it), t = TERM[k], p = it[2], devantI = t.charAt(0) === "i";
+    if (p === "ger" && devantI) return [r.slice(0, -1), "", t];         // nous mangions : le e disparaît devant i
+    if (p === "cer" && devantI) return [r.slice(0, -1) + "c", "", t];   // nous lancions : c devant i
+    if (p === "ger") return [r.slice(0, -1), "e", t];                   // je mangeais : e devant a
+    if (p === "cer") return [r.slice(0, -1), "ç", t];                   // je lançais : ç devant a
+    if ((p === "ier" || p === "yer") && devantI) return [r.slice(0, -1), r.slice(-1), t];   // nous criions, nous nettoyions
+    return [r, "", t];
+  }
+  function pron(k, f) { return k === 0 ? (/^[aeéèêiouâîôûh]/i.test(f) ? "j'" : "je ") : ["", "tu ", "il ", "nous ", "vous ", "ils "][k]; }
+  function dessinerFabrique() {
+    var S = el("scene"), it = item;
+    S.innerHTML = "";
+    var rec = H("div", "recette"); rec.innerHTML = "<small>" + it[0] + " → au présent :</small>";
+    var nous = H("div", "nous"); nous.id = "nous";
+    if (it[2] === "etre") nous.innerHTML = "nous sommes <span style='font-size:.45em; color:#c62828'>⚠ pas de -ons</span>";
+    else { nous.appendChild(document.createTextNode("nous ")); it[1].split("").forEach(function (c, i) { var s = H("span", "l"); s.textContent = c; s.dataset.i = i; nous.appendChild(s); }); }
+    rec.appendChild(nous); S.appendChild(rec);
+    var four = H("div", "four", "<div class='boutons'><i></i><i></i><i></i></div><div class='vitre'></div><div class='mot'>AU FOUR !</div>"); four.id = "four"; S.appendChild(four);
+    var M = H("div", "moule"); M.id = "moule";
+    PERS.forEach(function (p, k) {
+      var c = H("div", "case", "<div class='pers'>" + p + "</div><div class='gateau'></div><div class='caissette'></div><div class='forme'></div>"); c.dataset.k = k; M.appendChild(c);
+      c.addEventListener("click", function () { if (choisie) poserTerm(choisie, c); });
+    });
+    S.appendChild(M);
+    var P = H("div", "plaques"); P.id = "plaques"; S.appendChild(P);
+    if (it[2] === "etre") choixBols(); else { etape = "couper"; consigne("Coupe -ons : il reste le radical, la pâte."); brancherCoupe(); }
+  }
+  function choixBols() {   // être : pas de -ons à enlever ; on choisit le bon bol (ét-)
+    etape = "bol"; consigne("Être est spécial : choisis le bol du radical.");
+    var B = H("div", "choix-bols"); B.id = "choixBols";
+    melange(["ét", "som", "ser"]).forEach(function (r) { var b = H("div", "bol", bolSvg() + "<b>" + r + "-</b>"); b.dataset.r = r; B.appendChild(b);
+      b.addEventListener("click", function () { if (etape !== "bol") return; if (r === "ét") { son("pose"); B.remove(); bolPret(); } else { erreurs++; son("non"); secoue(b); verdict("🤪 Être à l'imparfait : j'étais, nous étions…", "faux"); } }); });
+    el("scene").appendChild(B);
+  }
+  function bolSvg() { return "<svg viewBox='0 0 380 170' preserveAspectRatio='none'><ellipse cx='190' cy='60' rx='170' ry='34' fill='#f6c27a' stroke='#c27c2c' stroke-width='5'/><path d='M20 60q10 100 170 104q160-4 170-104' fill='#fff' stroke='#90a4ae' stroke-width='6'/><ellipse cx='190' cy='60' rx='170' ry='34' fill='none' stroke='#90a4ae' stroke-width='6'/></svg>"; }
+  var depart = null;
+  function brancherCoupe() {
+    var N = el("nous");
+    N.addEventListener("pointerdown", function (ev) { if (etape !== "couper") return; ev.preventDefault(); depart = { x: ev.clientX }; });
+  }
+  document.addEventListener("pointerup", function (ev) {
+    if (!depart || etape !== "couper") { depart = null; return; } var x = (ev.clientX + depart.x) / 2, dx = Math.abs(ev.clientX - depart.x); depart = null; if (dx > 40) return;
+    var ls = [].slice.call(document.querySelectorAll("#nous .l")), best = null, dmin = 1e9;
+    for (var i = 1; i < ls.length; i++) { var a = ls[i - 1].getBoundingClientRect(), b = ls[i].getBoundingClientRect(), m = (a.right + b.left) / 2; if (Math.abs(m - x) < dmin) { dmin = Math.abs(m - x); best = i; } }
+    if (best !== null) couper(best);
+  });
+  function couper(i) {
+    var L = item[1].length; son("coupe");
+    if (i !== L - 3) { erreurs++; son("non"); secoue(el("nous")); verdict("🤪 Enlève seulement -ons.", "faux"); return; }
+    [].forEach.call(document.querySelectorAll("#nous .l"), function (s) { if (+s.dataset.i >= i) s.classList.add("enleve"); });
+    verdict(""); bolPret();
+  }
+  function bolPret() {
+    var b = H("div", "bol vide", bolSvg() + "<b>" + radicalDe(item) + "-</b>"); b.id = "bol"; el("scene").appendChild(b);
+    etape = "terminaisons"; consigne("Mets chaque terminaison dans la caissette de sa personne.");
+    poses = [null, null, null, null, null, null];
+    melange(TERM.slice()).forEach(function (t) { var d = H("div", "term"); d.textContent = t; d.dataset.t = t; el("plaques").appendChild(d);
+      glissable(d, function () { return [].slice.call(document.querySelectorAll("#moule .case")); }, function (c) { poserTerm(d, c); },
+        function () { if (choisie) choisie.classList.remove("choisie"); choisie = d; d.classList.add("choisie"); }); });
+  }
+  function poserTerm(d, c) {
+    if (etape !== "terminaisons" || !d.parentNode) return;
+    var k = +c.dataset.k, t = d.dataset.t;
+    if (choisie) { choisie.classList.remove("choisie"); choisie = null; }
+    if (poses[k] === null && TERM[k] === t) {
+      poses[k] = t; son("pose"); d.remove(); var p = H("div", "term"); p.textContent = t; c.querySelector(".caissette").appendChild(p); verdict("");
+      if (poses.every(function (x) { return x; })) { etape = "verser"; consigne("Verse la pâte dans le moule."); var b = el("bol"); b.classList.remove("vide"); b.classList.add("pret");
+        glissable(b, function () { return [el("moule")]; }, function () { verser(); }, function () { verser(); }); }
+    } else { erreurs++; son("non"); secoue(c); verdict(poses[k] ? "🤪 Cette caissette est déjà pleine." : "🤪 « " + t + " » ne va pas avec « " + PERS[k] + " ».", "faux"); }
+  }
+  function verser() {
+    if (etape !== "verser") return; etape = "four"; son("verse"); el("bol").classList.add("vide"); el("four").classList.add("chaud"); el("moule").classList.add("cuit");
+    consigne("Au four !");
+    setTimeout(function () {
+      son("ding"); el("four").classList.remove("chaud");
+      [].forEach.call(document.querySelectorAll("#moule .case"), function (c, k) {
+        var f = forme(item, k), mot = f[0] + f[1] + f[2];
+        c.querySelector(".forme").innerHTML = pron(k, mot) + f[0] + (f[1] ? "<span class='p'>" + f[1] + "</span>" : "") + "<span class='r'>" + f[2] + "</span>";
+        c.querySelector(".caissette").innerHTML = ""; c.classList.add("cuite");
+      });
+      consigne("Les gâteaux sont cuits : " + item[0] + " à l'imparfait !");
+      bravo(notePiege());
+    }, 1300);
+  }
+  function notePiege() {
+    var p = item[2];
+    if (p === "ger") return "Devant <b>a</b>, je garde le <span class='r'>e</span> : je mangeais. Devant <b>i</b>, plus besoin : nous mangions.";
+    if (p === "cer") return "Devant <b>a</b>, c devient <span class='r'>ç</span> : je lançais. Devant <b>i</b>, le c suffit : nous lancions.";
+    if (p === "ier") return "Le radical finit par i, la terminaison commence par i : nous cr<span class='r'>ii</span>ons, vous cr<span class='r'>ii</span>ez.";
+    if (p === "yer") return "Le y reste : nous nettoy<span class='r'>i</span>ons, vous nettoy<span class='r'>i</span>ez.";
+    if (p === "etre") return "Être n'a pas de « nous …ons » : le radical de l'imparfait est <b>ét-</b> (j'étais, nous étions).";
+    if (onglet === "fabrique" && niveau !== "1er") return "nous " + item[1] + " → <b>" + radicalDe(item) + "-</b> + -ais, -ais, -ait, -ions, -iez, -aient.";
+    return "";
+  }
+
+  // ---------- Je reconnais : le cupcake à l'imparfait sur le présentoir ----------
+  function cupcake(txt) {
+    var c = H("div", "cupcake", "<svg viewBox='0 0 260 230'><path d='M50 130h160l-20 92H70z' fill='#f48fb1'/><path d='M60 130l8 92M90 130l4 92M120 130v92M150 130l-2 92M180 130l-6 92' stroke='#f8bbd0' stroke-width='6'/>" +
+      "<path d='M36 132c-8-40 20-60 40-62 6-30 40-44 64-30 26-12 58 4 60 30 26 6 34 34 26 62z' fill='#fff3e0' stroke='#e0a050' stroke-width='5'/><circle cx='130' cy='20' r='14' fill='#e53935'/></svg><div class='plaque'></div>");
+    c.querySelector(".plaque").textContent = txt; c.dataset.v = txt; return c;
+  }
+  function marque(f) {   // la marque de l'imparfait en rouge : -ai- ou -i-
+    var m = f.match(/^(.*?)(ai)(ent|s|t)$/) || f.match(/^(.*?)(i)(ons|ez)$/); return m ? m[1] + "<span class='r'>" + m[2] + "</span>" + m[3] : f;
+  }
+  function dessinerReconnais() {
+    var S = el("scene"); S.innerHTML = "";
+    var P = H("div", "presentoir", "<div class='titre-p'>Imparfait</div><div class='plateau'></div><div class='pied'></div>"); P.id = "presentoir"; S.appendChild(P);
+    var C = H("div", "cupcakes"); C.id = "cupcakes"; S.appendChild(C);
+    consigne("Pose sur le présentoir le gâteau à l'imparfait.");
+    melange(item.slice()).forEach(function (f) { var c = cupcake(f); C.appendChild(c);
+      glissable(c, function () { return [el("presentoir")]; }, function () { choisir(c); }, function () { choisir(c); }); });
+  }
+  function choisir(c) {
+    if (fini) return; var f = c.dataset.v;
+    if (f === item[0]) { c.remove(); var p = cupcake(""); p.querySelector(".plaque").innerHTML = marque(f); p.classList.add("pose"); p.style.cursor = "default"; el("presentoir").appendChild(p);
+      el("cupcakes").innerHTML = ""; consigne("C'est l'imparfait !"); bravo("Je vois la marque de l'imparfait : <span class='r'>-ai-</span> (je, tu, il, ils) ou <span class='r'>-i-</span> (nous, vous) juste avant la marque de la personne."); }
+    else { erreurs++; son("non"); c.classList.remove("tombe"); void c.offsetWidth; c.classList.add("tombe"); verdict("🤪 « " + f + " » : pas de marque -ai- / -i-.", "faux"); }
+  }
+
+  // ---------- Défi : présent ou imparfait ? ----------
+  function dessinerDefi() {
+    var S = el("scene"); S.innerHTML = "";
+    var ph = H("div", "phrase"); ph.innerHTML = item[0].replace(/&/g, "&amp;").replace("_", "<span class='trou' id='trou'></span>") + "<span class='temps'>(" + item[1] + ")</span>"; S.appendChild(ph);
+    var C = H("div", "cupcakes"); C.id = "cupcakes"; S.appendChild(C);
+    consigne("Présent ou imparfait ? Glisse le bon gâteau dans la phrase.");
+    melange([item[2], item[3]]).forEach(function (f) { var c = cupcake(f); C.appendChild(c);
+      glissable(c, function () { return [el("trou")]; }, function () { choisirDefi(c); }, function () { choisirDefi(c); }); });
+  }
+  function choisirDefi(c) {
+    if (fini) return; var f = c.dataset.v, bon = item[4] === "présent" ? item[2] : item[3];
+    if (f === bon) { var t = el("trou"); t.className = "trou plein"; t.innerHTML = item[4] === "imparfait" ? marque(f) : f; c.remove();
+      el("cupcakes").innerHTML = ""; consigne("C'est " + (item[4] === "présent" ? "le présent" : "l'imparfait") + " !");
+      bravo(item[4] === "présent" ? "« " + item[0].split(",")[0] + " » : c'est maintenant → <b>présent</b>." : "« " + item[0].split(",")[0] + " » : c'est dans le passé → <b>imparfait</b>."); }
+    else { erreurs++; son("non"); c.classList.remove("tombe"); void c.offsetWidth; c.classList.add("tombe"); verdict("🤪 Regarde le début de la phrase : quand est-ce que ça se passe ?", "faux"); }
+  }
+
+  // ---------- un nouveau verbe ----------
+  function nouveau() {
+    item = liste[idx % liste.length]; fini = false; erreurs = 0; etape = ""; choisie = null;
+    verdict(""); el("note").innerHTML = ""; el("btnSuivant").hidden = true;
+    if (onglet === "fabrique") dessinerFabrique();
+    else if (onglet === "pieges") dessinerFabrique();
+    else if (onglet === "reconnais") dessinerReconnais();
+    else dessinerDefi();
+  }
+  el("btnIndice").addEventListener("click", function () {
+    var t = onglet === "reconnais" ? "Regarde la fin du verbe : -ai- ou -i- juste avant la marque de la personne → imparfait."
+      : onglet === "defi" ? "Aujourd'hui, maintenant → présent. Autrefois, hier, avant → imparfait."
+      : etape === "couper" ? "Dis « nous … » au présent, puis enlève -ons : il reste le radical."
+      : etape === "terminaisons" ? "je -ais, tu -ais, il -ait, nous -ions, vous -iez, ils -aient."
+      : "Glisse le bol de pâte sur le moule.";
+    verdict("💡 " + t, "indice");
+  });
+  el("btnSuivant").addEventListener("click", function () { idx++; nouveau(); });
+  el("btnSon").addEventListener("click", function () { sonActif = !sonActif; el("btnSon").textContent = sonActif ? "🔊" : "🔇"; });
+  function lancer() {
+    score = 0; idx = 0;
+    document.querySelectorAll("#onglets button").forEach(function (b) { b.classList.toggle("actif", b.dataset.onglet === onglet); });
+    document.querySelectorAll("#niveaux button").forEach(function (b) { b.classList.toggle("actif", b.dataset.niveau === niveau); });
+    el("niveaux").style.visibility = onglet === "fabrique" ? "" : "hidden";
+    liste = onglet === "fabrique" ? (niveau === "tout" ? melange(FABRIQUE.tout.slice()) : FABRIQUE[niveau].slice()) : melange((onglet === "pieges" ? PIEGES : onglet === "reconnais" ? RECONNAIS : DEFI).slice());
+    majScore(); nouveau();
+  }
+  document.querySelectorAll("#onglets button").forEach(function (b) { b.addEventListener("click", function () { onglet = b.dataset.onglet; lancer(); }); });
+  document.querySelectorAll("#niveaux button").forEach(function (b) { b.addEventListener("click", function () { niveau = b.dataset.niveau; onglet = "fabrique"; lancer(); }); });
+  function lireHash() {   // #fabrique-1er, #fabrique-2e, #fabrique-irr, #fabrique-tout, #reconnais, #pieges, #defi
+    var h = decodeURIComponent(location.hash.slice(1)).split("-");
+    if (["fabrique", "reconnais", "pieges", "defi"].indexOf(h[0]) !== -1) onglet = h[0];
+    if (FABRIQUE[h[1]]) niveau = h[1];
+    lancer();
+  }
+  window.addEventListener("hashchange", lireHash);
+  lireHash();
+  window.__moule = { etat: function () { return { onglet: onglet, niveau: niveau, item: item, etape: etape, fini: fini, score: score, n: liste.length, poses: poses.slice(), verdict: el("verdict").textContent,
+      formes: [].map.call(document.querySelectorAll("#moule .forme"), function (f) { return f.textContent; }), trou: el("trou") ? el("trou").textContent : "" }; },
+    coupe: function () { var ls = [].slice.call(document.querySelectorAll("#nous .l")), i = item[1].length - 3; if (!ls[i]) return null; var a = ls[i - 1].getBoundingClientRect(), b = ls[i].getBoundingClientRect(); return { x: (a.right + b.left) / 2, y: (a.top + a.bottom) / 2, xFaux: (ls[1].getBoundingClientRect().left + ls[0].getBoundingClientRect().right) / 2 }; },
+    forme: function (it, k) { return forme(it, k).join(""); } };
+})();
+</script>
+<!-- MENU -->
+<script>
+/* ==== LE MENU ☰ (GTH, 10/10) : interface épurée — à l'écran, seulement le titre, le score, la consigne et l'activité ====
+   Tout le reste (niveaux, onglets de méthode, ✏️, 🔊, 🖨️, aide…) part dans un menu ☰, ouvert d'un toucher.
+   Réglage par outil (CONF, posé par l'injecteur) : ancre = où mettre le bouton ☰ (sinon en haut à droite de l'écran) ;
+   cacher = ce qui part dans le menu (sinon : tout ce qui, dans « .barre .droite », n'est pas un score).
+   Installé par .claude/outils/menu-outil/injecter.py ; ne pas modifier dans l'outil, mais dans ce fichier. */
+(function () {
+  var CONF = {};
+  var st = document.createElement("style");
+  st.textContent =
+    ".menu-btn{width:58px; height:58px; border-radius:16px; border:2px solid rgba(0,0,0,.15); background:#fff; color:#1f2a33; font-size:2rem; line-height:1; cursor:pointer; flex:none; padding:0;}" +
+    ".menu-btn.fixe{position:fixed; top:10px; right:12px; z-index:150; box-shadow:0 4px 14px rgba(0,0,0,.15);}" +
+    ".menu-btn.ouvert{background:#1f2a33; color:#fff;}" +
+    ".menu-panneau{position:fixed; top:76px; right:16px; z-index:200; background:#fff; color:#1f2a33; border-radius:18px; box-shadow:0 18px 50px rgba(0,0,0,.28); padding:16px 18px;" +
+    "  display:flex; flex-direction:column; align-items:flex-start; gap:12px; max-width:min(620px, 92vw); max-height:80vh; overflow:auto;}" +
+    ".menu-panneau[hidden]{display:none !important;}" +
+    ".menu-panneau h4{margin:0; font-family:sans-serif; font-size:.85rem; text-transform:uppercase; letter-spacing:.6px; color:#6d7a85;}" +
+    ".menu-panneau > *{position:static !important; margin:0 !important;}" +
+    ".menu-panneau > div,.menu-panneau > nav{display:flex; flex-wrap:wrap; gap:8px;}";
+  document.head.appendChild(st);
+  function installer() {
+    var autres = [];
+    if (CONF.cacher) CONF.cacher.forEach(function (s) { document.querySelectorAll(s).forEach(function (e) { if (autres.indexOf(e) === -1) autres.push(e); }); });
+    else { var d = document.querySelector(".barre .droite"); if (d) autres = Array.prototype.filter.call(d.children, function (e) { return !e.classList.contains("score"); }); }
+    if (!autres.length) return;
+    var btn = document.createElement("button"); btn.type = "button"; btn.className = "menu-btn"; btn.title = "Niveaux et réglages"; btn.textContent = "☰";
+    var pan = document.createElement("div"); pan.className = "menu-panneau"; pan.hidden = true;
+    var t = document.createElement("h4"); t.textContent = "Niveaux et réglages"; pan.appendChild(t);
+    autres.forEach(function (e) { pan.appendChild(e); });
+    var ancre = document.querySelector(CONF.ancre || ".barre .droite");
+    if (ancre) ancre.appendChild(btn); else { btn.classList.add("fixe"); document.body.appendChild(btn); }
+    document.body.appendChild(pan);
+    function ouvrir(o) { pan.hidden = !o; btn.classList.toggle("ouvert", o); }
+    btn.addEventListener("click", function (e) { e.stopPropagation(); ouvrir(pan.hidden); });
+    // un niveau choisi, ou une fenêtre ouverte (✏️, 🖨️) : le menu se referme ; on garde le menu ouvert pour choisir un type de jeu
+    pan.addEventListener("click", function (e) { var b = e.target.closest("button"); if (b && !b.closest(CONF.garderOuvert || ".types")) setTimeout(function () { ouvrir(false); }, 120); });
+    document.addEventListener("pointerdown", function (e) { if (!pan.hidden && !pan.contains(e.target) && e.target !== btn) ouvrir(false); });
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", installer); else installer();
+})();
+</script>
+<!-- /MENU -->
+<!-- INDICE-COTE -->
+<script>
+/* 💡 sur le côté (Karim, 21/10) : dans les jeux qui ont un bouton « 💡 Indice » (.btn-indice), le bouton devient une ampoule seule,
+   collée au bord droit de l'écran, à mi-hauteur ; l'indice s'ouvre dans une bulle à côté d'elle, jamais sous le jeu.
+   Le jeu garde son propre code : au toucher, on regarde quel texte il vient d'écrire (zone #indice, ou la ligne de message),
+   on le reprend dans la bulle et on remet la zone comme avant. Installé par injecter.py. */
+(function () {
+  var b = document.querySelector(".btn-indice"); if (!b) return;
+  var st = document.createElement("style");
+  st.textContent =
+    ".btn-indice.cote{position:fixed !important; right:18px; top:50%; transform:translateY(-50%); width:76px; height:76px; padding:0 !important; border-radius:50% !important;" +
+    " font-size:40px !important; line-height:1; z-index:60; margin:0 !important; display:flex; align-items:center; justify-content:center}" +
+    "#bulle-cote{position:fixed; right:110px; top:50%; transform:translateY(-50%); max-width:520px; background:#fff8c4; border:2px solid #d4b106; border-radius:18px;" +
+    " padding:16px 22px; font-size:26px; line-height:1.35; z-index:60; box-shadow:0 6px 18px rgba(0,0,0,.15); display:none}" +
+    "#bulle-cote::after{content:''; position:absolute; right:-14px; top:50%; margin-top:-12px; border:12px solid transparent; border-left:14px solid #d4b106; border-right:none}";
+  document.head.appendChild(st);
+  b.classList.add("cote"); b.textContent = "💡"; b.title = "Indice"; document.body.appendChild(b);
+  var bulle = document.createElement("div"); bulle.id = "bulle-cote"; document.body.appendChild(bulle);
+  var zones = function () { return Array.prototype.slice.call(document.querySelectorAll("#indice, .indice, #message, .message, #verdict, .verdict, #consigne-aide")); };
+  var avant = [], minuteur = null;
+  b.addEventListener("click", function () { avant = zones().map(function (z) { return [z, z.textContent, z.className]; }); }, true);   // avant le code du jeu
+  b.addEventListener("click", function () {
+    setTimeout(function () {
+      var txt = "";
+      avant.forEach(function (a) {
+        var z = a[0], neuf = z.textContent;
+        if (neuf !== a[1] && neuf.trim()) { txt = neuf; z.textContent = a[1]; z.className = a[2]; }
+      });
+      if (!txt) return;   // le jeu montre l'indice autrement : on le laisse faire
+      bulle.textContent = txt.replace(/^\s*💡\s*/, ""); bulle.style.display = "block";
+      clearTimeout(minuteur); minuteur = setTimeout(function () { bulle.style.display = "none"; }, 8000);
+    }, 0);
+  });
+  document.addEventListener("pointerdown", function (e) { if (e.target !== b && e.target !== bulle) bulle.style.display = "none"; });
+})();
+</script>
+<!-- /INDICE-COTE -->
+</body>
+</html>

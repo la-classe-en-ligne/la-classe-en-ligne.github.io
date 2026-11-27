@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>La fleur des trios cachés</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath d='M32 40 V62' stroke='%232e8b3e' stroke-width='5'/%3E%3Cellipse cx='42' cy='54' rx='9' ry='4' fill='%233fae5a' transform='rotate(-30 42 54)'/%3E%3Ccircle cx='32' cy='12' r='10' fill='%23ef476f'/%3E%3Ccircle cx='48' cy='24' r='10' fill='%23f78c3b'/%3E%3Ccircle cx='42' cy='40' r='10' fill='%2306a77d'/%3E%3Ccircle cx='22' cy='40' r='10' fill='%23118ab2'/%3E%3Ccircle cx='16' cy='24' r='10' fill='%238e5bd1'/%3E%3Ccircle cx='32' cy='27' r='9' fill='%23264653'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Quicksand:wght@600;700&display=swap">
+<style>
+  /* Univers de ce jeu : une fleur dans un jardin. Ses 5 pétales sont des pentagones coupés en 5 triangles, un nombre par
+     triangle ; dans chaque pétale, deux nombres en donnent un troisième (ou font le nombre du cœur, aux compléments).
+     On les touche : le pétale se referme et son résultat va se ranger dans le triangle du cœur qui le touche.
+     Les 5 rangés, on rejoue au cœur. Chaque partie a de nouveaux nombres. */
+  :root{ --encre:#264653; --gris:#5c7480; --bord:#d5e3e6; --bien:#1a8f5c; --faux:#d6455d; }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{margin:0; color:var(--encre); font-family:"Quicksand",system-ui,sans-serif; overflow:hidden; height:100vh; display:flex; flex-direction:column;
+    background:linear-gradient(180deg,#d8f0fb 0%,#eef8fc 60%,#cfe9b8 82%,#a9d58a 100%); user-select:none; -webkit-user-select:none; touch-action:none;}
+  .barre{display:grid; grid-template-columns:1fr auto; align-items:center; gap:16px; padding:8px 22px; background:#fff; border-bottom:3px solid var(--bord);}
+  .titre{display:flex; align-items:center; gap:12px;} .titre svg{width:48px; height:48px;}
+  .titre h1{font-family:"Baloo 2",cursive; font-weight:800; font-size:1.9rem; margin:0;}
+  .droite{display:flex; align-items:center; gap:12px;}
+  .score{display:flex; flex-direction:column; align-items:center; padding:2px 12px; border-radius:12px; background:#fff; border:2px solid var(--bord); min-width:120px;}
+  .score small{font-size:.75rem; font-weight:700; color:var(--gris); text-transform:uppercase; letter-spacing:.5px;}
+  .score b{font-family:"Baloo 2",cursive; font-size:1.7rem; line-height:1.05;}
+  .choix{display:flex; flex-direction:column; gap:4px;}
+  .types,.niveaux{display:flex; gap:4px;}
+  .types button,.niveaux button{font:inherit; font-weight:700; font-size:.9rem; padding:2px 12px; border-radius:999px; cursor:pointer; background:#fff; color:var(--gris); border:2px solid var(--bord);}
+  .niveaux button{min-width:38px;}
+  .types button.actif,.niveaux button.actif{background:var(--encre); color:#fff; border-color:var(--encre);}
+  .btn-petit{font:inherit; font-weight:700; padding:8px 12px; border-radius:12px; cursor:pointer; background:#fff; border:2px solid var(--bord);}
+  .consigne{display:flex; justify-content:center; padding:8px 20px 0;}
+  .consigne p{margin:0; font-family:"Baloo 2",cursive; font-weight:700; font-size:2.1rem; text-align:center; background:#fff; padding:2px 22px; border-radius:16px; border:2px solid var(--bord);}
+
+  .jeu{flex:1; min-height:0; position:relative; overflow:hidden;}
+  #fleur{position:absolute; inset:0; width:100%; height:100%;}
+  .tri{stroke:#fff; stroke-width:4; cursor:pointer; transition:fill .25s ease;}
+  .tri.choisi{fill:#ffe08a !important;}
+  .tri.vide{fill:#fffdf3; stroke:#c9b98a; stroke-dasharray:8 6;}
+  .bord{fill:none; stroke-width:7; stroke-linejoin:round; pointer-events:none;}
+  .nb{font-family:"Baloo 2",cursive; font-weight:800; fill:#fff; text-anchor:middle; dominant-baseline:central; pointer-events:none; paint-order:stroke; stroke:rgba(0,0,0,.18); stroke-width:3px;}
+  .coeur-cible circle{fill:#fff; stroke:var(--encre); stroke-width:4;} .coeur-cible text{font-family:"Baloo 2",cursive; font-weight:800; fill:var(--encre); text-anchor:middle; dominant-baseline:central;}
+  .res-grand{font-family:"Baloo 2",cursive; font-weight:800; fill:#fff; text-anchor:middle; dominant-baseline:central; pointer-events:none;}
+  .res-calc{font-family:"Baloo 2",cursive; font-weight:800; fill:#fff; text-anchor:middle; pointer-events:none;}
+  .ferme .tri{pointer-events:none;}
+  .attente .tri{pointer-events:none;}
+  .secoue{animation:secoue .4s ease;} @keyframes secoue{0%,100%{transform:none}25%{transform:translateX(-10px)}75%{transform:translateX(10px)}}
+  .repere .bord{stroke:#ffb300; stroke-width:12;}
+  .signe{cursor:pointer;} .signe circle{fill:var(--encre);} .signe text{font-family:"Baloo 2",cursive; font-weight:800; fill:#fff; text-anchor:middle; dominant-baseline:central;}
+  .arrive{animation:arrive .6s ease;} @keyframes arrive{0%{opacity:0}100%{opacity:1}}
+  .fleurit{animation:fleurit 1.2s ease;} @keyframes fleurit{0%{transform:scale(1)}40%{transform:scale(1.06)}100%{transform:scale(1)}}
+
+  .bas{display:flex; align-items:center; justify-content:center; gap:18px; padding:4px 0 12px;}
+  .btn-indice{font:inherit; font-weight:700; font-size:1.2rem; padding:6px 16px; border-radius:999px; cursor:pointer; background:#fff8dc; border:2px solid #f1d27a; color:#7a5b00;}
+  .verdict{min-height:3rem; font-family:"Baloo 2",cursive; font-size:2.2rem; font-weight:800; text-align:center;}
+  .verdict:not(:empty){background:#fff; padding:0 24px; border-radius:14px;}
+  .verdict.bien{color:var(--bien);} .verdict.faux{color:var(--faux);}
+  .btn-suivant{font:inherit; font-family:"Baloo 2",cursive; font-weight:800; font-size:1.8rem; padding:4px 34px; border-radius:999px; cursor:pointer; background:var(--encre); color:#fff; border:none;}
+  .btn-suivant[hidden]{display:none;}
+
+  /* la feuille papier : la fleur à remplir, deux parties par A4 (A5 × 2) */
+  #papier{display:none;}
+  @media print{
+    @page{size:A4 portrait; margin:8mm;}
+    body{display:block; height:auto; overflow:visible; background:#fff;}
+    body > :not(#papier){display:none !important;}
+    #papier{display:block;}
+    .feuille{height:138mm; padding:1mm 3mm; page-break-inside:avoid; border-bottom:1px dashed #999;}
+    .feuille:nth-child(2n){border-bottom:none; page-break-after:always;}
+    .feuille h3{margin:0; font-family:"Baloo 2",cursive; font-size:14pt;}
+    .feuille p{margin:0 0 1mm; font-size:10pt;}
+    .deux-fleurs{display:flex; justify-content:space-between;} .deux-fleurs svg{width:94mm; height:112mm;}
+  }
+</style>
+</head>
+<body>
+<div class="barre">
+  <div class="titre">
+    <svg viewBox="0 0 64 64" aria-hidden="true"><path d="M32 40 V62" stroke="#2e8b3e" stroke-width="5"/><ellipse cx="42" cy="54" rx="9" ry="4" fill="#3fae5a" transform="rotate(-30 42 54)"/><circle cx="32" cy="12" r="10" fill="#ef476f"/><circle cx="48" cy="24" r="10" fill="#f78c3b"/><circle cx="42" cy="40" r="10" fill="#06a77d"/><circle cx="22" cy="40" r="10" fill="#118ab2"/><circle cx="16" cy="24" r="10" fill="#8e5bd1"/><circle cx="32" cy="27" r="9" fill="#264653"/></svg>
+    <h1>La fleur des trios cachés</h1>
+  </div>
+  <div class="droite">
+    <div class="score" title="Pétales trouvés du premier coup"><small>Pétales réussis</small><b id="score">0</b></div>
+    <div class="score" title="Le meilleur score à ce niveau, gardé sur cet ordinateur"><small>🏆 Record</small><b id="record">0</b></div>
+    <div class="choix">
+      <div class="types" id="types">
+        <button type="button" data-type="plus" class="actif">+</button>
+        <button type="button" data-type="moins">−</button>
+        <button type="button" data-type="fois">×</button>
+        <button type="button" data-type="compl">Compléments</button>
+        <button type="button" data-type="defi">Défi</button>
+      </div>
+      <div class="niveaux" id="niveaux"></div>
+    </div>
+    <button class="btn-petit" id="btnSon" type="button" title="Son">🔊</button>
+    <button class="btn-petit" id="btnImprimer" type="button" title="Imprimer cette partie et une autre, deux par A4">🖨️ Feuille</button>
+  </div>
+</div>
+<div class="consigne"><p id="consigne"></p></div>
+<div class="jeu" id="jeu"><svg id="fleur"></svg></div>
+<div class="bas">
+  <button class="btn-indice" id="btnIndice" type="button">💡 Indice</button>
+  <div class="verdict" id="verdict"></div>
+  <button class="btn-suivant" id="btnSuivant" type="button" hidden>Nouvelle fleur ➜</button>
+</div>
+<div id="papier"></div>
+<script>
+(function () {
+  // Pour chaque type, 5 niveaux ; chaque partie tire de nouveaux nombres (graine au hasard). Nombres inventés.
+  // a, b : bornes des deux nombres ; pas : on prend des multiples de pas ; max : le plus grand nombre affiché ;
+  // coeur : les signes du trio du cœur (si le type ne permet pas de trio avec ses propres résultats).
+  var TYPES = {
+    plus: { nom: "+", ops: ["+"], niv: [
+      { a: [1, 6], b: [1, 6], max: 10, titre: "≤ 10" }, { a: [2, 9], b: [2, 9], max: 18, titre: "≤ 20" },
+      { a: [10, 45], b: [2, 9], max: 50, titre: "≤ 50" }, { a: [11, 60], b: [11, 39], max: 100, titre: "≤ 100" },
+      { a: [100, 600], b: [100, 400], pas: 10, max: 1000, titre: "≤ 1 000" } ] },
+    moins: { nom: "−", ops: ["−"], niv: [
+      { b: [1, 9], r: [1, 9], max: 10, titre: "≤ 10" }, { b: [2, 9], r: [2, 9], max: 18, titre: "≤ 20" },
+      { b: [2, 9], r: [5, 40], max: 50, titre: "≤ 50" }, { b: [11, 39], r: [5, 60], max: 100, titre: "≤ 100" },
+      { b: [100, 400], r: [50, 600], pas: 10, max: 1000, titre: "≤ 1 000" } ] },
+    fois: { nom: "×", ops: ["×"], niv: [
+      { a: [2, 5], b: [2, 5], coeur: ["+", "−"], titre: "tables 2 à 5" }, { a: [2, 9], b: [2, 5], coeur: ["+", "−"], titre: "× 2 à 5" },
+      { a: [2, 9], b: [2, 9], titre: "tables 2 à 9" }, { a: [2, 9], b: [10, 90], pasB: 10, coeur: ["+", "−"], titre: "× 10, 20…" },
+      { a: [11, 25], b: [2, 6], coeur: ["+", "−"], titre: "× grands" } ] },
+    compl: { nom: "compléments", ops: ["+"], niv: [
+      { cible: 10, pas: 1, titre: "à 10" }, { cible: 20, pas: 1, titre: "à 20" }, { cible: 100, pas: 10, titre: "à 100 (dizaines)" },
+      { cible: 100, pas: 1, titre: "à 100" }, { cible: 1000, pas: 50, titre: "à 1 000" } ] },
+    defi: { nom: "Défi", ops: ["+", "−", "×"], niv: [
+      { a: [2, 9], b: [2, 9], max: 18, ops: ["+", "−"], titre: "+ −" }, { a: [2, 9], b: [2, 9], max: 81, titre: "+ − ×" },
+      { a: [2, 30], b: [2, 9], max: 100, titre: "≤ 100" }, { a: [10, 60], b: [2, 12], max: 200, titre: "≤ 200" },
+      { a: [20, 99], b: [2, 15], max: 1000, titre: "grands" } ] }
+  };
+  var COULEURS = ["#ef476f", "#f78c3b", "#06a77d", "#118ab2", "#8e5bd1"], COEUR = "#264653";
+  var NS = "http://www.w3.org/2000/svg";
+  var el = function (id) { return document.getElementById(id); };
+  var type = "plus", niv = 0, graine = 1, score = 0, partie = null, faits = 0, etats = [], geo = null, sonActif = true;
+
+  function alea(g) { var s = g % 2147483647; if (s <= 0) s += 2147483646; return function () { s = s * 16807 % 2147483647; return (s - 1) / 2147483646; }; }
+  function entre(r, a, b, pas) { pas = pas || 1; var lo = Math.ceil(a / pas), hi = Math.floor(b / pas); return pas * (lo + Math.floor(r() * (hi - lo + 1))); }
+  function calc(a, op, b) { return op === "+" ? a + b : op === "×" ? a * b : a - b; }
+  function melanger(r, t) { for (var i = t.length - 1; i > 0; i--) { var j = Math.floor(r() * (i + 1)), w = t[i]; t[i] = t[j]; t[j] = w; } return t; }
+  var cfg = function () { return TYPES[type].niv[niv]; };
+  var opsDe = function (c) { return c.ops || TYPES[type].ops; };
+  // les trios d'un ensemble de nombres (8 = 3 + 5 et 5 = 8 − 3 : le même trio)
+  function trios(ns, ops) {
+    var t = [], vus = {};
+    for (var x = 0; x < ns.length; x++) for (var y = 0; y < ns.length; y++) for (var z = 0; z < ns.length; z++) {
+      if (x === y || y === z || x === z) continue;
+      ops.forEach(function (op) {
+        var cle = [x, y, z].sort().join("");
+        if (calc(ns[x], op, ns[y]) === ns[z] && !vus[cle]) { vus[cle] = 1; t.push({ a: x, b: y, c: z, op: op }); }
+      });
+    }
+    return t;
+  }
+  // compléments : les paires qui font la cible
+  function paires(ns, cible) { var t = []; for (var x = 0; x < ns.length; x++) for (var y = x + 1; y < ns.length; y++) if (ns[x] + ns[y] === cible) t.push({ a: x, b: y }); return t; }
+
+  // un calcul a op b = c tiré dans le niveau
+  function tirer(r, c, op) {
+    var a, b;
+    if (op === "+") { a = entre(r, c.a[0], c.a[1], c.pas); b = entre(r, c.b[0], c.b[1], c.pas); if (c.max && a + b > c.max) return null; return [a, b, a + b]; }
+    if (op === "−") { if (c.r) { b = entre(r, c.b[0], c.b[1], c.pas); var res = entre(r, c.r[0], c.r[1], c.pas); if (res + b > c.max) return null; return [res + b, b, res]; }
+      a = entre(r, c.a[0], c.a[1], c.pas); b = entre(r, c.b[0], c.b[1], c.pas); if (a - b < 2) return null; return [a, b, a - b]; }
+    a = entre(r, c.a[0], c.a[1]); b = entre(r, c.b[0], c.b[1], c.pasB); if (c.max && a * b > c.max) return null; return [a, b, a * b];
+  }
+  function leurre(r, c, ns) {   // un nombre de la même taille que les autres
+    var lo = Math.min.apply(null, ns), hi = Math.max.apply(null, ns), pas = c.pas || 1;
+    return entre(r, Math.max(1, Math.floor(lo * 0.7)), Math.ceil(hi * 1.15) + 2, pas);
+  }
+  // un pétale : 5 nombres, un seul trio (ou une seule paire qui fait la cible) ; res : le nombre qui va au cœur
+  function petale(r, c, voulu) {
+    var ops = opsDe(c);
+    for (var essai = 0; essai < 1500; essai++) {
+      var ns, res;
+      if (c.cible) { var x = voulu !== undefined ? voulu : entre(r, c.pas, c.cible - c.pas, c.pas); if (x <= 0 || x >= c.cible) return null; ns = [x, c.cible - x]; res = x; if (ns[0] === ns[1]) continue; }
+      else { var op = ops[Math.floor(r() * ops.length)], t = tirer(r, c, op); if (!t || t[0] === t[1] || t[0] === t[2] || t[1] === t[2]) continue;
+        if (voulu !== undefined && t[2] !== voulu) continue; ns = t.slice(); res = t[2]; }
+      var garde = 0;
+      while (ns.length < 5 && garde++ < 50) { var v = c.cible ? entre(r, c.pas, c.cible - c.pas, c.pas) : leurre(r, c, ns); if (v > 0 && ns.indexOf(v) === -1) ns.push(v); }
+      if (ns.length < 5) continue;
+      if (c.cible ? paires(ns, c.cible).length !== 1 : trios(ns, ops).length !== 1) continue;
+      return { ns: melanger(r, ns), res: res };
+    }
+    return null;
+  }
+  function construire(c, g) {
+    var r = alea(g), ops = opsDe(c), coeurOps = c.coeur || ops, possibles = null;
+    for (var tour = 0; tour < 3000; tour++) {
+      var ps = [], ok = true;
+      if (c.cible) {   // les 5 nombres qui partent au cœur : une seule paire y fait la cible
+        var vals = []; while (vals.length < 5) { var v = entre(r, c.pas, c.cible - c.pas, c.pas); if (vals.indexOf(v) === -1) vals.push(v); }
+        if (paires(vals, c.cible).length !== 1) continue;
+        for (var k = 0; k < 5 && ok; k++) { var p = petale(r, c, vals[k]); if (!p) ok = false; else ps.push(p); }
+      } else {
+        if (!possibles) { possibles = []; for (var e = 0; e < 600; e++) { var op = ops[Math.floor(r() * ops.length)], t = tirer(r, c, op); if (t && possibles.indexOf(t[2]) === -1) possibles.push(t[2]); } }
+        var res = []; while (res.length < 5) { var v2 = possibles[Math.floor(r() * possibles.length)]; if (res.indexOf(v2) === -1) res.push(v2); }
+        if (trios(res, coeurOps).length !== 1) continue;
+        for (var k2 = 0; k2 < 5 && ok; k2++) { var p2 = petale(r, c, res[k2]); if (!p2) ok = false; else ps.push(p2); }
+      }
+      if (ok) return { pentas: ps.map(function (q) { return q.ns; }), res: ps.map(function (q) { return q.res; }), coeurOps: coeurOps };
+    }
+    return null;
+  }
+
+  // ---------- la fleur : le cœur et les 5 pétales collés sur ses côtés, la tige et les feuilles ----------
+  function geometrie(cx, cy, R) {
+    var V = []; for (var k = 0; k < 5; k++) { var an = (-90 + 72 * k) * Math.PI / 180; V.push([cx + R * Math.cos(an), cy + R * Math.sin(an)]); }
+    function reflet(P, A, B) { var dx = B[0] - A[0], dy = B[1] - A[1], t = ((P[0] - A[0]) * dx + (P[1] - A[1]) * dy) / (dx * dx + dy * dy);
+      var H = [A[0] + t * dx, A[1] + t * dy]; return [2 * H[0] - P[0], 2 * H[1] - P[1]]; }
+    var pentas = [];
+    for (var k = 0; k < 5; k++) { var A = V[k], B = V[(k + 1) % 5];
+      pentas.push({ centre: reflet([cx, cy], A, B), sommets: [A, B, reflet(V[(k + 2) % 5], A, B), reflet(V[(k + 3) % 5], A, B), reflet(V[(k + 4) % 5], A, B)] }); }
+    pentas.push({ centre: [cx, cy], sommets: V });
+    return pentas;
+  }
+  function triangles(P) { var t = []; for (var i = 0; i < 5; i++) t.push([P.centre, P.sommets[i], P.sommets[(i + 1) % 5]]); return t; }
+  function centroide(T) { return [(T[0][0] + T[1][0] + T[2][0]) / 3, (T[0][1] + T[1][1] + T[2][1]) / 3]; }
+  function pts(L) { return L.map(function (q) { return q[0].toFixed(1) + "," + q[1].toFixed(1); }).join(" "); }
+  function svg(tag, at, txt) { var e = document.createElementNS(NS, tag); for (var k in at) e.setAttribute(k, at[k]); if (txt !== undefined) e.textContent = txt; return e; }
+  function cadrer(W, H, hautFleur) {   // la fleur dans le haut (hautFleur), la tige en dessous
+    var g0 = geometrie(0, 0, 1), xs = [], ys = [];
+    g0.forEach(function (P) { P.sommets.forEach(function (q) { xs.push(q[0]); ys.push(q[1]); }); });
+    var bx = [Math.min.apply(null, xs), Math.max.apply(null, xs)], by = [Math.min.apply(null, ys), Math.max.apply(null, ys)];
+    var R = Math.min((W - 40) / (bx[1] - bx[0]), (hautFleur - 20) / (by[1] - by[0]));
+    return { R: R, g: geometrie(W / 2 - R * (bx[0] + bx[1]) / 2, 10 - R * by[0], R), bas: 10 + R * (by[1] - by[0]) };
+  }
+  function tige(F, cx, yHaut, yBas, R) {
+    var e = R * 0.16;
+    F.appendChild(svg("path", { d: "M" + cx + " " + yHaut + " C " + (cx - R * 0.15) + " " + (yHaut + (yBas - yHaut) * 0.4) + " " + (cx + R * 0.15) + " " + (yHaut + (yBas - yHaut) * 0.7) + " " + cx + " " + yBas,
+      stroke: "#2e8b3e", "stroke-width": e, fill: "none", "stroke-linecap": "round" }));
+    var y1 = yHaut + (yBas - yHaut) * 0.45, y2 = yHaut + (yBas - yHaut) * 0.72;
+    F.appendChild(svg("path", { d: "M" + cx + " " + y1 + " q " + R * 0.9 + " " + -R * 0.55 + " " + R * 1.5 + " " + -R * 0.15 + " q " + -R * 0.6 + " " + R * 0.55 + " " + -R * 1.5 + " " + R * 0.15 + " z", fill: "#3fae5a", stroke: "#2e7d32", "stroke-width": 4 }));
+    F.appendChild(svg("path", { d: "M" + cx + " " + y2 + " q " + -R * 0.9 + " " + -R * 0.55 + " " + -R * 1.5 + " " + -R * 0.15 + " q " + R * 0.6 + " " + R * 0.55 + " " + R * 1.5 + " " + R * 0.15 + " z", fill: "#4cbb64", stroke: "#2e7d32", "stroke-width": 4 }));
+    F.appendChild(svg("ellipse", { cx: cx, cy: yBas + 6, rx: R * 1.6, ry: R * 0.18, fill: "#7cbf5e" }));
+  }
+
+  // ---------- les sons ----------
+  var ctxSon = null;
+  function note(f, t0, duree, typeO, vol) {
+    var o = ctxSon.createOscillator(), g = ctxSon.createGain(), t = ctxSon.currentTime + t0;
+    o.type = typeO || "triangle"; o.frequency.setValueAtTime(f, t); o.connect(g); g.connect(ctxSon.destination);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol || 0.16, t + 0.015); g.gain.exponentialRampToValueAtTime(0.0001, t + duree);
+    o.start(t); o.stop(t + duree + 0.05);
+  }
+  function son(s) {
+    if (!sonActif) return;
+    try {
+      ctxSon = ctxSon || new (window.AudioContext || window.webkitAudioContext)();
+      if (s === "choix") note(660, 0, 0.12, "sine", 0.08);
+      else if (s === "trouve") { [784, 988, 1175, 1568].forEach(function (f, k) { note(f, k * 0.07, 0.35, "triangle", 0.15); }); note(2637, 0.3, 0.5, "sine", 0.06); }
+      else if (s === "range") { note(1568, 0, 0.18, "sine", 0.1); note(2093, 0.08, 0.3, "sine", 0.08); }
+      else if (s === "fin") { [523, 659, 784, 1047, 784, 1047].forEach(function (f, k) { note(f, k * 0.12, k === 5 ? 0.8 : 0.22, "square", 0.07); note(f * 2, k * 0.12, 0.2, "triangle", 0.05); }); }
+      else { note(196, 0, 0.3, "sawtooth", 0.06); note(147, 0.08, 0.35, "sawtooth", 0.05); }
+    } catch (e) {}
+  }
+
+  function cleRecord() { return "fleur-trios-record-" + type + "-" + (niv + 1); }
+  function majScore() {
+    var r = 0; try { r = parseInt(localStorage.getItem(cleRecord()), 10) || 0; } catch (e) {}
+    if (score > r) { r = score; try { localStorage.setItem(cleRecord(), String(r)); } catch (e) {} }
+    el("score").textContent = score; el("record").textContent = r;
+  }
+  function verdict(t, c) { el("verdict").textContent = t; el("verdict").className = "verdict" + (c ? " " + c : ""); }
+  function secoue(g) { g.classList.remove("secoue"); void g.getBoundingClientRect(); g.classList.add("secoue"); }
+  var ns = function (p) { return p === 5 ? partie.res : partie.pentas[p]; };
+  var opsP = function (p) { return p === 5 ? partie.coeurOps : opsDe(cfg()); };
+  function n(v) { return String(v).replace(/\B(?=(\d{3})+(?!\d))/g, " "); }
+
+  function afficher() {
+    partie = construire(cfg(), graine); faits = 0; choisi = null;
+    etats = []; for (var q = 0; q < 6; q++) etats.push({ erreurs: 0, fait: false });
+    var F = el("fleur"), W = F.clientWidth, H = F.clientHeight; F.innerHTML = "";
+    F.setAttribute("viewBox", "0 0 " + W + " " + H);
+    var cad = cadrer(W, H, H * 0.82); geo = cad.g; var R = cad.R;
+    tige(F, W / 2, geo[5].centre[1] + R, H - 8, R);
+    var taille = Math.round(R * (cfg().max >= 1000 || cfg().cible === 1000 || cfg().a && cfg().a[1] > 99 ? 0.22 : 0.3));
+    geo.forEach(function (P, p) {
+      var g = svg("g", { "class": "penta" + (p === 5 ? " attente" : ""), "data-p": p }), coul = p === 5 ? COEUR : COULEURS[p];
+      g.style.transformOrigin = P.centre[0] + "px " + P.centre[1] + "px";
+      triangles(P).forEach(function (T, i) {
+        g.appendChild(svg("polygon", { "class": "tri" + (p === 5 ? " vide" : ""), points: pts(T), fill: coul, "data-p": p, "data-i": i }));
+        var c = centroide(T); g.appendChild(svg("text", { "class": "nb", x: c[0], y: c[1], "font-size": taille, "data-i": i }, p === 5 ? "" : n(ns(p)[i])));
+      });
+      g.appendChild(svg("polygon", { "class": "bord", points: pts(P.sommets), stroke: coul }));
+      if (cfg().cible) {   // aux compléments, le nombre à faire au cœur de chaque pétale
+        var cc = svg("g", { "class": "coeur-cible" }); cc.appendChild(svg("circle", { cx: P.centre[0], cy: P.centre[1], r: R * 0.2 }));
+        cc.appendChild(svg("text", { x: P.centre[0], y: P.centre[1], "font-size": R * (cfg().cible >= 100 ? 0.17 : 0.22) }, n(cfg().cible))); g.appendChild(cc);
+      }
+      F.appendChild(g);
+    });
+    el("consigne").textContent = cfg().cible ? "Touche les deux nombres qui font " + n(cfg().cible) : "Touche les deux nombres qui en donnent un troisième";
+    el("btnSuivant").hidden = true; verdict(""); majScore();
+  }
+
+  // ---------- les gestes : toucher un triangle puis un autre, ou glisser de l'un à l'autre ----------
+  var choisi = null, depart = null;
+  function triSous(x, y) { var t = document.elementFromPoint(x, y); return t && t.classList && t.classList.contains("tri") ? t : null; }
+  function oublier() { if (choisi) choisi.classList.remove("choisi"); choisi = null; }
+  el("fleur").addEventListener("pointerdown", function (ev) {
+    var t = ev.target.closest && ev.target.closest(".tri"); if (!t) return; ev.preventDefault();
+    var g = t.closest(".penta"); if (g.classList.contains("ferme") || g.classList.contains("attente")) return;
+    depart = t;
+  });
+  document.addEventListener("pointerup", function (ev) {
+    if (!depart) return;
+    var d = depart; depart = null;
+    var t = triSous(ev.clientX, ev.clientY);
+    if (t && t !== d && t.dataset.p === d.dataset.p) { oublier(); return essayer(+d.dataset.p, +d.dataset.i, +t.dataset.i); }
+    if (t !== d) return;
+    if (choisi && choisi !== d && choisi.dataset.p === d.dataset.p) { var a = +choisi.dataset.i; oublier(); return essayer(+d.dataset.p, a, +d.dataset.i); }
+    var deja = choisi === d; oublier(); if (!deja) { choisi = d; d.classList.add("choisi"); son("choix"); }
+  });
+
+  // la paire touchée doit vraiment donner le 3e nombre (16 − 3 = 13 ou 16 − 13 = 3 ; pas 13 + 3) ; aux compléments, faire la cible
+  function essayer(p, i, j) {
+    var t = ns(p), g = document.querySelector('.penta[data-p="' + p + '"]'), bon = null, c = cfg();
+    if (c.cible) {
+      if (t[i] + t[j] === c.cible) { var garde = p < 5 ? partie.res[p] : t[i]; bon = { a: garde, b: c.cible - garde, op: "+", c: c.cible, va: garde }; }
+    } else {
+      var tr = trios(t, opsP(p))[0], S = [tr.a, tr.b, tr.c];
+      if (S.indexOf(i) !== -1 && S.indexOf(j) !== -1) {
+        var z = S.filter(function (k) { return k !== i && k !== j; })[0];
+        opsP(p).forEach(function (op) { if (bon) return;
+          if (calc(t[i], op, t[j]) === t[z]) bon = { a: t[i], b: t[j], op: op, c: t[z] };
+          else if (calc(t[j], op, t[i]) === t[z]) bon = { a: t[j], b: t[i], op: op, c: t[z] }; });
+      }
+      // 12/10, Karim : on ne réécrit jamais le calcul touché. 16 − 13 = 3 est juste, mais le cœur attend 13 (16 − 3 = 13) :
+      // pas d'erreur, on demande l'autre calcul de la même famille de nombres.
+      if (bon && p < 5 && bon.c !== partie.res[p]) {
+        verdict("👍 " + n(bon.a) + " " + bon.op + " " + n(bon.b) + " = " + n(bon.c) + ", c'est juste ! Trouve l'autre calcul avec ces trois nombres.", "bien");
+        son("choix"); return;
+      }
+      if (bon) bon.va = bon.c;
+    }
+    if (!bon) { etats[p].erreurs++; secoue(g); son("non"); verdict("🤪", "faux"); return; }
+    if (type === "defi" || (p === 5 && partie.coeurOps.length > 1)) return choisirSigne(g, p, bon);
+    fermer(g, p, bon);
+  }
+  function choisirSigne(g, p, bon) {
+    var P = geo[p], r = Math.hypot(geo[5].sommets[0][0] - geo[5].centre[0], geo[5].sommets[0][1] - geo[5].centre[1]);
+    var boite = svg("g", { "class": "signes" });
+    ["+", "−", "×"].forEach(function (op, k) {
+      var x = P.centre[0] + (k - 1) * r * 0.48, y = P.centre[1];
+      var s = svg("g", { "class": "signe" }); s.appendChild(svg("circle", { cx: x, cy: y, r: r * 0.2 })); s.appendChild(svg("text", { x: x, y: y, "font-size": r * 0.28 }, op));
+      s.addEventListener("pointerup", function (e) {
+        e.stopPropagation();
+        if (calc(bon.a, op, bon.b) !== bon.c) { etats[p].erreurs++; secoue(s); son("non"); verdict("🤪", "faux"); return; }
+        boite.remove(); fermer(g, p, { a: bon.a, b: bon.b, op: op, c: bon.c, va: bon.va });
+      });
+      boite.appendChild(s);
+    });
+    el("fleur").appendChild(boite); verdict("Quel calcul ? Touche le signe");
+  }
+  function fermer(g, p, bon) {
+    var P = geo[p], coul = p === 5 ? COEUR : COULEURS[p], R = Math.hypot(P.sommets[0][0] - P.centre[0], P.sommets[0][1] - P.centre[1]);
+    g.classList.add("ferme");
+    g.querySelectorAll(".tri").forEach(function (t) { t.setAttribute("fill", coul); t.style.stroke = coul; });
+    g.querySelectorAll(".nb, .coeur-cible").forEach(function (x) { x.style.display = "none"; });
+    var grand = n(bon.va), fs = R * (grand.length > 4 ? 0.36 : grand.length > 2 ? 0.48 : 0.62);
+    g.appendChild(svg("text", { "class": "res-grand arrive", x: P.centre[0], y: P.centre[1] - R * 0.08, "font-size": fs }, grand));
+    g.appendChild(svg("text", { "class": "res-calc arrive", x: P.centre[0], y: P.centre[1] + R * 0.5, "font-size": R * 0.19 }, n(bon.a) + " " + bon.op + " " + n(bon.b) + " = " + n(bon.c)));
+    etats[p].fait = true; if (!etats[p].erreurs) score++; majScore();
+    if (p === 5) { son("fin"); var f = el("fleur"); f.classList.add("fleurit"); verdict("✅ La fleur a éclos !", "bien"); el("btnSuivant").hidden = false; el("consigne").textContent = "Bravo !"; return; }
+    var m = document.querySelector('.penta[data-p="5"]'), t = m.querySelector('.tri[data-i="' + p + '"]'), x = m.querySelector('.nb[data-i="' + p + '"]');
+    t.classList.remove("vide"); t.setAttribute("fill", coul); x.textContent = n(bon.va); x.classList.add("arrive");
+    faits++; verdict("✅", "bien"); son("trouve"); setTimeout(function () { son("range"); }, 650);
+    if (faits === 5) { m.classList.remove("attente"); m.querySelectorAll(".tri").forEach(function (q) { q.setAttribute("fill", COEUR); });
+      el("consigne").textContent = cfg().cible ? "Le centre : quels deux nombres font " + n(cfg().cible) + " ?" : "Le centre de la fleur : encore une fois !"; }
+  }
+
+  el("btnIndice").addEventListener("click", function () {
+    document.querySelectorAll(".penta.repere").forEach(function (x) { x.classList.remove("repere"); });
+    var p = etats.findIndex(function (e, k) { return !e.fait && (k < 5 || faits === 5); }); if (p === -1) return;
+    var g = document.querySelector('.penta[data-p="' + p + '"]'); g.classList.add("repere");
+    if (cfg().cible) { var pr = paires(ns(p), cfg().cible)[0]; verdict("💡 Ici, il faut " + n(ns(p)[pr.a]) + " + … = " + n(cfg().cible)); }
+    else { var t = trios(ns(p), opsP(p))[0]; verdict("💡 Ici, deux nombres donnent " + n(ns(p)[t.c])); }
+  });
+  function nouvelle() { graine = 1 + Math.floor(Math.random() * 2147483000); afficher(); }
+  el("btnSuivant").addEventListener("click", nouvelle);
+  el("btnSon").addEventListener("click", function () { sonActif = !sonActif; el("btnSon").textContent = sonActif ? "🔊" : "🔇"; });
+  // la feuille papier (Karim, 10/10) : 4 fleurs différentes par A4, pour 2 élèves : chaque demi-feuille (à couper) porte 2 fleurs
+  el("btnImprimer").addEventListener("click", function () {
+    var h = "", c = cfg();
+    var MOT_T = { plus: "Additions", moins: "Soustractions", fois: "Multiplications", compl: "Compléments", defi: "Défi" };
+    [[graine, graine + 7919], [graine + 2 * 7919, graine + 3 * 7919]].forEach(function (paire) {
+      var fleurs = "";
+      paire.forEach(function (g) {
+      var P = construire(c, g), cad = { g: geometrie(500, 280, 105) }, s = '<svg viewBox="200 0 600 680">';
+      s += '<path d="M500 385 C 485 470 515 560 500 670" stroke="#555" stroke-width="10" fill="none"/><path d="M500 520 q 90 -55 150 -15 q -60 55 -150 15 z" fill="#ddd" stroke="#555" stroke-width="3"/><path d="M500 600 q -90 -55 -150 -15 q 60 55 150 15 z" fill="#ddd" stroke="#555" stroke-width="3"/>';
+      cad.g.forEach(function (Q, q) {
+        triangles(Q).forEach(function (T, i) { var cc = centroide(T);
+          s += '<polygon points="' + pts(T) + '" fill="' + (q === 5 ? "#fff" : "#f2f2f2") + '" stroke="#000" stroke-width="' + (q === 5 ? 1.2 : 1.5) + '"/>';
+          if (q < 5) s += '<text x="' + cc[0] + '" y="' + (cc[1] + 10) + '" text-anchor="middle" font-family="Arial" font-weight="bold" font-size="' + (n(P.pentas[q][i]).length > 3 ? 21 : 28) + '">' + n(P.pentas[q][i]) + '</text>'; });
+        s += '<polygon points="' + pts(Q.sommets) + '" fill="none" stroke="#000" stroke-width="' + (q === 5 ? 4 : 3) + '"/>';
+        if (c.cible) s += '<circle cx="' + Q.centre[0] + '" cy="' + Q.centre[1] + '" r="20" fill="#fff" stroke="#000" stroke-width="2"/><text x="' + Q.centre[0] + '" y="' + (Q.centre[1] + 7) + '" text-anchor="middle" font-family="Arial" font-weight="bold" font-size="' + (c.cible >= 100 ? 15 : 20) + '">' + n(c.cible) + '</text>';
+      });
+      fleurs += s + '</svg>';
+      });
+      h += '<div class="feuille"><h3>🌼 La fleur des trios cachés — ' + MOT_T[type] + (c.cible ? " à " + n(c.cible) : "") + '</h3><p>' + (c.cible
+          ? "Dans chaque pétale, entoure <b>en jaune</b> les deux nombres qui font " + n(c.cible) + " ; écris le premier dans le triangle du <b>centre</b> qui touche ce pétale. <b>Au centre</b> : entoure en jaune les deux nombres qui font " + n(c.cible) + "."
+          : "Dans chaque pétale, entoure <b>en jaune</b> les deux nombres et <b>en rose</b> leur résultat ; écris ce résultat dans le triangle du <b>centre</b> qui touche ce pétale. <b>Au centre</b> : entoure en jaune les deux nombres et en rose le résultat.") + '</p><div class="deux-fleurs">' + fleurs + '</div></div>';
+    });
+    el("papier").innerHTML = h; window.print();
+  });
+
+  // ---------- choisir le type et le niveau ----------
+  function boutonsNiveaux() {
+    var box = el("niveaux"); box.innerHTML = "";
+    TYPES[type].niv.forEach(function (c, k) { var b = document.createElement("button"); b.type = "button"; b.textContent = k + 1; b.title = "Niveau " + (k + 1) + " : " + c.titre;
+      b.className = k === niv ? "actif" : ""; b.addEventListener("click", function () { niv = k; score = 0; boutonsNiveaux(); nouvelle(); }); box.appendChild(b); });
+    document.querySelectorAll("#types button").forEach(function (x) { x.classList.toggle("actif", x.dataset.type === type); });
+  }
+  document.querySelectorAll("#types button").forEach(function (b) { b.addEventListener("click", function () { type = b.dataset.type; niv = 0; score = 0; boutonsNiveaux(); nouvelle(); }); });
+  // Class Flow ouvre l'outil sur un type et un niveau : …html#plus-2 ; la feuille papier peut fixer la partie : #plus-2-123
+  (function () {
+    var h = decodeURIComponent(location.hash.slice(1)).split("-"), anciens = { moins100: ["moins", 3], plus100: ["plus", 3] };
+    if (anciens[h[0]]) { type = anciens[h[0]][0]; niv = anciens[h[0]][1]; }
+    else if (TYPES[h[0]]) { type = h[0]; niv = Math.max(0, Math.min(4, (parseInt(h[1], 10) || 1) - 1)); }
+    boutonsNiveaux();
+    if (h[2]) { graine = parseInt(h[2], 10) || 1; afficher(); } else nouvelle();
+  })();
+  window.addEventListener("resize", function () { if (!faits && !document.querySelector(".ferme")) afficher(); });
+  window.__fleur = { partie: function () { return partie; }, cfg: cfg, type: function () { return type; }, niv: function () { return niv; },
+    trios: function (p) { return trios(ns(p), opsP(p)); }, paires: function (p) { return paires(ns(p), cfg().cible); }, etats: function () { return etats; },
+    verifier: function (t, k, nb) { var c = TYPES[t].niv[k]; for (var q = 0; q < (nb || 10); q++) { var P = construire(c, 1000 + q * 7919); if (!P) return "impossible (" + t + " " + (k + 1) + ")";
+      if (c.cible) { if (paires(P.res, c.cible).length !== 1) return "cœur"; for (var z = 0; z < 5; z++) if (paires(P.pentas[z], c.cible).length !== 1) return "pétale"; }
+      else { if (trios(P.res, P.coeurOps).length !== 1) return "cœur"; for (var z2 = 0; z2 < 5; z2++) if (trios(P.pentas[z2], c.ops || TYPES[t].ops).length !== 1) return "pétale"; } }
+      return "ok"; },
+    types: function () { return Object.keys(TYPES); } };
+})();
+</script>
+<!-- MENU -->
+<script>
+/* ==== LE MENU ☰ (GTH, 10/10) : interface épurée — à l'écran, seulement le titre, le score, la consigne et l'activité ====
+   Tout le reste (niveaux, onglets de méthode, ✏️, 🔊, 🖨️, aide…) part dans un menu ☰, ouvert d'un toucher.
+   Réglage par outil (CONF, posé par l'injecteur) : ancre = où mettre le bouton ☰ (sinon en haut à droite de l'écran) ;
+   cacher = ce qui part dans le menu (sinon : tout ce qui, dans « .barre .droite », n'est pas un score).
+   Installé par .claude/outils/menu-outil/injecter.py ; ne pas modifier dans l'outil, mais dans ce fichier. */
+(function () {
+  var CONF = {};
+  var st = document.createElement("style");
+  st.textContent =
+    ".menu-btn{width:58px; height:58px; border-radius:16px; border:2px solid rgba(0,0,0,.15); background:#fff; color:#1f2a33; font-size:2rem; line-height:1; cursor:pointer; flex:none; padding:0;}" +
+    ".menu-btn.fixe{position:fixed; top:10px; right:12px; z-index:150; box-shadow:0 4px 14px rgba(0,0,0,.15);}" +
+    ".menu-btn.ouvert{background:#1f2a33; color:#fff;}" +
+    ".menu-panneau{position:fixed; top:76px; right:16px; z-index:200; background:#fff; color:#1f2a33; border-radius:18px; box-shadow:0 18px 50px rgba(0,0,0,.28); padding:16px 18px;" +
+    "  display:flex; flex-direction:column; align-items:flex-start; gap:12px; max-width:min(620px, 92vw); max-height:80vh; overflow:auto;}" +
+    ".menu-panneau[hidden]{display:none !important;}" +
+    ".menu-panneau h4{margin:0; font-family:sans-serif; font-size:.85rem; text-transform:uppercase; letter-spacing:.6px; color:#6d7a85;}" +
+    ".menu-panneau > *{position:static !important; margin:0 !important;}" +
+    ".menu-panneau > div,.menu-panneau > nav{display:flex; flex-wrap:wrap; gap:8px;}";
+  document.head.appendChild(st);
+  function installer() {
+    var autres = [];
+    if (CONF.cacher) CONF.cacher.forEach(function (s) { document.querySelectorAll(s).forEach(function (e) { if (autres.indexOf(e) === -1) autres.push(e); }); });
+    else { var d = document.querySelector(".barre .droite"); if (d) autres = Array.prototype.filter.call(d.children, function (e) { return !e.classList.contains("score"); }); }
+    if (!autres.length) return;
+    var btn = document.createElement("button"); btn.type = "button"; btn.className = "menu-btn"; btn.title = "Niveaux et réglages"; btn.textContent = "☰";
+    var pan = document.createElement("div"); pan.className = "menu-panneau"; pan.hidden = true;
+    var t = document.createElement("h4"); t.textContent = "Niveaux et réglages"; pan.appendChild(t);
+    autres.forEach(function (e) { pan.appendChild(e); });
+    var ancre = document.querySelector(CONF.ancre || ".barre .droite");
+    if (ancre) ancre.appendChild(btn); else { btn.classList.add("fixe"); document.body.appendChild(btn); }
+    document.body.appendChild(pan);
+    function ouvrir(o) { pan.hidden = !o; btn.classList.toggle("ouvert", o); }
+    btn.addEventListener("click", function (e) { e.stopPropagation(); ouvrir(pan.hidden); });
+    // un niveau choisi, ou une fenêtre ouverte (✏️, 🖨️) : le menu se referme ; on garde le menu ouvert pour choisir un type de jeu
+    pan.addEventListener("click", function (e) { var b = e.target.closest("button"); if (b && !b.closest(CONF.garderOuvert || ".types")) setTimeout(function () { ouvrir(false); }, 120); });
+    document.addEventListener("pointerdown", function (e) { if (!pan.hidden && !pan.contains(e.target) && e.target !== btn) ouvrir(false); });
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", installer); else installer();
+})();
+</script>
+<!-- /MENU -->
+<!-- INDICE-COTE -->
+<script>
+/* 💡 sur le côté (Karim, 21/10) : dans les jeux qui ont un bouton « 💡 Indice » (.btn-indice), le bouton devient une ampoule seule,
+   collée au bord droit de l'écran, à mi-hauteur ; l'indice s'ouvre dans une bulle à côté d'elle, jamais sous le jeu.
+   Le jeu garde son propre code : au toucher, on regarde quel texte il vient d'écrire (zone #indice, ou la ligne de message),
+   on le reprend dans la bulle et on remet la zone comme avant. Installé par injecter.py. */
+(function () {
+  var b = document.querySelector(".btn-indice"); if (!b) return;
+  var st = document.createElement("style");
+  st.textContent =
+    ".btn-indice.cote{position:fixed !important; right:18px; top:50%; transform:translateY(-50%); width:76px; height:76px; padding:0 !important; border-radius:50% !important;" +
+    " font-size:40px !important; line-height:1; z-index:60; margin:0 !important; display:flex; align-items:center; justify-content:center}" +
+    "#bulle-cote{position:fixed; right:110px; top:50%; transform:translateY(-50%); max-width:520px; background:#fff8c4; border:2px solid #d4b106; border-radius:18px;" +
+    " padding:16px 22px; font-size:26px; line-height:1.35; z-index:60; box-shadow:0 6px 18px rgba(0,0,0,.15); display:none}" +
+    "#bulle-cote::after{content:''; position:absolute; right:-14px; top:50%; margin-top:-12px; border:12px solid transparent; border-left:14px solid #d4b106; border-right:none}";
+  document.head.appendChild(st);
+  b.classList.add("cote"); b.textContent = "💡"; b.title = "Indice"; document.body.appendChild(b);
+  var bulle = document.createElement("div"); bulle.id = "bulle-cote"; document.body.appendChild(bulle);
+  var zones = function () { return Array.prototype.slice.call(document.querySelectorAll("#indice, .indice, #message, .message, #verdict, .verdict, #consigne-aide")); };
+  var avant = [], minuteur = null;
+  b.addEventListener("click", function () { avant = zones().map(function (z) { return [z, z.textContent, z.className]; }); }, true);   // avant le code du jeu
+  b.addEventListener("click", function () {
+    setTimeout(function () {
+      var txt = "";
+      avant.forEach(function (a) {
+        var z = a[0], neuf = z.textContent;
+        if (neuf !== a[1] && neuf.trim()) { txt = neuf; z.textContent = a[1]; z.className = a[2]; }
+      });
+      if (!txt) return;   // le jeu montre l'indice autrement : on le laisse faire
+      bulle.textContent = txt.replace(/^\s*💡\s*/, ""); bulle.style.display = "block";
+      clearTimeout(minuteur); minuteur = setTimeout(function () { bulle.style.display = "none"; }, 8000);
+    }, 0);
+  });
+  document.addEventListener("pointerdown", function (e) { if (e.target !== b && e.target !== bulle) bulle.style.display = "none"; });
+})();
+</script>
+<!-- /INDICE-COTE -->
+</body>
+</html>

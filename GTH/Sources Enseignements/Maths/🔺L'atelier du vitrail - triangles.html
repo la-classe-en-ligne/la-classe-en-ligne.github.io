@@ -1,0 +1,336 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>L'atelier du vitrail</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath d='M8 56L32 8l24 48z' fill='%2390caf9' stroke='%23263238' stroke-width='5'/%3E%3Cpath d='M32 8v48M20 32h24' stroke='%23263238' stroke-width='4'/%3E%3C/svg%3E">
+<!--
+  🔺 L'atelier du vitrail — reconnaître les triangles, P2 📅 4 (et 📅 5 pour vérifier un tracé) (GTH v2 : donnees/seances/maths/ma-s4-geometrie.js, ma-s5).
+  Maquette « Le trieur de triangles » (21/10) ; Karim a demandé de coder toutes les activités (21/10). Nouvel univers : l'atelier du vitrailliste.
+  Chaque pièce de verre est un triangle. L'élève vérifie avec les outils de la classe, puis range la pièce dans son casier :
+  — le gabarit d'angle droit : glissé sur un sommet, il se pose contre un côté ; l'angle se code seulement s'il est droit ;
+  — le compas : glissé sur un côté, il prend sa longueur ; glissé sur un autre côté, il trace l'arc : les côtés égaux se codent.
+  Onglets : « Je classe » (rectangle, isocèle, équilatéral, quelconque) · « Défi » (en plus : rectangle isocèle ; pièces tournées, presque droites).
+  Liens : #classe, #defi. Gestes : glisser, ou toucher l'outil puis le sommet ou le côté ; glisser la pièce (ou la toucher) dans un casier.
+  Le dépôt dans le casier vaut réponse. Un équilatéral posé dans « isocèle » : « c'est vrai, mais il a même 3 côtés égaux ».
+  Contenu : les triangles sont de moi (les triangles A à K de la banque, ressources P2 p. 15-17, sont sur papier). Hors ligne (ENI, Chromebook).
+-->
+<style>
+:root{--mur:#efe9df;--plomb:#263238;--bois:#a9743f;--boisf:#6d4521;--encre:#263238;--vert:#2e7d32;--rouge:#c62828;--talbot:#1f7a8c}
+html,body{margin:0;height:100%;background:#263238;overflow:hidden;font-family:Arial,Helvetica,sans-serif;color:var(--encre)}
+#scene{position:absolute;left:0;top:0;width:1920px;height:1080px;transform-origin:0 0;background:var(--mur);
+  background-image:linear-gradient(90deg,rgba(0,0,0,.025) 50%,transparent 50%);background-size:120px 100%}
+#barre{height:84px;display:flex;align-items:center;gap:22px;padding:0 28px;background:#fff;border-bottom:4px solid var(--plomb)}
+#barre h1{margin:0;font-size:34px;display:flex;align-items:center;gap:12px}
+#barre h1 svg{width:52px;height:52px}
+.onglets{display:flex;gap:8px;margin-left:24px}
+.onglets button{font:inherit;font-size:24px;padding:10px 22px;border-radius:12px;border:2px solid #b0bec5;background:#f5f5f5;color:var(--encre);cursor:pointer}
+.onglets button.on{background:var(--plomb);color:#fff;font-weight:700;border-color:var(--plomb)}
+#coin{margin-left:auto;text-align:right;font-size:20px;line-height:1.45}
+#niveaux{display:flex;gap:6px;justify-content:flex-end;margin-top:2px}
+#niveaux button{font:inherit;font-size:16px;padding:3px 10px;border-radius:10px;border:1.5px solid #b0bec5;background:#fff;color:#263238;cursor:pointer}
+#niveaux button.on{background:#1f7a8c;color:#fff;border-color:#1f7a8c}
+#coin b{font-size:28px}
+#consigne{height:100px;display:flex;align-items:center;justify-content:center;font-size:50px;font-weight:700;text-align:center}
+#consigne .q{color:var(--talbot)}
+#jeu{position:absolute;left:0;right:0;top:188px;bottom:110px}
+#bas{position:absolute;left:0;right:0;bottom:0;height:110px;display:flex;align-items:center;justify-content:center;gap:30px}
+#indice{font:inherit;font-size:24px;padding:12px 26px;border-radius:30px;border:2px solid #d4b106;background:#fff8c4;cursor:pointer}
+#verdict{font-size:38px;font-weight:700;min-width:760px;text-align:center}
+#verdict.ok{color:var(--vert)} #verdict.ko{color:var(--rouge)}
+#bulle{position:absolute;left:50%;bottom:118px;transform:translateX(-50%);max-width:1100px;background:#fff8c4;border:2px solid #d4b106;border-radius:18px;padding:16px 26px;font-size:30px;display:none;box-shadow:0 6px 18px rgba(0,0,0,.15)}
+#table{position:absolute;left:30px;top:170px;width:800px;height:600px;touch-action:none}
+#table.choisi #piece{filter:drop-shadow(0 0 10px var(--talbot))}
+#piece{cursor:grab}
+.outil{position:absolute;width:140px;height:140px;cursor:grab;touch-action:none;user-select:none}
+.outil.choisi{filter:drop-shadow(0 0 8px var(--talbot)) drop-shadow(0 0 8px var(--talbot))}
+.outil-nom{position:absolute;font-size:24px;font-weight:700;width:140px;text-align:center}
+#vitrail{position:absolute;left:1094px;top:0;width:581px;height:690px}
+#vitrail .neuf{animation:verre .8s ease-out}
+@keyframes verre{from{fill-opacity:0}}
+.vole{position:fixed;z-index:30;pointer-events:none;opacity:.9}
+#casiers{position:absolute;left:880px;right:30px;bottom:4px;height:76px;display:flex;gap:10px}
+.casier{flex:1;display:flex;align-items:center;justify-content:center;background:#263238;border-radius:12px;cursor:pointer}
+.casier span{color:#fff;font-size:26px;font-weight:700;text-align:center;line-height:1.05}
+.casier.survol,.casier.choisi-cible{outline:6px solid var(--talbot);outline-offset:2px}
+/* 💡 sur le côté (21/10) : l'ampoule seule, au bout de la consigne ; la bulle à côté, jamais sous le jeu */
+#indice{position:absolute;right:26px;top:96px;width:82px;height:82px;padding:0;border-radius:50%;font-size:44px;line-height:1;z-index:20}
+#bulle{left:auto;right:124px;top:100px;bottom:auto;transform:none;max-width:640px;font-size:28px;z-index:20}
+</style>
+</head>
+<body>
+<div id="scene">
+  <div id="barre">
+    <h1><svg viewBox="0 0 64 64"><path d="M8 56L32 8l24 48z" fill="#90caf9" stroke="#263238" stroke-width="5"/><path d="M32 8v48M20 32h24" stroke="#263238" stroke-width="4"/></svg>L'atelier du vitrail</h1>
+    <div class="onglets"><button data-o="classe">Je classe</button><button data-o="defi">Défi</button></div>
+    <div id="coin"><div>Série sans faute : <b id="score">0</b> · 🏆 Record : <b id="record">0</b></div><div id="niveaux"><button data-d="voilier">Vitrail 1</button><button data-d="fusee">Vitrail 2</button><button data-d="sapin">Vitrail 3</button></div></div>
+  </div>
+  <div id="consigne"></div>
+  <div id="jeu">
+    <svg id="table" viewBox="0 0 800 600"></svg>
+    <div class="outil" id="gabarit" style="left:150px;top:0"><svg viewBox="0 0 200 200"><path d="M20 180V20h40v120h120v40z" fill="#e53935" fill-opacity=".85" stroke="#7f1d1d" stroke-width="4"/><path d="M60 140h16v-16H60" fill="none" stroke="#fff" stroke-width="4"/></svg></div>
+    <div class="outil-nom" style="left:150px;top:140px">le gabarit</div>
+    <div class="outil" id="compas" style="left:520px;top:0"><svg viewBox="0 0 200 200"><circle cx="100" cy="26" r="14" fill="#90a4ae" stroke="#37474f" stroke-width="4"/><path d="M100 36L46 182M100 36l54 146" stroke="#37474f" stroke-width="10" stroke-linecap="round"/><path d="M154 182l6 14" stroke="#1565c0" stroke-width="8" stroke-linecap="round"/><path d="M60 140h80" stroke="#90a4ae" stroke-width="6"/></svg></div>
+    <div class="outil-nom" style="left:520px;top:140px">le compas</div>
+    <svg id="vitrail" viewBox="0 0 640 760"></svg>
+    <div id="casiers"></div>
+  </div>
+  <div id="bulle"></div>
+  <button id="indice" title="Indice">💡</button><div id="bas"><div id="verdict"></div></div>
+</div>
+<script>
+"use strict";
+// ---------- les pièces : un triangle = ses angles en A et en B, la longueur AB, une rotation ----------
+// Le vitrail : un voilier sur la mer, dans une boîte de 560 × 560. Chaque morceau de verre est un triangle (ses sommets, sa couleur) ;
+// la pièce à vérifier, c'est ce morceau, agrandi et tourné. Sa famille se calcule sur ses côtés et ses angles (famille()).
+const M = (pts, verre, rot) => ({ pts, verre, rot });
+const VOILIER = {
+  voile1: M([[300, 80], [300, 380], [120, 380]], "#fffde7", 0), voile2: M([[320, 120], [320, 380], [470, 380]], "#ffccbc", 200),
+  coque: M([[90, 400], [510, 400], [300, 480]], "#8d6e63", 0), soleil: M([[40, 40], [140, 40], [90, 126.6]], "#ffd54f", 20),
+  etoile: M([[180, 30], [240, 30], [210, 81.96]], "#fff59d", -35), drapeau: M([[300, 22], [365, 40], [300, 70]], "#e53935", 15),
+  ile: M([[430, 560], [560, 560], [530, 495]], "#a5d6a7", -20), montagne: M([[480, 380], [560, 380], [520, 250]], "#90a4ae", 10)
+};
+const VAGUES = {   // Je classe : des vagues isocèles ; Défi : des vagues rectangles isocèles
+  classe: [M([[0, 560], [80, 500], [160, 560]], "#42a5f5", 30), M([[160, 560], [240, 500], [320, 560]], "#64b5f6", -25)],
+  defi: [M([[0, 560], [80, 480], [160, 560]], "#42a5f5", 30), M([[160, 560], [240, 480], [320, 560]], "#64b5f6", -25)]
+};
+const V = VOILIER;
+// La fusée : le nez, le corps (deux triangles rectangles), les ailerons, les flammes, les étoiles, la lune
+const F = {
+  nez: M([[230, 130], [330, 130], [280, 43.4]], "#ef5350", 0), corps1: M([[230, 130], [330, 130], [230, 380]], "#eceff1", 15), corps2: M([[330, 130], [330, 380], [230, 380]], "#cfd8dc", 190),
+  aileron1: M([[230, 300], [230, 420], [140, 450]], "#ef5350", -10), aileron2: M([[330, 300], [330, 420], [420, 450]], "#e53935", 20),
+  flamme1: M([[240, 380], [320, 380], [280, 470]], "#ffb300", 0), flamme2: M([[250, 470], [310, 470], [280, 530]], "#ffe082", 30),
+  etoile1: M([[60, 60], [110, 60], [85, 103.3]], "#fff59d", -20), etoile2: M([[440, 160], [500, 160], [470, 108.04]], "#fff59d", 35), lune: M([[440, 420], [520, 420], [480, 330]], "#b0bec5", 0),
+  flammeD: M([[240, 380], [320, 380], [280, 420]], "#ffb300", 0), luneD: M([[440, 420], [520, 420], [480, 380]], "#b0bec5", 45)
+};
+// Le sapin : trois étages, le tronc, l'étoile, deux cadeaux, un flocon, la lune
+const S = {
+  haut: M([[240, 160], [320, 160], [280, 60]], "#43a047", 0), milieu: M([[210, 260], [350, 260], [280, 160]], "#388e3c", 15), bas: M([[180, 370], [380, 370], [280, 260]], "#2e7d32", -10),
+  tronc1: M([[260, 370], [300, 370], [260, 450]], "#8d6e63", 0), tronc2: M([[300, 370], [300, 450], [260, 450]], "#6d4c41", 180), etoile: M([[255, 60], [305, 60], [280, 16.7]], "#ffd54f", 25),
+  cadeau1: M([[120, 450], [200, 450], [160, 380.72]], "#e53935", 0), cadeau2: M([[380, 450], [470, 450], [400, 390]], "#1e88e5", -15), flocon: M([[60, 120], [110, 100], [90, 160]], "#e1f5fe", 40),
+  lune: M([[440, 80], [500, 80], [470, 28.04]], "#fff59d", 0), hautD: M([[240, 160], [320, 160], [280, 120]], "#43a047", 0), cadeauD: M([[120, 450], [200, 450], [160, 410]], "#e53935", 45)
+};
+const DESSINS = {
+  voilier: { nom: "Le voilier", classe: [V.voile1, V.coque, V.soleil, VAGUES.classe[0], V.drapeau, V.voile2, V.montagne, V.etoile, V.ile, VAGUES.classe[1]],
+    defi: [VAGUES.defi[0], V.drapeau, V.montagne, V.voile2, V.soleil, VAGUES.defi[1], V.ile, V.coque, V.voile1, V.etoile] },
+  fusee: { nom: "La fusée", classe: [F.corps1, F.nez, F.flamme1, F.aileron1, F.etoile1, F.corps2, F.lune, F.aileron2, F.etoile2, F.flamme2],
+    defi: [F.flammeD, F.aileron2, F.nez, F.corps2, F.luneD, F.etoile1, F.aileron1, F.corps1, F.flamme2, F.etoile2] },
+  sapin: { nom: "Le sapin", classe: [S.bas, S.tronc1, S.etoile, S.cadeau2, S.milieu, S.cadeau1, S.flocon, S.tronc2, S.haut, S.lune],
+    defi: [S.hautD, S.flocon, S.milieu, S.tronc1, S.etoile, S.cadeauD, S.cadeau2, S.bas, S.tronc2, S.lune] }
+};
+let CLASSE = DESSINS.voilier.classe, DEFI = DESSINS.voilier.defi;
+function famille(P) {
+  const d = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]), c = [d(P[0], P[1]), d(P[1], P[2]), d(P[2], P[0])], eg = (x, y) => Math.abs(x - y) / Math.max(x, y) < 0.01;
+  const droit = [0, 1, 2].some(i => { const V = P[i], a = P[(i + 1) % 3], b = P[(i + 2) % 3], u = [a[0] - V[0], a[1] - V[1]], v = [b[0] - V[0], b[1] - V[1]]; return Math.abs(u[0] * v[0] + u[1] * v[1]) / Math.hypot(...u) / Math.hypot(...v) < 0.01; });
+  const iso = eg(c[0], c[1]) || eg(c[1], c[2]) || eg(c[2], c[0]);
+  if (eg(c[0], c[1]) && eg(c[1], c[2])) return "equilateral";
+  return droit && iso ? "rectiso" : droit ? "rectangle" : iso ? "isocele" : "quelconque";
+}
+const CASIERS = { classe: ["rectangle", "isocele", "equilateral", "quelconque"], defi: ["rectangle", "rectiso", "isocele", "equilateral", "quelconque"] };
+const NOMS = { rectangle: "rectangle", isocele: "isocèle", equilateral: "équilatéral", quelconque: "quelconque", rectiso: "rectangle isocèle" };
+const VERRES = ["#90caf9", "#ef9a9a", "#a5d6a7", "#fff59d", "#ce93d8", "#ffcc80"];
+const etat = { dessin: "voilier", onglet: "classe", i: 0, score: 0, aide: 0, P: [], codesAngles: [], codesCotes: [], ouverture: null, fini: false };
+window.VITRAIL = etat;   // pour le test automatique
+const $ = id => document.getElementById(id);
+const mem = { lire(k) { try { return +localStorage.getItem(k) || 0; } catch (e) { return 0; } }, ecrire(k, v) { try { localStorage.setItem(k, v); } catch (e) {} } };
+const cleRecord = () => "vitrail-record-" + etat.onglet + "-" + etat.dessin;
+function afficheScore() { $("score").textContent = etat.score; $("record").textContent = mem.lire(cleRecord()); }
+function marque() { etat.score++; if (etat.score > mem.lire(cleRecord())) mem.ecrire(cleRecord(), etat.score); afficheScore(); }
+function verdict(t, cls) { const v = $("verdict"); v.textContent = t; v.className = cls || ""; if (cls === "ko" && etat.score) { etat.score = 0; afficheScore(); } }   // série sans faute : une erreur la remet à 0
+function consigne(h) { $("consigne").innerHTML = "<span>" + h + "</span>"; }
+function bulle(t) { const b = $("bulle"); b.textContent = t; b.style.display = "block"; clearTimeout(bulle.t); bulle.t = setTimeout(() => b.style.display = "none", 7000); }
+const echelle = () => +($("scene").dataset.ech || 1);
+let minuteur = 0;
+const plusTard = f => { clearTimeout(minuteur); minuteur = setTimeout(f, 1800); };
+
+// ---------- géométrie ----------
+const rad = d => d * Math.PI / 180, dist = (p, q) => Math.hypot(p[0] - q[0], p[1] - q[1]);
+function sommets(t) {   // le morceau de verre, tourné et agrandi pour la table
+  let P = t.pts.map(q => q.slice());
+  const r = rad(t.rot); P = P.map(([x, y]) => [x * Math.cos(r) - y * Math.sin(r), x * Math.sin(r) + y * Math.cos(r)]);
+  const xs = P.map(p => p[0]), ys = P.map(p => p[1]), w = Math.max(...xs) - Math.min(...xs), h = Math.max(...ys) - Math.min(...ys);
+  const k = Math.min(560 / w, 440 / h), cx = (Math.max(...xs) + Math.min(...xs)) / 2, cy = (Math.max(...ys) + Math.min(...ys)) / 2;
+  return P.map(([x, y]) => [400 + (x - cx) * k, 300 + (y - cy) * k]);
+}
+function angle(i) { const P = etat.P, V = P[i], a = P[(i + 1) % 3], b = P[(i + 2) % 3]; const u = [a[0] - V[0], a[1] - V[1]], v = [b[0] - V[0], b[1] - V[1]]; return Math.acos((u[0] * v[0] + u[1] * v[1]) / Math.hypot(...u) / Math.hypot(...v)) * 180 / Math.PI; }
+const cote = j => [etat.P[j], etat.P[(j + 1) % 3]];   // le côté j va du sommet j au sommet j+1
+const longueur = j => dist(...cote(j));
+function versTable(ev) { const svg = $("table"), pt = svg.createSVGPoint(); pt.x = ev.clientX; pt.y = ev.clientY; const q = pt.matrixTransform(svg.getScreenCTM().inverse()); return [q.x, q.y]; }
+function distSegment(p, [a, b]) { const dx = b[0] - a[0], dy = b[1] - a[1]; let t = ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / (dx * dx + dy * dy); t = Math.max(0, Math.min(1, t)); return dist(p, [a[0] + t * dx, a[1] + t * dy]); }
+
+// ---------- dessin de la pièce et des codages ----------
+function dessine(extra) {
+  const P = etat.P, pts = P.map(p => p.join(",")).join(" ");
+  let s = '<polygon id="piece" points="' + pts + '" fill="' + (etat.onglet === "defi" ? DEFI : CLASSE)[etat.i % 10].verre + '" fill-opacity=".9" stroke="#263238" stroke-width="10" stroke-linejoin="round"/>';
+  s += '<polygon points="' + pts + '" fill="none" stroke="rgba(255,255,255,.55)" stroke-width="2" stroke-dasharray="40 30" transform="translate(6 6)" pointer-events="none"/>';
+  for (const i of etat.codesAngles) {   // le petit carré de l'angle droit
+    const V = P[i], a = P[(i + 1) % 3], b = P[(i + 2) % 3], u = unit(V, a), v = unit(V, b), k = 34;
+    s += '<path d="M' + (V[0] + u[0] * k) + ' ' + (V[1] + u[1] * k) + 'L' + (V[0] + (u[0] + v[0]) * k) + ' ' + (V[1] + (u[1] + v[1]) * k) + 'L' + (V[0] + v[0] * k) + ' ' + (V[1] + v[1] * k) + '" fill="none" stroke="#c62828" stroke-width="6"/>';
+  }
+  for (const j of etat.codesCotes) {   // le trait sur les côtés égaux
+    const [a, b] = cote(j), m = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2], u = unit(a, b), n = [-u[1], u[0]];
+    s += '<path d="M' + (m[0] - n[0] * 20) + ' ' + (m[1] - n[1] * 20) + 'L' + (m[0] + n[0] * 20) + ' ' + (m[1] + n[1] * 20) + '" stroke="#1565c0" stroke-width="8" stroke-linecap="round"/>';
+  }
+  if (etat.ouverture !== null) { const [a, b] = cote(etat.ouverture); s += '<line x1="' + a[0] + '" y1="' + a[1] + '" x2="' + b[0] + '" y2="' + b[1] + '" stroke="#1565c0" stroke-width="16" stroke-opacity=".5" stroke-linecap="round"/>'; }
+  $("table").innerHTML = s + (extra || "");
+}
+const unit = (p, q) => { const d = dist(p, q); return [(q[0] - p[0]) / d, (q[1] - p[1]) / d]; };
+
+// ---------- le gabarit : posé sur le sommet le plus proche, contre le côté qui va au sommet suivant ----------
+function poseGabarit(ev) {
+  if (etat.anim) return;
+  const p = versTable(ev), i = [0, 1, 2].sort((a, b) => dist(p, etat.P[a]) - dist(p, etat.P[b]))[0];
+  if (dist(p, etat.P[i]) > 170) { verdict("🤪 Pose le gabarit sur un sommet.", "ko"); return; }
+  const V = etat.P[i], a = etat.P[(i + 1) % 3], b = etat.P[(i + 2) % 3], u = unit(V, a);
+  // l'autre bras du gabarit part vers l'intérieur du triangle
+  let n = [-u[1], u[0]]; if ((b[0] - V[0]) * n[0] + (b[1] - V[1]) * n[1] < 0) n = [-n[0], -n[1]];
+  const L = 190, e = 36, pt = (x, y) => (V[0] + u[0] * x + n[0] * y) + " " + (V[1] + u[1] * x + n[1] * y);
+  const g = '<path d="M' + pt(0, 0) + 'L' + pt(L, 0) + 'L' + pt(L, e) + 'L' + pt(e, e) + 'L' + pt(e, L) + 'L' + pt(0, L) + 'z" fill="#e53935" fill-opacity=".55" stroke="#7f1d1d" stroke-width="4" pointer-events="none"/>';
+  const droit = Math.abs(angle(i) - 90) < 0.6;
+  if (droit && !etat.codesAngles.includes(i)) etat.codesAngles.push(i);
+  dessine(g); verdict(droit ? "✅ Cet angle est droit." : "Cet angle n'est pas droit.", droit ? "ok" : "");
+  setTimeout(() => dessine(), 1500);
+}
+// ---------- le compas : il prend la longueur d'un côté, puis il tourne autour du sommet commun jusqu'à l'autre côté ----------
+function dessinCompas(P, Q) {   // pointe en P, crayon en Q, charnière au-dessus
+  const m = [(P[0] + Q[0]) / 2, (P[1] + Q[1]) / 2], d = dist(P, Q), u = [(Q[0] - P[0]) / d, (Q[1] - P[1]) / d];
+  let n = [u[1], -u[0]]; if (n[1] > 0) n = [-n[0], -n[1]];   // la charnière vers le haut de l'écran
+  const H = [m[0] + n[0] * Math.max(110, d * 0.55), m[1] + n[1] * Math.max(110, d * 0.55)];
+  return '<g pointer-events="none"><line x1="' + H[0] + '" y1="' + H[1] + '" x2="' + P[0] + '" y2="' + P[1] + '" stroke="#455a64" stroke-width="12" stroke-linecap="round"/>' +
+    '<line x1="' + H[0] + '" y1="' + H[1] + '" x2="' + Q[0] + '" y2="' + Q[1] + '" stroke="#455a64" stroke-width="12" stroke-linecap="round"/>' +
+    '<circle cx="' + Q[0] + '" cy="' + Q[1] + '" r="9" fill="#1565c0"/><circle cx="' + P[0] + '" cy="' + P[1] + '" r="6" fill="#263238"/>' +
+    '<circle cx="' + H[0] + '" cy="' + H[1] + '" r="16" fill="#90a4ae" stroke="#37474f" stroke-width="4"/><line x1="' + H[0] + '" y1="' + (H[1] - 16) + '" x2="' + H[0] + '" y2="' + (H[1] - 50) + '" stroke="#37474f" stroke-width="8" stroke-linecap="round"/></g>';
+}
+function poseCompas(ev) {
+  if (etat.anim) return;
+  const p = versTable(ev), j = [0, 1, 2].sort((a, b) => distSegment(p, cote(a)) - distSegment(p, cote(b)))[0];
+  if (distSegment(p, cote(j)) > 110) { verdict("🤪 Pose le compas sur un côté.", "ko"); return; }
+  if (etat.ouverture === null || etat.ouverture === j) {
+    etat.ouverture = j; const [a, b] = cote(j); dessine(dessinCompas(a, b));
+    verdict("Le compas a pris la longueur de ce côté : pose-le sur un autre côté.", ""); return;
+  }
+  const j1 = etat.ouverture, r = longueur(j1), [a, b] = cote(j), c1 = cote(j1);
+  const commun = c1.find(q => q === a || q === b), autre1 = c1.find(q => q !== commun), autre2 = commun === a ? b : a;
+  const t0 = Math.atan2(autre1[1] - commun[1], autre1[0] - commun[0]), t2 = Math.atan2(autre2[1] - commun[1], autre2[0] - commun[0]);
+  let d = t2 - t0; while (d > Math.PI) d -= 2 * Math.PI; while (d <= -Math.PI) d += 2 * Math.PI;
+  const egal = Math.abs(r - longueur(j)) / r < 0.01, debut = performance.now(), D = 1400;
+  etat.ouverture = null; etat.anim = true; verdict("");
+  const arc = tt => { const x1 = commun[0] + r * Math.cos(t0), y1 = commun[1] + r * Math.sin(t0), x2 = commun[0] + r * Math.cos(tt), y2 = commun[1] + r * Math.sin(tt);
+    return '<path d="M' + x1 + ' ' + y1 + 'A' + r + ' ' + r + ' 0 0 ' + (d > 0 ? 1 : 0) + ' ' + x2 + ' ' + y2 + '" fill="none" stroke="#1565c0" stroke-width="5" stroke-dasharray="12 8" pointer-events="none"/>'; };
+  const image = k => { const tt = t0 + d * k, Q = [commun[0] + r * Math.cos(tt), commun[1] + r * Math.sin(tt)]; return { s: arc(tt), Q }; };
+  const fin = () => {
+    etat.anim = false;
+    const { s, Q } = image(1);
+    if (egal) { for (const k of [j1, j]) if (!etat.codesCotes.includes(k)) etat.codesCotes.push(k); }
+    const ecart = egal ? '<circle cx="' + autre2[0] + '" cy="' + autre2[1] + '" r="22" fill="none" stroke="#2e7d32" stroke-width="6"/>'
+      : '<line x1="' + Q[0] + '" y1="' + Q[1] + '" x2="' + autre2[0] + '" y2="' + autre2[1] + '" stroke="#c62828" stroke-width="10" stroke-linecap="round"/>';
+    dessine(s + dessinCompas(commun, Q) + ecart);
+    verdict(egal ? "✅ Le crayon tombe pile sur le sommet : ces deux côtés ont la même longueur." : "Le crayon ne tombe pas sur le sommet : ces deux côtés n'ont pas la même longueur.", egal ? "ok" : "");
+    setTimeout(() => { if (!etat.anim) dessine(); }, 2200);
+  };
+  const pas = now => { const k = Math.min(1, (now - debut) / D); if (k >= 1) return fin(); const { s, Q } = image(k); dessine(s + dessinCompas(commun, Q)); requestAnimationFrame(pas); };
+  requestAnimationFrame(pas);
+}
+
+// ---------- le vitrail : chaque pièce bien rangée prend sa place ; le voilier apparaît morceau après morceau ----------
+function dessineVitrail() {
+  const L = etat.onglet === "defi" ? DEFI : CLASSE, poses = etat.poses || [];
+  let s = '<path d="M20 760V230A300 210 0 0 1 620 230V760z" fill="#37474f"/><path d="M40 742V236A280 192 0 0 1 600 236V742z" fill="#e3f2fd"/>';
+  s += '<g transform="translate(40 172)">';
+  L.forEach((m, k) => { const pose = poses.includes(k); if (!pose) return;   // le dessin se découvre pièce après pièce
+    s += '<polygon class="verre' + (pose && k === etat.dernier ? " neuf" : "") + '" points="' + m.pts.map(q => q.join(",")).join(" ") + '" fill="' + (pose ? m.verre : "#cfd8dc") + '" fill-opacity="' + (pose ? 1 : .45) + '" stroke="#263238" stroke-width="6" stroke-linejoin="round"/>'; });
+  $("vitrail").innerHTML = s + "</g>";
+}
+
+// ---------- ranger la pièce ----------
+function range(casier) {
+  if (etat.fini || etat.anim) return;
+  const t = (etat.onglet === "defi" ? DEFI : CLASSE)[etat.i % 10], c = casier.dataset.t; t.type = famille(t.pts);
+  if (c === t.type) {
+    marque(); etat.fini = true; verdict("✅ C'est un triangle " + NOMS[t.type] + ".", "ok");
+    (etat.poses = etat.poses || []).push(etat.i % 10); etat.dernier = etat.i % 10; dessineVitrail();   // le morceau prend sa place dans le voilier
+    $("table").innerHTML = "";
+    etat.i++; plusTard(tour);
+  } else if (c === "isocele" && t.type === "equilateral") verdict("C'est vrai, mais il a même 3 côtés égaux.", "ko");
+  else if ((c === "rectangle" || c === "isocele") && t.type === "rectiso") verdict("C'est vrai, mais il est rectangle ET isocèle.", "ko");
+  else verdict("🤪 Vérifie avec le gabarit et le compas.", "ko");
+}
+
+// ---------- les deux gestes ----------
+const choix = { el: null, f: null };
+let enGlisse = false;   // pendant un glisser, le lâcher ne compte pas comme un toucher
+function rendGlissable(el, cibles, quandDepose, image) {
+  el.addEventListener("pointerdown", ev => {
+    if (choix.el && choix.el !== el) return;   // un outil est choisi : ce toucher est pour lui
+    if (image && ev.target.id !== "piece") return;   // on prend la pièce par le verre, pas par la table
+    ev.preventDefault();
+    const sx = ev.clientX, sy = ev.clientY, r0 = (image ? image() : el).getBoundingClientRect();
+    let bouge = false, survol = null, fantome = null;
+    const move = e => {
+      if (!bouge && Math.hypot(e.clientX - sx, e.clientY - sy) > 12) {
+        bouge = true; enGlisse = true; if (choix.el) { choix.el.classList.remove("choisi"); choix.el = null; }
+        fantome = image ? fantomePiece() : el.cloneNode(true); fantome.classList.add("vole"); fantome.classList.remove("choisi"); fantome.removeAttribute("id");
+        Object.assign(fantome.style, { left: r0.left + "px", top: r0.top + "px", width: r0.width + "px", height: r0.height + "px" });
+        document.body.appendChild(fantome);
+      }
+      if (!bouge) return;
+      fantome.style.left = (r0.left + e.clientX - sx) + "px"; fantome.style.top = (r0.top + e.clientY - sy) + "px";
+      const c = cibles().find(t => { const r = t.getBoundingClientRect(); return e.clientX > r.left && e.clientX < r.right && e.clientY > r.top && e.clientY < r.bottom; }) || null;
+      if (c !== survol) { survol && survol.classList.remove("survol"); survol = c; survol && survol.classList.add("survol"); }
+    };
+    const up = e => {
+      removeEventListener("pointermove", move); removeEventListener("pointerup", up);
+      setTimeout(() => enGlisse = false, 0);
+      survol && survol.classList.remove("survol"); fantome && fantome.remove();
+      if (!bouge) { document.querySelectorAll(".choisi").forEach(x => x !== el && x.classList.remove("choisi")); el.classList.toggle("choisi"); choix.el = el.classList.contains("choisi") ? el : null; choix.f = quandDepose; return; }
+      if (survol) quandDepose(survol, e);
+    };
+    addEventListener("pointermove", move); addEventListener("pointerup", up);
+  });
+}
+function cibleTouchable(t) { t.addEventListener("pointerup", ev => { if (enGlisse || !choix.el || choix.el === t) return; const f = choix.f; choix.el.classList.remove("choisi"); choix.el = null; f(t, ev); }); }
+function fantomePiece() { const r = $("piece").getBBox(), d = document.createElement("div"); d.innerHTML = '<svg viewBox="' + [r.x - 10, r.y - 10, r.width + 20, r.height + 20].join(" ") + '" width="100%" height="100%">' + $("piece").outerHTML + "</svg>"; return d; }
+rendGlissable($("gabarit"), () => [$("table")], (t, e) => poseGabarit(e));
+rendGlissable($("compas"), () => [$("table")], (t, e) => poseCompas(e));
+rendGlissable($("table"), () => [...document.querySelectorAll(".casier")], t => range(t), () => $("piece"));
+cibleTouchable($("table"));
+
+// ---------- une pièce ----------
+function tour() {
+  const L = etat.onglet === "defi" ? DEFI : CLASSE;
+  if (etat.i >= L.length) { consigne(DESSINS[etat.dessin].nom + ' : <span class="q">terminé</span>'); $("table").innerHTML = ""; return; }
+  etat.P = sommets(L[etat.i]); etat.type = famille(L[etat.i].pts); etat.codesAngles = []; etat.codesCotes = []; etat.ouverture = null; etat.fini = false; etat.aide = 0;
+  dessine(); verdict("");
+  consigne('Vérifie, puis pose la pièce sur <span class="q">sa famille</span>');
+}
+function ouvre(o) {
+  clearTimeout(minuteur);
+  etat.onglet = o; etat.i = 0; etat.score = 0; etat.poses = []; etat.dernier = -1;
+  CLASSE = DESSINS[etat.dessin].classe; DEFI = DESSINS[etat.dessin].defi; dessineVitrail();
+  document.querySelectorAll("#niveaux button").forEach(b => b.classList.toggle("on", b.dataset.d === etat.dessin));
+  document.querySelectorAll(".onglets button").forEach(b => b.classList.toggle("on", b.dataset.o === o));
+  history.replaceState(null, "", "#" + o);
+  $("casiers").innerHTML = CASIERS[o].map(t => '<div class="casier" data-t="' + t + '"><span>' + NOMS[t] + "</span></div>").join("");
+  document.querySelectorAll(".casier").forEach(cibleTouchable);
+  afficheScore(); $("bulle").style.display = "none"; tour();
+}
+document.querySelectorAll(".onglets button").forEach(b => b.onclick = () => ouvre(b.dataset.o));
+document.querySelectorAll("#niveaux button").forEach(b => b.onclick = () => { etat.dessin = b.dataset.d; ouvre(etat.onglet); });
+// l'indice donne la méthode de classe, jamais la famille
+$("indice").onclick = () => {
+  etat.aide++;
+  bulle(etat.aide === 1 ? "Pose le gabarit sur chaque sommet : un angle droit ? Puis prends un côté au compas et reporte-le sur les autres : des côtés égaux ?"
+    : "Un angle droit → rectangle. Deux côtés égaux → isocèle. Trois côtés égaux → équilatéral. Rien de tout ça → quelconque.");
+};
+function ajuste() {
+  const e = Math.min(innerWidth / 1920, innerHeight / 1080), s = $("scene");
+  s.style.transform = "scale(" + e + ")"; s.style.left = ((innerWidth - 1920 * e) / 2) + "px"; s.style.top = ((innerHeight - 1080 * e) / 2) + "px"; s.dataset.ech = e;
+}
+addEventListener("resize", ajuste); ajuste();
+function depuisLien() { const m = location.hash.slice(1); ouvre(m === "defi" ? "defi" : "classe"); }
+addEventListener("hashchange", depuisLien);
+depuisLien();
+</script>
+</body>
+</html>

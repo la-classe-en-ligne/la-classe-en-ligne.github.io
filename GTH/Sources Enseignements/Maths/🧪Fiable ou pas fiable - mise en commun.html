@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fiable ou pas fiable ?</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath d='M24 6h16v6h-3v14l14 24a6 6 0 0 1-5 9H18a6 6 0 0 1-5-9l14-24V12h-3z' fill='%23e8f6f8' stroke='%231f7a8c' stroke-width='4'/%3E%3Cpath d='M17 44h30l5 8a3 3 0 0 1-3 4H15a3 3 0 0 1-3-4z' fill='%231a9e72'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Quicksand:wght@600;700&display=swap">
+<style>
+  /* Univers : un banc d'essai. Chaque méthode des élèves est une fiche qu'on met à l'épreuve : fiable ou pas fiable,
+     et toujours POURQUOI. Outil de mise en commun demandé par la tutrice (visite du 2/10) : qualifier les procédures
+     en montrant pourquoi. Toutes matières ; le maître écrit le thème et les méthodes en direct. */
+  :root{ --encre:#22313f; --gris:#6b7a8a; --bord:#cfdbe3; --fiable:#1a9e72; --fiable-bg:#e6f6ef; --pas:#e8792a; --pas-bg:#fdf0e5; --talbot:#1f7a8c; }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{margin:0; color:var(--encre); font-family:"Quicksand",system-ui,sans-serif; overflow:hidden; height:100vh; display:flex; flex-direction:column;
+    background:linear-gradient(180deg,#eef4f7,#dde8ee); user-select:none; -webkit-user-select:none;}
+  input, textarea{user-select:text; -webkit-user-select:text;}
+
+  /* 1. Barre du haut */
+  .barre{display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:18px; padding:10px 24px; background:#fff; border-bottom:3px solid var(--bord);}
+  .titre{display:flex; align-items:center; gap:10px;}
+  .titre svg{width:46px; height:46px;}
+  .titre h1{font-family:"Baloo 2",cursive; font-weight:800; font-size:1.8rem; margin:0;}
+  #theme{font:inherit; font-family:"Baloo 2",cursive; font-weight:700; font-size:1.7rem; padding:6px 16px; border:3px solid var(--bord); border-radius:14px; width:100%; color:var(--encre);}
+  #theme:focus{outline:none; border-color:var(--talbot);}
+  .droite{display:flex; gap:10px; align-items:center;}
+  .compte{display:flex; flex-direction:column; align-items:center; padding:2px 12px; border-radius:12px; border:2px solid var(--bord); min-width:110px; background:#f6f9fb;}
+  .compte small{font-size:.75rem; font-weight:700; color:var(--gris); text-transform:uppercase; letter-spacing:.5px;}
+  .compte b{font-family:"Baloo 2",cursive; font-size:1.6rem; line-height:1.05;}
+  .compte.f b{color:var(--fiable);} .compte.p b{color:var(--pas);}
+  select, .btn{font:inherit; font-weight:700; font-size:1rem; padding:8px 14px; border-radius:999px; border:2px solid var(--bord); background:#fff; color:var(--encre); cursor:pointer;}
+  .btn.principal{background:var(--talbot); color:#fff; border-color:var(--talbot);}
+
+  /* 2. Consigne */
+  .consigne{text-align:center; padding:12px 20px 0;}
+  .consigne p{display:inline-block; margin:0; font-family:"Baloo 2",cursive; font-weight:700; font-size:2rem; background:rgba(255,255,255,.92); padding:2px 24px; border-radius:16px;}
+
+  /* 3. Le banc d'essai */
+  .jeu{flex:1; display:grid; grid-template-columns:1fr 1.15fr 1.15fr; gap:18px; padding:14px 22px 10px; min-height:0;}
+  .colonne{display:flex; flex-direction:column; border-radius:20px; padding:12px; min-height:0;}
+  .colonne h2{margin:0 0 8px; font-family:"Baloo 2",cursive; font-size:1.7rem; text-align:center;}
+  .pioche{background:rgba(255,255,255,.75); border:3px dashed var(--bord);}
+  .zone{border:4px solid; transition:transform .15s, box-shadow .15s;}
+  .zone.f{background:var(--fiable-bg); border-color:var(--fiable);} .zone.f h2{color:var(--fiable);}
+  .zone.p{background:var(--pas-bg); border-color:var(--pas);} .zone.p h2{color:var(--pas);}
+  .zone.survol, .pioche.survol{transform:scale(1.015); box-shadow:0 0 0 6px rgba(31,122,140,.25);}
+  .liste{flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:10px; padding:2px;}
+  .ajout{display:flex; gap:8px; margin-top:8px;}
+  #nouvelle{flex:1; font:inherit; font-size:1.2rem; padding:10px 14px; border:2px solid var(--bord); border-radius:12px;}
+
+  .fiche{background:#fff; border-radius:14px; border:3px solid var(--bord); padding:10px 14px; font-size:1.45rem; font-weight:700; cursor:grab; touch-action:none; box-shadow:0 4px 0 rgba(0,0,0,.06); position:relative;}
+  .fiche .x{position:absolute; top:4px; right:8px; border:none; background:none; color:#b8c3cc; font-size:1.1rem; cursor:pointer;}
+  .zone.f .fiche{border-color:var(--fiable);} .zone.p .fiche{border-color:var(--pas);}
+  .fiche .pourquoi{margin-top:6px; font-size:1.15rem; font-weight:600; color:var(--gris);}
+  .fiche .pourquoi b{color:var(--encre);}
+  .criteres{display:flex; flex-wrap:wrap; gap:6px; margin-top:8px;}
+  .criteres button{font:inherit; font-size:1rem; font-weight:700; padding:6px 12px; border-radius:999px; cursor:pointer; background:#fff; border:2px solid var(--bord); color:var(--encre);}
+  .zone.f .criteres button{border-color:var(--fiable);} .zone.p .criteres button{border-color:var(--pas);}
+  .criteres input{font:inherit; font-size:1rem; padding:6px 10px; border:2px solid var(--bord); border-radius:999px; min-width:200px; flex:1;}
+  .vol{position:fixed; z-index:50; pointer-events:none; transform:translate(-50%,-50%) rotate(-2deg) scale(1.04); opacity:.95; width:360px;}
+  .vide{color:#9aa7b2; font-style:italic; text-align:center; margin:14px 0;}
+
+  /* Karim, 8/11 : le pourquoi se voit comme un tampon ; à la fin, on élit la méthode qu'on garde */
+  .tampon{display:inline-block; margin-top:8px; padding:4px 14px; border:4px solid; border-radius:10px; font-family:"Baloo 2",cursive; font-weight:800; font-size:1.35rem; text-transform:uppercase; letter-spacing:.5px; transform:rotate(-3deg); cursor:pointer; background:#fff;}
+  .tampon.t-ok{color:#1a9e72; border-color:#1a9e72;} .tampon.t-long{color:#b26a00; border-color:#ef9a00; background:#fff8e1;} .tampon.t-ko{color:#d84315; border-color:#d84315;}
+  .fiche .garder{position:absolute; top:4px; right:40px; border:2px solid #f0c000; background:#fffbe6; border-radius:999px; font:inherit; font-size:1rem; font-weight:800; padding:2px 10px; cursor:pointer; color:#7a5d00;}
+  .fiche.gardee{border-color:#f0b400 !important; border-width:5px; background:#fffbe6; box-shadow:0 0 0 6px rgba(240,180,0,.25);}
+  .fiche .ruban{margin:-10px -14px 8px; padding:4px 14px; background:#f0b400; color:#3b2c00; font-family:"Baloo 2",cursive; font-weight:800; font-size:1.25rem; border-radius:10px 10px 0 0;}
+  .consigne p.garde{background:#fff3c4; border:4px solid #f0b400; font-size:2.1rem; padding:14px 26px;}
+  /* Karim, 9/11 : une fois la méthode gardée, les autres s'effacent ; la gardée devient ce qu'on retient */
+  .fiche.grise{opacity:.28; filter:grayscale(1);}
+  /* le bilan */
+  #bilan{position:fixed; inset:0; background:rgba(20,35,45,.45); display:flex; align-items:center; justify-content:center; z-index:60;}
+  #bilan[hidden]{display:none;}
+  .feuille{background:#fff; border-radius:18px; padding:26px 34px; width:min(1100px,94vw); max-height:92vh; overflow:auto;}
+  .feuille h2{margin:0 0 4px; font-family:"Baloo 2",cursive; font-size:2rem;}
+  .feuille h3{margin:14px 0 6px; font-family:"Baloo 2",cursive;}
+  .feuille ul{margin:0; padding-left:22px; font-size:1.25rem;}
+  .feuille .meilleure{margin-top:16px; font-size:1.4rem; font-weight:700;}
+  .feuille .actions{display:flex; gap:10px; justify-content:flex-end; margin-top:18px;}
+  @media print{
+    body{overflow:visible; height:auto; background:#fff;}
+    .barre, .consigne, .jeu{display:none !important;}
+    #bilan{position:static; background:none; display:block !important;}
+    .feuille{width:auto; max-height:none; padding:0;}
+    .feuille .actions, .feuille select{display:none;}
+  }
+.fiche.cachee{background:repeating-linear-gradient(135deg,#e8eef3 0 10px,#dde6ee 10px 20px);color:#5b6b78;font-style:italic;position:relative;padding-right:52px}
+.fiche.cachee .montrer{position:absolute;right:6px;top:50%;transform:translateY(-50%);font-size:22px;border:0;background:#fff;border-radius:8px;padding:4px 8px;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+</style>
+</head>
+<body>
+<header class="barre">
+  <div class="titre">
+    <svg viewBox="0 0 64 64" aria-hidden="true"><path d="M24 6h16v6h-3v14l14 24a6 6 0 0 1-5 9H18a6 6 0 0 1-5-9l14-24V12h-3z" fill="#e8f6f8" stroke="#1f7a8c" stroke-width="4"/><path d="M17 44h30l5 8a3 3 0 0 1-3 4H15a3 3 0 0 1-3-4z" fill="#1a9e72"/></svg>
+    <h1>Fiable ou pas fiable ?</h1>
+  </div>
+  <input id="theme" type="text" placeholder="Le thème : par exemple « Calculer 4 605 − 839 »" maxlength="90">
+  <div class="droite">
+    <div class="compte f"><small>Fiables</small><b id="nbF">0</b></div>
+    <div class="compte p"><small>Pas fiables</small><b id="nbP">0</b></div>
+    <select id="exemples" title="Charger un exemple prêt">
+      <option value="">Exemples…</option>
+    </select>
+    <button class="btn" id="btnVider" type="button" title="Tout effacer">🧽</button>
+    <button class="btn principal" id="btnBilan" type="button">📝 Bilan</button>
+  </div>
+</header>
+<div class="consigne"><p id="consigne"></p></div>
+<main class="jeu">
+  <section class="colonne pioche" data-z="pioche">
+    <h2>🧪 Les méthodes</h2>
+    <div class="liste" id="L-pioche"></div>
+    <div class="ajout">
+      <input id="nouvelle" type="text" placeholder="Écris une méthode…" maxlength="80">
+      <button class="btn principal" id="btnAjouter" type="button">➕</button>
+    </div>
+  </section>
+  <section class="colonne zone f" data-z="fiable"><h2>✅ Fiable</h2><div class="liste" id="L-fiable"></div></section>
+  <section class="colonne zone p" data-z="pas"><h2>⚠️ Pas fiable</h2><div class="liste" id="L-pas"></div></section>
+</main>
+
+<div id="bilan" hidden>
+  <div class="feuille">
+    <h2 id="bTheme"></h2>
+    <h3 style="color:#1a9e72">✅ Fiable</h3><ul id="bF"></ul>
+    <h3 style="color:#e8792a">⚠️ Pas fiable</h3><ul id="bP"></ul>
+    <p class="meilleure">Fiable et efficace : <select id="bMeilleure"></select><span id="bMeilleureTxt"></span></p>
+    <div class="actions">
+      <button class="btn" id="btnImprimer" type="button">🖨️ Imprimer la trace écrite</button>
+      <button class="btn principal" id="btnFermer" type="button">Fermer</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* Critères pour dire POURQUOI (méthodes de classe) ; on peut aussi écrire son propre « parce que ».
+   Fiable = donne toujours le bon résultat. La lenteur ne rend pas une méthode « pas fiable » : elle est fiable mais pas efficace. */
+var CRITERES = {
+  fiable: ["elle marche toujours", "on peut vérifier", "elle marche, mais elle est longue"],
+  pas: ["le résultat est faux", "on risque de se tromper", "elle ne marche que parfois"]
+};
+/* Exemples prêts : des méthodes que les élèves proposent souvent. Elles arrivent dans la pioche, sans réponse :
+   c'est la classe qui décide et qui justifie. */
+var EXEMPLES = {
+  "Calculer 4 605 − 839": ["Je compte à rebours de 1 en 1", "Je pose la soustraction en colonnes, avec les retenues", "J'enlève 800, puis 39", "J'estime d'abord : 4 600 − 800, environ 3 800", "Je fais 839 − 4 605"],
+  "Trouver le sujet du verbe": ["Je dis « C'est … qui » autour du groupe", "Je pose la question « Qui est-ce qui … ? »", "C'est toujours le premier mot de la phrase", "C'est le mot juste avant le verbe", "Je le remplace par il, elle, ils ou elles"],
+  "Trouver le verbe": ["Je change le temps : hier… / demain…", "J'encadre avec ne … pas", "C'est le mot qui dit une action", "C'est le deuxième mot de la phrase"],
+  "Trouver le nom": ["Je peux mettre un ou le devant", "C'est une chose qu'on peut toucher", "C'est le mot après le déterminant", "C'est le mot le plus long"],
+  "Lire une droite graduée": ["Je compte les graduations de 1 en 1", "Je calcule l'écart entre deux repères et je le partage", "Je regarde le nombre le plus proche et je devine", "Je vérifie que toutes les graduations sont régulières"],
+  "Écrire 21/4 avec un entier et une fraction": ["Je plie des bandes en quarts et je compte", "J'utilise la table de 4 : 4 × 5 = 20, donc 5 + 1/4", "Le grand nombre en haut veut dire plus que 1", "Je dessine 21 parts et je fais des paquets de 4"],
+  // Karim, 9/11 : les cartes sont les propositions attendues des élèves, écrites avec leurs nombres (la séance ma-s2-calcul-mental les liste)
+  "Calculer 36 × 20": ["Je pose 36 × 20 en colonnes", "36 × 2 = 72, puis 72 × 10 = 720", "36 × 10 = 360, puis 360 × 2 = 720", "30 × 20 = 600 et 6 × 20 = 120, donc 720", "J'ajoute 36 vingt fois", "J'écris 36 et j'ajoute un zéro : 360", "36 + 20 = 56"],
+  // 17/11 : problèmes à étapes du lundi 23/11 (ma-s4-problemes) : 50 cubes, 12 à la table 1, 15 à la table 2
+  "Combien de cubes reste-t-il dans la boîte ?": ["50 − 12 = 38, puis 38 − 15 = 23", "12 + 15 = 27, puis 50 − 27 = 23", "50 − 12 = 38 : il reste 38 cubes", "Je dessine 50 cubes, j'en barre 12, puis 15, et je compte ceux qui restent", "50 − 12 + 15 = 53", "50 − 15 = 35 : il reste 35 cubes", "50 + 12 + 15 = 77",
+    "CM2 : 12 + 3 = 15 pour la table 2, puis 50 − 12 − 15 = 23", "CM2 : 50 − 12 − 3 = 35", "CM2 : 12 + 3 = 15 : il reste 15 cubes"],   // 21/11 (Karim) : les méthodes attendues, bonnes et mauvaises, CM1 et CM2,
+  "Jusqu'où broute la chèvre ? (la corde : 5 cm)": ["Je dessine un rond à main levée autour du piquet", "Je dessine un carré autour du piquet", "Je mesure 5 cm dans quelques directions et je relie les points", "Je mesure 5 cm dans beaucoup de directions et je relie les points", "Je trace avec le compas, ouvert de 5 cm, la pointe sur le piquet", "Je trace avec le compas, ouvert de 10 cm"]   // 24/11 : le cercle du vendredi 4/12 (#exemple=8), face cachée
+};
+var TAMPONS = { "elle marche toujours": ["✔ marche toujours", "t-ok"], "on peut vérifier": ["✔ on peut vérifier", "t-ok"], "elle marche, mais elle est longue": ["🐢 juste, mais longue", "t-long"],
+  "le résultat est faux": ["✗ faux", "t-ko"], "on risque de se tromper": ["⚠ on se trompe facilement", "t-ko"], "elle ne marche que parfois": ["⚠ seulement parfois", "t-ko"] };
+var CLE = "fiable-pas-fiable-etat";
+var etat = { theme: "", fiches: [] };   // fiche = { id, texte, zone: pioche|fiable|pas, pourquoi }
+
+function el(id) { return document.getElementById(id); }
+function sauver() { try { localStorage.setItem(CLE, JSON.stringify(etat)); } catch (e) {} }
+function charger() { try { var e = JSON.parse(localStorage.getItem(CLE)); if (e && Array.isArray(e.fiches)) etat = e; } catch (e) {} }
+// « parce que elle » → « parce qu'elle » (élision devant une voyelle)
+function parceQue(t) { return /^[aeéèêiîoôuyh]/i.test(t) ? "parce qu'" : "parce que "; }
+function nouvelId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+
+function consigne() {
+  var c;
+  if (!etat.theme.trim()) c = "Écris le thème en haut.";
+  else if (!etat.fiches.length) c = "Écris la méthode.";
+  else if (etat.fiches.some(function (f) { return f.zone === "pioche"; })) c = "";   // plus de « Glisse-la : fiable ou pas fiable ? » (Karim, 21/10)
+  else if (etat.fiches.some(function (f) { return !f.pourquoi; })) c = "Dis pourquoi.";
+  else if (!garde()) c = etat.fiches.some(function (f) { return f.zone === "fiable"; }) ? "Laquelle garde-t-on ? Je touche ⭐ sur la plus sûre et la plus rapide." : "Aucune méthode fiable : on en cherche une autre.";
+  else c = "📌 Je retiens : " + garde().texte;
+  el("consigne").textContent = c; el("consigne").className = garde() && c.indexOf("📌") === 0 ? "garde" : "";
+}
+function garde() { return etat.fiches.filter(function (f) { return f.id === etat.garde && f.zone === "fiable"; })[0]; }
+function dessiner() {
+  ["pioche", "fiable", "pas"].forEach(function (z) {
+    var L = el("L-" + z); L.innerHTML = "";
+    var fs = etat.fiches.filter(function (f) { return f.zone === z; });
+    if (!fs.length) { var v = document.createElement("p"); v.className = "vide"; v.textContent = z === "pioche" ? "Les méthodes des élèves arrivent ici." : "Glisse une méthode ici."; L.appendChild(v); }
+    fs.forEach(function (f) { L.appendChild(carte(f)); });
+  });
+  el("nbF").textContent = etat.fiches.filter(function (f) { return f.zone === "fiable"; }).length;
+  el("nbP").textContent = etat.fiches.filter(function (f) { return f.zone === "pas"; }).length;
+  consigne();
+}
+function carte(f) {
+  var d = document.createElement("div"); d.className = "fiche"; d.dataset.id = f.id;
+  var t = document.createElement("div"); t.textContent = f.texte; d.appendChild(t);
+  // 24/11 (Karim) : les méthodes préparées arrivent face cachée ; je les retourne quand un élève les dit (ou à la fin, s'il en manque une)
+  if (f.cache) {
+    d.classList.add("cachee"); t.textContent = "? Méthode " + (etat.fiches.filter(function (g) { return g.cache || g.vue; }).indexOf(f) + 1);
+    var m = document.createElement("button"); m.className = "montrer"; m.type = "button"; m.textContent = "👁"; m.title = "Retourner la carte";
+    m.addEventListener("pointerdown", function (e) { e.stopPropagation(); });
+    m.addEventListener("click", function (e) { e.stopPropagation(); f.cache = false; f.vue = true; sauver(); dessiner(); });
+    d.appendChild(m); return d;
+  }
+  var x = document.createElement("button"); x.className = "x"; x.type = "button"; x.textContent = "✕"; x.title = "Retirer";
+  x.addEventListener("pointerdown", function (e) { e.stopPropagation(); });
+  x.addEventListener("click", function (e) { e.stopPropagation(); etat.fiches = etat.fiches.filter(function (g) { return g.id !== f.id; }); sauver(); dessiner(); });
+  d.appendChild(x);
+  if (garde() && etat.garde !== f.id) d.classList.add("grise");
+  if (f.zone === "fiable" && f.pourquoi) {   // l'élection : une seule méthode gardée
+    if (etat.garde === f.id) { d.classList.add("gardee"); var r = document.createElement("div"); r.className = "ruban"; r.textContent = "⭐ La méthode qu'on garde"; d.insertBefore(r, t); }
+    var g = document.createElement("button"); g.className = "garder"; g.type = "button"; g.textContent = etat.garde === f.id ? "⭐ retirer" : "⭐ on garde"; g.title = "La méthode qu'on garde";
+    g.addEventListener("pointerdown", function (e) { e.stopPropagation(); });
+    g.addEventListener("click", function (e) { e.stopPropagation(); etat.garde = etat.garde === f.id ? "" : f.id; sauver(); dessiner(); });
+    d.appendChild(g);
+  }
+  if (f.zone !== "pioche") {
+    if (f.pourquoi) {
+      var T = TAMPONS[f.pourquoi], p = document.createElement("div");
+      if (T) { p.className = "tampon " + T[1]; p.textContent = T[0]; }
+      else { p.className = "pourquoi"; p.innerHTML = parceQue(f.pourquoi) + "<b></b>"; p.querySelector("b").textContent = f.pourquoi; }
+      d.appendChild(p);
+      p.addEventListener("click", function () { f.pourquoi = ""; sauver(); dessiner(); });
+      p.title = "Toucher pour changer le pourquoi";
+    } else {
+      var c = document.createElement("div"); c.className = "criteres";
+      CRITERES[f.zone].forEach(function (k) {
+        var b = document.createElement("button"); b.type = "button"; b.textContent = k;
+        b.addEventListener("pointerdown", function (e) { e.stopPropagation(); });
+        b.addEventListener("click", function () { f.pourquoi = k; sauver(); dessiner(); });
+        c.appendChild(b);
+      });
+      var i = document.createElement("input"); i.type = "text"; i.placeholder = "parce que…"; i.maxLength = 80;
+      i.addEventListener("pointerdown", function (e) { e.stopPropagation(); });
+      i.addEventListener("keydown", function (e) { if (e.key === "Enter" && i.value.trim()) { f.pourquoi = i.value.trim(); sauver(); dessiner(); } });
+      i.addEventListener("blur", function () { if (i.value.trim()) { f.pourquoi = i.value.trim(); sauver(); dessiner(); } });
+      c.appendChild(i); d.appendChild(c);
+    }
+  }
+  return d;
+}
+function ajouter(texte) {
+  texte = (texte || "").trim(); if (!texte) return;
+  etat.fiches.push({ id: nouvelId(), texte: texte, zone: "pioche", pourquoi: "" }); sauver(); dessiner();
+}
+
+/* ---------- Glisser une fiche (le toucher-toucher passe par le module « deux gestes ») ---------- */
+var vol = null, src = null;
+function zoneSous(x, y) { var e = document.elementFromPoint(x, y); return e && e.closest ? e.closest(".zone, .pioche") : null; }
+document.addEventListener("pointerdown", function (e) {
+  var f = e.target.closest && e.target.closest(".fiche");
+  if (!f || e.target.closest("input, button")) return;
+  e.preventDefault();
+  src = f; vol = f.cloneNode(true); vol.classList.add("vol"); document.body.appendChild(vol); bouger(e.clientX, e.clientY);
+});
+function bouger(x, y) {
+  if (!vol) return;
+  vol.style.left = x + "px"; vol.style.top = y + "px";
+  [].forEach.call(document.querySelectorAll(".survol"), function (z) { z.classList.remove("survol"); });
+  var z = zoneSous(x, y); if (z) z.classList.add("survol");
+}
+document.addEventListener("pointermove", function (e) { if (vol) bouger(e.clientX, e.clientY); });
+document.addEventListener("pointerup", function (e) {
+  if (!vol) return;
+  var z = zoneSous(e.clientX, e.clientY), id = src.dataset.id;
+  vol.remove(); vol = null; src = null;
+  [].forEach.call(document.querySelectorAll(".survol"), function (x) { x.classList.remove("survol"); });
+  if (!z) return;
+  var f = etat.fiches.filter(function (g) { return g.id === id; })[0]; if (!f) return;
+  var nz = z.dataset.z;
+  if (f.zone !== nz) { f.zone = nz; f.pourquoi = ""; sauver(); dessiner(); }
+});
+
+/* ---------- Bilan : la trace écrite ---------- */
+function ouvrirBilan() {
+  el("bTheme").textContent = etat.theme || "Fiable ou pas fiable ?";
+  var li = function (f) { return "<li>" + esc(f.texte) + (f.pourquoi ? ", " + parceQue(f.pourquoi) + "<i>" + esc(f.pourquoi) + "</i>" : "") + "</li>"; };
+  var F = etat.fiches.filter(function (f) { return f.zone === "fiable"; }), P = etat.fiches.filter(function (f) { return f.zone === "pas"; });
+  el("bF").innerHTML = F.map(li).join("") || "<li>—</li>";
+  el("bP").innerHTML = P.map(li).join("") || "<li>—</li>";
+  var s = el("bMeilleure"); s.innerHTML = F.map(function (f) { return "<option>" + esc(f.texte) + "</option>"; }).join("") || "<option>—</option>";
+  el("bMeilleureTxt").textContent = "";
+  if (garde()) s.value = garde().texte;
+  el("bilan").hidden = false;
+}
+function esc(t) { return String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;"); }
+el("btnBilan").addEventListener("click", ouvrirBilan);
+el("btnFermer").addEventListener("click", function () { el("bilan").hidden = true; });
+el("btnImprimer").addEventListener("click", function () { el("bMeilleureTxt").textContent = ""; window.print(); });
+
+el("btnAjouter").addEventListener("click", function () { ajouter(el("nouvelle").value); el("nouvelle").value = ""; el("nouvelle").focus(); });
+el("nouvelle").addEventListener("keydown", function (e) { if (e.key === "Enter") { ajouter(el("nouvelle").value); el("nouvelle").value = ""; } });
+el("theme").addEventListener("input", function () { etat.theme = el("theme").value; sauver(); consigne(); });
+Object.keys(EXEMPLES).forEach(function (k) { var o = document.createElement("option"); o.value = k; o.textContent = k; el("exemples").appendChild(o); });
+el("exemples").addEventListener("change", function () {
+  var k = el("exemples").value; if (!k) return;
+  etat = { theme: k, fiches: EXEMPLES[k].map(function (t) { return { id: nouvelId(), texte: t, zone: "pioche", pourquoi: "", cache: true }; }) };
+  el("theme").value = k; el("exemples").value = ""; sauver(); dessiner();
+});
+el("btnVider").addEventListener("click", function () { etat = { theme: "", fiches: [] }; el("theme").value = ""; sauver(); dessiner(); });
+
+charger(); el("theme").value = etat.theme || "";
+// #exemple=<n> ouvre directement un exemple (liens de 🎯 Activités et de la page de séance)
+(function () {
+  var m = location.hash.match(/^#exemple=(\d+)$/); if (!m) return;
+  var k = Object.keys(EXEMPLES)[+m[1]]; if (!k) return;
+  etat = { theme: k, fiches: EXEMPLES[k].map(function (t) { return { id: nouvelId(), texte: t, zone: "pioche", pourquoi: "", cache: true }; }) };
+  el("theme").value = k;
+})();
+dessiner();
+</script>
+<!-- DEUX GESTES -->
+<script>
+/* ==== DEUX GESTES (GTH) : chaque jeu se joue en glissant OU en touchant (demande de Karim du 01/10) ====
+   REGLES  : jeu au glisser-déposer → on peut aussi toucher l'objet (il s'entoure), puis toucher sa place ; s'il n'a qu'une place
+             possible (une case réponse), un seul toucher le pose (10/10) :
+             le module rejoue exactement le même glisser-déposer, le jeu garde ses règles.
+   INVERSE : jeu au toucher (toucher la carte, puis la zone) → on peut aussi glisser la carte sur la zone.
+   Installé par .claude/outils/deux-gestes/injecter.py ; ne pas modifier dans le jeu, mais dans ce fichier. */
+(function () {
+  var REGLES = [{"source": ".fiche", "cible": ".zone, .pioche"}], INVERSE = [];
+  // setPointerCapture refuse les pointeurs rejoués : on ignore l'erreur
+  ["setPointerCapture", "releasePointerCapture"].forEach(function (m) {
+    var o = Element.prototype[m]; if (!o) return;
+    Element.prototype[m] = function (id) { try { return o.call(this, id); } catch (e) { return undefined; } };
+  });
+  var st = document.createElement("style");
+  st.textContent = ".dg-choisi{outline:7px solid #1f7a8c !important; outline-offset:4px !important;}" +
+    ".dg-vol{position:fixed !important; z-index:9999; pointer-events:none; opacity:.92; transform:scale(1.05) rotate(-2deg); margin:0 !important;}";
+  document.head.appendChild(st);
+
+  var choix = null, bas = null, rejeu = false, avalerClic = 0;
+  function sous(x, y) { return document.elementFromPoint(x, y); }
+  function trouver(el, liste, cle) {
+    if (!el || !el.closest) return null;
+    for (var i = 0; i < liste.length; i++) { var e = el.closest(liste[i][cle]); if (e) return { regle: liste[i], el: e }; }
+    return null;
+  }
+  function oublier() { if (choix) choix.el.classList.remove("dg-choisi"); choix = null; }
+  function evt(type, cible, x, y) {
+    var e = new PointerEvent(type, { bubbles: true, cancelable: true, composed: true, clientX: x, clientY: y, pointerId: 777,
+      pointerType: "touch", isPrimary: true, button: 0, buttons: type === "pointerup" ? 0 : 1 });
+    (cible && cible.isConnected ? cible : document).dispatchEvent(e);
+  }
+  // Rejoue le glisser-déposer du jeu : de l'objet jusqu'au point touché
+  function rejouer(src, x, y) {
+    if (!src.isConnected) return;
+    var r = src.getBoundingClientRect(), x0 = r.left + r.width / 2, y0 = r.top + r.height / 2;
+    var depart = sous(x0, y0); if (!depart || !src.contains(depart)) depart = src;
+    rejeu = true;
+    try {
+      evt("pointerdown", depart, x0, y0);
+      for (var k = 1; k <= 12; k++) evt("pointermove", depart, x0 + (x - x0) * k / 12, y0 + (y - y0) * k / 12);
+      evt("pointerup", depart, x, y);
+    } finally { rejeu = false; }
+  }
+
+  // ---------- REGLES : toucher l'objet, puis sa place ----------
+  document.addEventListener("pointerdown", function (e) {
+    if (rejeu || !e.isTrusted || !REGLES.length) return;
+    if (choix && !choix.el.isConnected) oublier();
+    // l'objet touché est repéré dès que le doigt se pose : ensuite, le jeu le cache pour le faire glisser
+    bas = { x: e.clientX, y: e.clientY, cible: null, src: trouver(e.target, REGLES, "source") };
+    if (choix) {
+      var c = e.target.closest && e.target.closest(choix.regle.cible);
+      if (c && !(e.target.closest(choix.regle.source))) { bas.cible = c; e.stopImmediatePropagation(); e.preventDefault(); }
+    }
+  }, true);
+  document.addEventListener("pointerup", function (e) {
+    if (rejeu || !e.isTrusted || !bas || !REGLES.length) return;
+    var b = bas; bas = null;
+    var tap = Math.hypot(e.clientX - b.x, e.clientY - b.y) < 12;
+    if (b.cible) {   // le toucher sur la place : le jeu ne le voit pas, on rejoue le glisser à cet endroit
+      e.stopImmediatePropagation(); e.preventDefault(); avalerClic = Date.now();
+      if (tap && choix) { var s = choix.el; oublier(); var x = e.clientX, y = e.clientY; setTimeout(function () { rejouer(s, x, y); }, 0); }
+      return;
+    }
+    if (!tap) { oublier(); return; }   // un vrai glisser : le jeu s'en occupe
+    var src = b.src;
+    setTimeout(function () {   // après le jeu : l'objet touché est choisi (ou ne l'est plus)
+      if (!src || !src.el.isConnected) { return; }
+      // une seule place où le poser (une case réponse) : un toucher suffit, la réponse part dans la case (Karim, 10/10)
+      var places = Array.prototype.filter.call(document.querySelectorAll(src.regle.cible), function (c) {
+        var r = c.getBoundingClientRect(); return r.width > 0 && r.height > 0 && !src.el.contains(c) && getComputedStyle(c).visibility !== "hidden"; });
+      if (places.length === 1) { oublier(); var r = places[0].getBoundingClientRect(); rejouer(src.el, r.left + r.width / 2, r.top + r.height / 2); return; }
+      if (choix && choix.el === src.el) { oublier(); return; }
+      oublier(); choix = src; src.el.classList.add("dg-choisi");
+    }, 0);
+  }, true);
+  document.addEventListener("click", function (e) {
+    if (Date.now() - avalerClic < 500 && e.isTrusted) { e.stopImmediatePropagation(); e.preventDefault(); }
+  }, true);
+
+  // ---------- INVERSE : glisser la carte sur la zone = la toucher, puis toucher la zone ----------
+  var g = null;
+  document.addEventListener("pointerdown", function (e) {
+    if (rejeu || !e.isTrusted || !INVERSE.length) return;
+    var src = trouver(e.target, INVERSE, "source"); if (!src) return;
+    g = { src: src, x: e.clientX, y: e.clientY, vol: null };
+  }, true);
+  document.addEventListener("pointermove", function (e) {
+    if (!g || rejeu) return;
+    if (!g.vol && Math.hypot(e.clientX - g.x, e.clientY - g.y) < 12) return;
+    if (!g.vol) {
+      var r = g.src.el.getBoundingClientRect();
+      g.vol = g.src.el.cloneNode(true); g.vol.classList.add("dg-vol"); g.vol.style.width = r.width + "px";
+      g.dx = g.x - r.left; g.dy = g.y - r.top; document.body.appendChild(g.vol);
+    }
+    g.vol.style.left = (e.clientX - g.dx) + "px"; g.vol.style.top = (e.clientY - g.dy) + "px";
+  }, true);
+  document.addEventListener("pointerup", function (e) {
+    if (!g || rejeu || !e.isTrusted) return;
+    var d = g; g = null;
+    if (!d.vol) return;   // simple toucher : le jeu s'en occupe
+    d.vol.remove(); e.stopImmediatePropagation(); e.preventDefault(); avalerClic = Date.now();
+    var dessous = sous(e.clientX, e.clientY), zone = dessous && dessous.closest ? dessous.closest(d.src.regle.cible) : null;
+    if (!zone) return;
+    rejeu = true;
+    try { evt("pointerup", d.src.el, e.clientX, e.clientY); evt("pointerup", zone, e.clientX, e.clientY); }
+    finally { rejeu = false; }
+  }, true);
+})();
+</script>
+<!-- /DEUX GESTES -->
+<!-- MENU -->
+<script>
+/* ==== LE MENU ☰ (GTH, 10/10) : interface épurée — à l'écran, seulement le titre, le score, la consigne et l'activité ====
+   Tout le reste (niveaux, onglets de méthode, ✏️, 🔊, 🖨️, aide…) part dans un menu ☰, ouvert d'un toucher.
+   Réglage par outil (CONF, posé par l'injecteur) : ancre = où mettre le bouton ☰ (sinon en haut à droite de l'écran) ;
+   cacher = ce qui part dans le menu (sinon : tout ce qui, dans « .barre .droite », n'est pas un score).
+   Installé par .claude/outils/menu-outil/injecter.py ; ne pas modifier dans l'outil, mais dans ce fichier. */
+(function () {
+  var CONF = {"ancre": ".barre .droite", "cacher": ["#exemples", "#btnVider", "#btnBilan"]};
+  var st = document.createElement("style");
+  st.textContent =
+    ".menu-btn{width:58px; height:58px; border-radius:16px; border:2px solid rgba(0,0,0,.15); background:#fff; color:#1f2a33; font-size:2rem; line-height:1; cursor:pointer; flex:none; padding:0;}" +
+    ".menu-btn.fixe{position:fixed; top:10px; right:12px; z-index:150; box-shadow:0 4px 14px rgba(0,0,0,.15);}" +
+    ".menu-btn.ouvert{background:#1f2a33; color:#fff;}" +
+    ".menu-panneau{position:fixed; top:76px; right:16px; z-index:200; background:#fff; color:#1f2a33; border-radius:18px; box-shadow:0 18px 50px rgba(0,0,0,.28); padding:16px 18px;" +
+    "  display:flex; flex-direction:column; align-items:flex-start; gap:12px; max-width:min(620px, 92vw); max-height:80vh; overflow:auto;}" +
+    ".menu-panneau[hidden]{display:none !important;}" +
+    ".menu-panneau h4{margin:0; font-family:sans-serif; font-size:.85rem; text-transform:uppercase; letter-spacing:.6px; color:#6d7a85;}" +
+    ".menu-panneau > *{position:static !important; margin:0 !important;}" +
+    ".menu-panneau > div,.menu-panneau > nav{display:flex; flex-wrap:wrap; gap:8px;}";
+  document.head.appendChild(st);
+  function installer() {
+    var autres = [];
+    if (CONF.cacher) CONF.cacher.forEach(function (s) { document.querySelectorAll(s).forEach(function (e) { if (autres.indexOf(e) === -1) autres.push(e); }); });
+    else { var d = document.querySelector(".barre .droite"); if (d) autres = Array.prototype.filter.call(d.children, function (e) { return !e.classList.contains("score"); }); }
+    if (!autres.length) return;
+    var btn = document.createElement("button"); btn.type = "button"; btn.className = "menu-btn"; btn.title = "Niveaux et réglages"; btn.textContent = "☰";
+    var pan = document.createElement("div"); pan.className = "menu-panneau"; pan.hidden = true;
+    var t = document.createElement("h4"); t.textContent = "Niveaux et réglages"; pan.appendChild(t);
+    autres.forEach(function (e) { pan.appendChild(e); });
+    var ancre = document.querySelector(CONF.ancre || ".barre .droite");
+    if (ancre) ancre.appendChild(btn); else { btn.classList.add("fixe"); document.body.appendChild(btn); }
+    document.body.appendChild(pan);
+    function ouvrir(o) { pan.hidden = !o; btn.classList.toggle("ouvert", o); }
+    btn.addEventListener("click", function (e) { e.stopPropagation(); ouvrir(pan.hidden); });
+    // un niveau choisi, ou une fenêtre ouverte (✏️, 🖨️) : le menu se referme ; on garde le menu ouvert pour choisir un type de jeu
+    pan.addEventListener("click", function (e) { var b = e.target.closest("button"); if (b && !b.closest(CONF.garderOuvert || ".types")) setTimeout(function () { ouvrir(false); }, 120); });
+    document.addEventListener("pointerdown", function (e) { if (!pan.hidden && !pan.contains(e.target) && e.target !== btn) ouvrir(false); });
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", installer); else installer();
+})();
+</script>
+<!-- /MENU -->
+</body>
+</html>

@@ -1,0 +1,410 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>L'horloge de la gare</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='28' fill='%23fff' stroke='%23123' stroke-width='6'/%3E%3Cpath d='M32 32V12M32 32l12 8' stroke='%23123' stroke-width='5' stroke-linecap='round'/%3E%3C/svg%3E">
+<!--
+  🚉 L'horloge de la gare — lire l'heure, placer les aiguilles, calculer une durée, P2 📅 1 à 5 (GTH v2 : ma-s1-mesures.js … ma-s5-mesures.js).
+  Maquette « L'horloge et la frise des durées » (21/10) ; Karim a demandé de coder toutes les activités (21/10).
+  Univers : la gare ; une horloge de quai et, pour les durées, la voie ferrée où le train fait des bonds.
+  Onglets : « Je lis » (taper l'heure ; l'après-midi, on ajoute 12) · « Je place » (tourner la grande aiguille au doigt : la petite avance
+  avec elle, comme une vraie horloge) · « Durée » (le train fait des bonds sur la voie : jusqu'à l'heure ronde, puis des heures, puis
+  jusqu'à l'arrivée ; l'élève écrit chaque bond, puis la durée). Liens : #lis, #place, #duree.
+  Gestes : glisser la grande aiguille ou toucher le cadran ; glisser le train ou toucher l'arrêt. L'outil ne calcule jamais à la place
+  de l'élève : il trace le bond, l'élève écrit sa durée. Les secondes (CM2) ne sont pas dans l'outil.
+  Contenu : les horaires viennent des séances de GTH v2 (6 h 38 → 7 h 56, 8 h 37 + 45 min, 11 h 55, 23 h 55…) ; les autres sont de moi.
+  Karim, 7/11 (les CM1 ne savent pas lire l'heure) : les minutes écrites autour du cadran ; deux onglets à une seule aiguille,
+  « Les heures » (la petite seule : pile, puis entre deux nombres) et « Les minutes » (la grande seule : de 5 en 5, puis de 1 en 1) ;
+  Karim, 7/11 (2e retour : « tu mélanges lire et placer, ça mérite deux niveaux différents ») : lire et placer sont deux niveaux à part.
+  Liens : #heures-1 (je lis, pile) #heures-2 (je place, pile) #heures-3 (je lis, entre deux) ; #minutes-1 (je lis, 5 en 5) #minutes-2 (je place, 5 en 5) #minutes-3 (je lis, 1 en 1) #minutes-4 (je place, 1 en 1).
+  Hors ligne (ENI, Chromebook).
+-->
+<style>
+:root{--quai:#e8edf1;--nuit:#12324a;--rail:#6d4c41;--encre:#12324a;--vert:#2e7d32;--rouge:#c62828;--talbot:#1f7a8c;--jaune:#ffd54f}
+html,body{margin:0;height:100%;background:#12324a;overflow:hidden;font-family:Arial,Helvetica,sans-serif;color:var(--encre)}
+#scene{position:absolute;left:0;top:0;width:1920px;height:1080px;transform-origin:0 0;background:var(--quai)}
+#barre{height:84px;display:flex;align-items:center;gap:22px;padding:0 28px;background:var(--nuit);color:#fff}
+#barre h1{margin:0;font-size:34px;display:flex;align-items:center;gap:12px;color:var(--jaune)}
+#barre h1 svg{width:52px;height:52px}
+.onglets{display:flex;gap:8px;margin-left:24px}
+.onglets button{font:inherit;font-size:24px;padding:10px 22px;border-radius:10px;border:2px solid #3d5a73;background:#1b4462;color:#fff;cursor:pointer}
+.onglets button.on{background:var(--jaune);color:var(--nuit);font-weight:700;border-color:var(--jaune)}
+#coin{margin-left:auto;text-align:right;font-size:20px;line-height:1.45}
+#niveaux{display:flex;gap:6px;justify-content:flex-end;margin-top:2px}
+#niveaux button{font:inherit;font-size:16px;padding:3px 10px;border-radius:10px;border:1.5px solid #3d5a73;background:#1b4462;color:#fff;cursor:pointer}
+#niveaux button.on{background:#1f7a8c;border-color:#1f7a8c}
+#coin b{font-size:28px;color:var(--jaune)}
+#consigne{height:100px;display:flex;align-items:center;justify-content:center;font-size:50px;font-weight:700;text-align:center}
+#consigne .q{color:#c2410c}
+#jeu{position:absolute;left:0;right:0;top:184px;bottom:110px}
+#bas{position:absolute;left:0;right:0;bottom:0;height:110px;display:flex;align-items:center;justify-content:center;gap:30px}
+#indice{font:inherit;font-size:24px;padding:12px 26px;border-radius:30px;border:2px solid #d4b106;background:#fff8c4;cursor:pointer}
+#verdict{font-size:38px;font-weight:700;min-width:760px;text-align:center}
+#verdict.ok{color:var(--vert)} #verdict.ko{color:var(--rouge)}
+#bulle{position:absolute;left:50%;bottom:118px;transform:translateX(-50%);max-width:1100px;background:#fff8c4;border:2px solid #d4b106;border-radius:18px;padding:16px 26px;font-size:30px;display:none;box-shadow:0 6px 18px rgba(0,0,0,.15)}
+.quai{position:absolute;left:0;right:0;bottom:0;height:60px;background:#b0bec5;border-top:14px solid #ffd54f}
+#crayon{position:absolute;left:26px;top:96px;height:64px;padding:0 22px;border-radius:32px;border:3px solid #1f7a8c;background:#fff;color:#1f7a8c;font:700 28px "Segoe UI",sans-serif;cursor:pointer;z-index:20}
+#choix{position:absolute;left:0;top:0;right:0;bottom:0;background:rgba(18,50,74,.55);display:none;align-items:center;justify-content:center;z-index:40}
+#choix div{background:#fff;border-radius:20px;padding:30px 44px;font-size:34px;font-weight:700;display:flex;flex-direction:column;gap:22px;align-items:flex-start}
+#choix input{font:inherit;font-size:40px;padding:6px 12px;margin-left:14px}
+#choix button{font:inherit;font-size:30px;padding:10px 30px;border-radius:30px;border:3px solid var(--talbot);background:var(--talbot);color:#fff;cursor:pointer;align-self:center}
+svg#horloge{position:absolute;left:150px;top:0;width:780px;height:780px;touch-action:none}
+#moment{position:absolute;left:1080px;top:280px;text-align:left;font-size:34px;font-weight:700}
+#ecran{position:absolute;display:flex;align-items:center;gap:14px;font-size:46px;font-weight:700}
+.champ{min-width:100px;height:76px;border:5px solid #90a4ae;border-radius:16px;background:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:46px;padding:0 8px;box-sizing:border-box}
+.champ.actif{border-color:var(--talbot);box-shadow:0 0 0 5px #bfe3ea}
+.champ.ko{border-color:var(--rouge);animation:secoue .45s 2}
+.champ.ok{border-color:var(--vert)}
+@keyframes secoue{0%,100%{transform:translateX(0)}25%{transform:translateX(-10px)}75%{transform:translateX(10px)}}
+#pave{position:absolute;display:grid;grid-template-columns:repeat(5,70px);gap:10px}
+#pave button{font:inherit;font-size:30px;font-weight:700;height:60px;border-radius:16px;border:3px solid #90a4ae;background:#fff;color:var(--encre);cursor:pointer}
+#cible{position:absolute;left:1050px;top:120px;font-size:96px;font-weight:700;font-family:"Courier New",monospace;background:var(--nuit);color:var(--jaune);padding:24px 48px;border-radius:14px;letter-spacing:4px}
+svg#voie{position:absolute;left:0;top:0;width:1920px;height:440px;touch-action:none}
+#train{cursor:grab}
+#train.choisi{filter:drop-shadow(0 0 8px #1f7a8c)}
+.vole{position:fixed;z-index:30;pointer-events:none;opacity:.9}
+.bond-champ{position:absolute;display:flex;align-items:center;gap:6px;font-size:36px;font-weight:700;transform:translateX(-50%)}
+.bond-champ .champ{min-width:72px;height:60px;font-size:36px}
+/* 💡 sur le côté (21/10) : l'ampoule seule, au bout de la consigne ; la bulle à côté, jamais sous le jeu */
+#indice{position:absolute;right:26px;top:96px;width:82px;height:82px;padding:0;border-radius:50%;font-size:44px;line-height:1;z-index:20}
+#bulle{left:auto;right:124px;top:100px;bottom:auto;transform:none;max-width:640px;font-size:28px;z-index:20}
+/* 🧮 la calculette (21/10) : petite, sur le côté, on touche les touches */
+#pave{position:absolute !important; left:auto !important; right:40px !important; top:440px !important; bottom:auto !important; grid-template-columns:repeat(3,64px) !important; gap:8px !important;
+  padding:14px; background:#37474f; border-radius:20px; box-shadow:0 6px 0 #263238; z-index:15}
+#pave button{height:52px !important; font-size:26px !important; border-radius:10px !important; border:none !important; background:#eceff1 !important; color:#263238 !important; box-shadow:0 3px 0 #90a4ae; grid-column:auto !important}
+#pave button:active{transform:translateY(2px); box-shadow:none}
+/* 🧮 calculette discrète (21/10) : petite, pâle, petits chiffres */
+#pave{padding:8px !important; gap:5px !important; grid-template-columns:repeat(3,46px) !important; background:#eceff1 !important; box-shadow:none !important; border:2px solid #cfd8dc; border-radius:14px !important; opacity:.85}
+#pave button{height:38px !important; font-size:19px !important; border-radius:8px !important; background:#fff !important; color:#607d8b !important; box-shadow:none !important; border:1px solid #cfd8dc !important}
+
+/* 24/11 (Karim : « le décor de l'activité est bof ») : un vrai paysage clair, un ciel, des collines, l'herbe sous la voie ; le bandeau devient clair */
+#scene{background:linear-gradient(180deg,#d7eefb 0,#eef8fd 300px,#eef8fd 330px,rgba(0,0,0,0) 331px),radial-gradient(ellipse 520px 120px at 22% 330px,#b9dca6 0 99%,transparent 100%),radial-gradient(ellipse 640px 150px at 75% 335px,#a9d293 0 99%,transparent 100%),linear-gradient(180deg,#eef8fd 0,#eef8fd 330px,#d8eccb 331px,#e6f3dc 100%)!important}
+#barre{background:#ffffff!important;color:#12324a!important;border-bottom:3px solid #1f7a8c;box-shadow:0 2px 8px rgba(0,0,0,.08)}
+#barre h1{color:#1f7a8c!important}
+#barre b,#barre strong{color:#1f7a8c!important}
+.onglets button{background:#eef4f7!important;color:#12324a!important;border-color:#cfdde5!important}
+.onglets button.on{background:#ffd54f!important;color:#12324a!important;border-color:#e6b800!important}
+</style>
+</head>
+<body>
+<div id="scene">
+  <div id="barre">
+    <h1><svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="28" fill="#fff" stroke="#ffd54f" stroke-width="6"/><path d="M32 32V12M32 32l12 8" stroke="#12324a" stroke-width="5" stroke-linecap="round"/></svg>L'horloge de la gare</h1>
+    <div class="onglets"><button data-o="heures">Les heures</button><button data-o="minutes">Les minutes</button><button data-o="lis">Je lis</button><button data-o="place">Je place</button><button data-o="duree">Durée</button></div>
+    <div id="coin"><div><span id="nom-score">Série sans faute</span> : <b id="score">0</b> · 🏆 Record : <b id="record">0</b></div><div id="niveaux"><button data-n="1">Piles et demies</button><button data-n="2">Quarts d'heure</button><button data-n="3">De 5 en 5</button><button data-n="4">Toutes les minutes</button></div></div>
+  </div>
+  <div id="consigne"></div>
+  <div id="jeu"></div>
+  <div id="bulle"></div>
+  <button id="crayon" title="Choisir mon heure">✏️ Je choisis l'heure</button>
+  <div id="choix"><div><label>Heure <input type="time" id="h1" value="09:40"></label><label id="l2">Arrivée <input type="time" id="h2" value="11:15"></label><button id="ok">C'est parti</button></div></div>
+  <button id="indice" title="Indice">💡</button><div id="bas"><div id="verdict"></div></div>
+</div>
+<script>
+"use strict";
+// ---------- les horaires (en minutes depuis minuit) ----------
+const hm = (h, m) => h * 60 + m;
+const LIS = [hm(6, 56), hm(11, 55), hm(15, 20), hm(4, 8), hm(18, 56), hm(10, 55), hm(17, 8), hm(3, 28), hm(23, 55), hm(14, 25), hm(9, 23), hm(16, 42)];
+const PLACE = [hm(14, 35), hm(8, 15), hm(10, 50), hm(5, 8), hm(17, 45), hm(11, 40), hm(3, 28), hm(20, 5), hm(7, 31), hm(12, 8)];
+const DUREE = [[hm(9, 40), hm(11, 15)], [hm(6, 38), hm(7, 56)], [hm(8, 37), hm(9, 22)], [hm(10, 17), hm(12, 8)], [hm(13, 40), hm(15, 5)],
+  [hm(14, 25), hm(16, 42)], [hm(22, 17), hm(22, 55)], [hm(7, 31), hm(10, 50)], [hm(11, 40), hm(12, 8)], [hm(17, 23), hm(19, 57)]];
+const etat = { niveau: 4, simple: 1, onglet: "lis", i: 0, score: 0, aide: 0, champs: [], actif: 0, minutes: 720, phase: "", pos: 0, bonds: [] };
+window.GARE = etat;   // pour le test automatique
+const $ = id => document.getElementById(id);
+const mem = { lire(k) { try { return +localStorage.getItem(k) || 0; } catch (e) { return 0; } }, ecrire(k, v) { try { localStorage.setItem(k, v); } catch (e) {} } };
+const UNE = { heures: ["Je lis · pile", "Je place · pile", "Je lis · entre deux"], minutes: ["Je lis · de 5 en 5", "Je place · de 5 en 5", "Je lis · de 1 en 1", "Je place · de 1 en 1"] };   // les onglets à une seule aiguille ont leurs niveaux
+const cleRecord = () => "gare-record-" + etat.onglet + "-" + (UNE[etat.onglet] ? etat.simple : etat.niveau);
+// les horaires d'un niveau : minutes 0/30, 0/15/30/45, de 5 en 5 ; le niveau 4 garde les horaires des séances
+const LIS0 = LIS.slice(), PLACE0 = PLACE.slice(), DUREE0 = DUREE.map(d => d.slice());
+const PAS = { 1: 30, 2: 15, 3: 5 };
+function horaire(pas) { return (6 + Math.floor(Math.random() * 16)) * 60 + pas * Math.floor(Math.random() * (60 / pas)); }
+function horaires() {
+  const remplace = (L, l) => { L.length = 0; l.forEach(x => L.push(x)); };
+  if (etat.niveau === 4) { remplace(LIS, LIS0); remplace(PLACE, PLACE0); remplace(DUREE, DUREE0.map(d => d.slice())); return; }
+  const pas = PAS[etat.niveau], l = [], p = [], d = [];
+  for (let k = 0; k < 12; k++) { l.push(horaire(pas)); p.push(horaire(pas)); }
+  for (let k = 0; k < 10; k++) { const dep = horaire(pas), dur = pas * (1 + Math.floor(Math.random() * (180 / pas))); d.push([dep, Math.min(dep + Math.max(dur, 20), 23 * 60 + 55)]); }
+  remplace(LIS, l); remplace(PLACE, p); remplace(DUREE, d);
+}
+function afficheScore() { $("score").textContent = etat.score; $("record").textContent = mem.lire(cleRecord()); $("nom-score").textContent = "Série sans faute"; }
+function marque() { etat.score++; if (etat.score > mem.lire(cleRecord())) mem.ecrire(cleRecord(), etat.score); afficheScore(); }
+function verdict(t, cls) { const v = $("verdict"); v.textContent = t; v.className = cls || ""; if (cls === "ko" && etat.score) { etat.score = 0; afficheScore(); } }   // série sans faute : une erreur la remet à 0
+function consigne(h) { $("consigne").innerHTML = "<span>" + h + "</span>"; }
+function bulle(t) { const b = $("bulle"); b.textContent = t; b.style.display = "block"; clearTimeout(bulle.t); bulle.t = setTimeout(() => b.style.display = "none", 7000); }
+const echelle = () => +($("scene").dataset.ech || 1);
+let minuteur = 0;
+const plusTard = f => { clearTimeout(minuteur); minuteur = setTimeout(f, 1800); };
+const ecrit = m => Math.floor(m / 60) % 24 + " h " + String(m % 60).padStart(2, "0");
+const ecritDuree = d => (d >= 60 ? Math.floor(d / 60) + " h " : "") + (d % 60 || d < 60 ? d % 60 + " min" : "");
+const nomMoment = m => m < 12 * 60 ? "le matin" : m < 18 * 60 ? "l'après-midi" : "le soir";
+const moment = m => (m < 12 * 60 ? "☀️ " : m < 18 * 60 ? "🌤️ " : "🌙 ") + nomMoment(m);
+
+// ---------- l'horloge ----------
+const CX = 390, CY = 420, R = 205, LG = 160, LP = 105;   // le centre, le rayon, la grande et la petite aiguille
+function dessineHorloge() {
+  let s = '<circle cx="' + CX + '" cy="' + CY + '" r="' + (R + 46) + '" fill="#12324a"/><circle cx="' + CX + '" cy="' + CY + '" r="' + R + '" fill="#fff"/>';
+  for (let k = 0; k < 60; k++) { const a = k * 6 * Math.PI / 180, l = k % 5 ? 14 : 34; s += '<line x1="' + (CX + Math.sin(a) * (R - 8)) + '" y1="' + (CY - Math.cos(a) * (R - 8)) + '" x2="' + (CX + Math.sin(a) * (R - 8 - l)) + '" y2="' + (CY - Math.cos(a) * (R - 8 - l)) + '" stroke="#12324a" stroke-width="' + (k % 5 ? 3 : 8) + '"/>'; }
+  for (let h = 1; h <= 12; h++) { const a = h * 30 * Math.PI / 180; s += '<text x="' + (CX + Math.sin(a) * (R - 64)) + '" y="' + (CY - Math.cos(a) * (R - 64) + 17) + '" font-size="46" font-weight="700" text-anchor="middle" fill="#12324a">' + h + '</text>'; }
+  for (let mi = 0; mi < 60; mi += 5) { const a = mi * 6 * Math.PI / 180; s += '<text x="' + (CX + Math.sin(a) * (R + 23)) + '" y="' + (CY - Math.cos(a) * (R + 23) + 10) + '" font-size="29" font-weight="700" text-anchor="middle" fill="#ffd54f">' + mi + '</text>'; }
+  s += '<line id="petite" x1="' + CX + '" y1="' + CY + '" x2="' + CX + '" y2="' + (CY - LP) + '" stroke="#12324a" stroke-width="22" stroke-linecap="round"/>';
+  s += '<line id="grande" x1="' + CX + '" y1="' + CY + '" x2="' + CX + '" y2="' + (CY - LG) + '" stroke="#c2410c" stroke-width="12" stroke-linecap="round"/>';
+  s += '<circle id="poignee" cx="' + CX + '" cy="' + (CY - LG) + '" r="34" fill="#c2410c" fill-opacity=".25" stroke="#c2410c" stroke-width="4" style="cursor:grab"/>';
+  s += '<circle cx="' + CX + '" cy="' + CY + '" r="16" fill="#12324a"/>';
+  // la façade de la gare : le fronton, le mur de pierre, l'horloge au centre, l'enseigne GARE, deux portes en arc
+  s = '<path d="M30 175L390 20L750 175z" fill="#d7b98e" stroke="#8d6e63" stroke-width="6" stroke-linejoin="round"/>' +
+    '<rect x="60" y="170" width="660" height="610" fill="#efe0c4" stroke="#8d6e63" stroke-width="6"/>' +
+    '<path d="M60 200h660" stroke="#8d6e63" stroke-width="4"/>' +
+    '<rect x="270" y="690" width="240" height="58" rx="8" fill="#12324a"/><text x="390" y="732" font-size="40" font-weight="700" text-anchor="middle" fill="#ffd54f" letter-spacing="6">GARE</text>' +
+    '<path d="M95 780V680a55 55 0 0 1 110 0V780z M575 780V680a55 55 0 0 1 110 0V780z" fill="#6d4c41" stroke="#4e342e" stroke-width="4"/>' + s;
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg"); svg.id = "horloge"; svg.setAttribute("viewBox", "0 0 780 780"); svg.innerHTML = s;
+  $("jeu").insertAdjacentHTML("beforeend", '<div class="quai"></div>'); $("jeu").appendChild(svg); return svg;
+}
+function aiguilles(m) {
+  const am = (m % 60) * 6 * Math.PI / 180, ah = ((m % 720) / 2) * Math.PI / 180;
+  $("grande").setAttribute("x2", CX + Math.sin(am) * LG); $("grande").setAttribute("y2", CY - Math.cos(am) * LG);
+  $("poignee").setAttribute("cx", CX + Math.sin(am) * LG); $("poignee").setAttribute("cy", CY - Math.cos(am) * LG);
+  $("petite").setAttribute("x2", CX + Math.sin(ah) * LP); $("petite").setAttribute("y2", CY - Math.cos(ah) * LP);
+}
+function versHorloge(ev) { const svg = $("horloge"), pt = svg.createSVGPoint(); pt.x = ev.clientX; pt.y = ev.clientY; const q = pt.matrixTransform(svg.getScreenCTM().inverse()); return [q.x, q.y]; }
+const minuteDe = ev => { const [x, y] = versHorloge(ev); let a = Math.atan2(x - CX, -(y - CY)) * 180 / Math.PI; if (a < 0) a += 360; return Math.round(a / 6) % 60; };
+// la grande aiguille va vers la minute visée par le plus court chemin : la petite avance (ou recule) avec elle
+function tourneVers(min) { let d = min - etat.minutes % 60; if (d > 30) d -= 60; if (d <= -30) d += 60; etat.minutes = (etat.minutes + d + 1440) % 1440; aiguilles(etat.minutes); }
+
+// ---------- le pavé ----------
+function pave(x, y) {
+  const p = document.createElement("div"); p.id = "pave"; Object.assign(p.style, { left: x + "px", top: y + "px" });
+  ["7", "8", "9", "4", "5", "6", "1", "2", "3", "0"].forEach(t => { const b = document.createElement("button"); b.textContent = t; b.onclick = () => touche(t); p.appendChild(b); });
+  const eff = document.createElement("button"); eff.textContent = "⌫"; eff.style.gridColumn = "5"; eff.onclick = () => touche("⌫"); p.appendChild(eff);
+  $("jeu").appendChild(p);
+}
+const deux = n => n < 10 ? [String(n), "0" + n] : [String(n)];
+// un champ = { el, juste: "15" ou ["8", "08"] } ; on vérifie quand ce qui est tapé ne peut plus devenir la réponse
+function champsActifs(liste) { etat.champs = liste; etat.actif = 0; liste.forEach((c, j) => { c.val = ""; c.el.onclick = () => { etat.actif = j; montre(); }; }); montre(); }
+function montre() { etat.champs.forEach((c, j) => { c.el.textContent = c.val; c.el.classList.toggle("actif", j === etat.actif && !c.fait); }); }
+function touche(t) {
+  const c = etat.champs[etat.actif]; if (!c || c.fait) return;
+  if (t === "⌫") { c.val = c.val.slice(0, -1); montre(); return; }
+  if (c.val.length >= 2) return;
+  c.val += t; montre();
+  const ok = [].concat(c.juste);   // 8 ou 08 : les deux sont acceptés
+  if (ok.includes(c.val)) { c.fait = true; c.el.classList.add("ok"); const s = etat.champs.findIndex(x => !x.fait); if (s >= 0) { etat.actif = s; montre(); } else champsFinis(); }
+  else if (!ok.some(j => j.startsWith(c.val))) { c.el.classList.add("ko"); faux(c); setTimeout(() => { c.el.classList.remove("ko"); c.val = ""; montre(); }, 1000); }
+}
+function faux(c) {
+  if (UNE[etat.onglet]) verdict(etat.onglet === "heures" ? "🤪 Regarde le nombre que la petite aiguille vient de passer." : "🤪 Lis les minutes écrites autour de l'horloge.", "ko");
+  else if (etat.onglet === "lis") { const m = LIS[etat.i % LIS.length]; verdict(c === etat.champs[0] && m >= 720 && +c.val === Math.floor(m / 60) - 12 ? "🤪 C'est " + nomMoment(m) + " : ajoute 12." : "🤪 Regarde bien l'aiguille.", "ko"); }
+  else verdict("🤪 Compte encore.", "ko");
+}
+
+// ---------- Je lis ----------
+function tourLis() {
+  $("jeu").innerHTML = ""; etat.aide = 0;
+  const m = LIS[etat.i % LIS.length]; dessineHorloge(); aiguilles(m); $("poignee").style.display = "none";   // on lit, on ne tourne pas
+  $("jeu").insertAdjacentHTML("beforeend", '<div id="moment">' + moment(m) + "</div>");
+  const e = document.createElement("div"); e.id = "ecran"; Object.assign(e.style, { left: "1080px", top: "160px" });
+  e.innerHTML = '<div class="champ"></div><span>h</span><div class="champ"></div><span>min</span>';
+  $("jeu").appendChild(e); pave(1110, 360);
+  const [h, mi] = e.querySelectorAll(".champ");
+  champsActifs([{ el: h, juste: deux(Math.floor(m / 60)) }, { el: mi, juste: deux(m % 60) }]);
+  consigne('Quelle <span class="q">heure</span> est-il ?');
+}
+// ---------- Je place ----------
+function tourPlace() {
+  $("jeu").innerHTML = ""; etat.aide = 0; etat.minutes = 720; etat.phase = "place";
+  const m = PLACE[etat.i % PLACE.length], svg = dessineHorloge(); aiguilles(etat.minutes);
+  $("jeu").insertAdjacentHTML("beforeend", '<div id="cible">' + ecrit(m).replace(" h ", ":") + '</div><div id="moment" style="left:1050px;top:340px;width:auto;text-align:left">' + moment(m) + "</div>");
+  // glisser la grande aiguille, ou toucher le cadran
+  let tient = false;
+  svg.addEventListener("pointerdown", ev => { ev.preventDefault(); tient = true; tourneVers(minuteDe(ev)); });
+  addEventListener("pointermove", glisseAiguille = ev => { if (tient) tourneVers(minuteDe(ev)); });
+  addEventListener("pointerup", lacheAiguille = () => { if (!tient) return; tient = false; verifiePlace(); });
+  consigne('Mets l\'horloge à <span class="q">l\'heure</span>');
+}
+let glisseAiguille = null, lacheAiguille = null;
+function verifiePlace() {
+  if (etat.phase !== "place") return;
+  const m = PLACE[etat.i % PLACE.length];
+  if (etat.minutes % 720 === m % 720) { marque(); etat.phase = "fini"; const h = (Math.floor(m / 60) % 12) || 12;
+    verdict("✅ " + ecrit(m) + " : la petite aiguille est " + (m % 60 ? "entre le " + h + " et le " + (h % 12 + 1) : "sur le " + h) + ".", "ok"); etat.i++; plusTard(tourPlace); }
+  else if (etat.minutes % 60 === m % 60) verdict("La grande aiguille est bien placée : fais des tours pour la petite.", "");
+  else verdict("");
+}
+// ---------- Les heures, les minutes : une seule aiguille ; chaque niveau, ou je lis, ou je place ----------
+let dernier = -1;
+function auHasard(n) { let k; do k = Math.floor(Math.random() * n); while (k === dernier && n > 1); dernier = k; return k; }
+function uneAiguille(o, v) {   // v : les minutes de l'horloge pour la petite aiguille, les minutes de la grande sinon
+  const heures = o === "heures", a = (heures ? v / 2 : v * 6) * Math.PI / 180, L = heures ? LP : LG, x = CX + Math.sin(a) * L, y = CY - Math.cos(a) * L;
+  const f = $(heures ? "petite" : "grande"); f.setAttribute("x2", x); f.setAttribute("y2", y);
+  $("poignee").setAttribute("cx", x); $("poignee").setAttribute("cy", y);
+}
+function tourUne() {
+  clearTimeout(minuteur); $("jeu").innerHTML = ""; etat.aide = 0; verdict("");
+  if (glisseAiguille) { removeEventListener("pointermove", glisseAiguille); removeEventListener("pointerup", lacheAiguille); glisseAiguille = lacheAiguille = null; }
+  const o = etat.onglet, heures = o === "heures", lire = heures ? etat.simple !== 2 : etat.simple % 2 === 1, svg = dessineHorloge();
+  $(heures ? "grande" : "petite").style.display = "none";
+  if (heures) {
+    const h = 1 + auHasard(12), plus = etat.simple === 3 ? 10 + 5 * Math.floor(Math.random() * 9) : 0;
+    etat.une = { juste: h % 12, voulu: h, v: (h % 12) * 60 + plus };
+  } else { const pas = etat.simple <= 2 ? 5 : 1, k = auHasard(60 / pas) * pas; etat.une = { juste: k, voulu: k, v: k }; }
+  etat.phase = lire ? "lire" : "placer";
+  if (lire) {
+    uneAiguille(o, etat.une.v); $("poignee").style.display = "none";
+    const e = document.createElement("div"); e.id = "ecran"; Object.assign(e.style, { left: "1080px", top: "160px" });
+    e.innerHTML = '<div class="champ"></div><span>' + (heures ? "h" : "min") + "</span>"; $("jeu").appendChild(e); pave(1110, 360);
+    const r = heures ? [String(etat.une.voulu), ...(etat.une.voulu < 10 ? ["0" + etat.une.voulu] : [])] : etat.une.voulu === 0 ? ["0", "00", "60"] : deux(etat.une.voulu);
+    champsActifs([{ el: e.querySelector(".champ"), juste: r }]);
+    consigne(heures ? (etat.simple === 3 ? 'Quelle <span class="q">heure</span> vient de passer ?' : 'Quelle <span class="q">heure</span> montre la petite aiguille ?') : 'Combien de <span class="q">minutes</span> montre la grande aiguille ?');
+    return;
+  }
+  uneAiguille(o, heures ? 0 : 0);
+  $("jeu").insertAdjacentHTML("beforeend", '<div id="cible">' + etat.une.voulu + (heures ? " h" : " min") + "</div>");
+  const vise = ev => { const [x, y] = versHorloge(ev); let a = Math.atan2(x - CX, -(y - CY)) * 180 / Math.PI; if (a < 0) a += 360; return a; };
+  let tient = false, pos = 0;
+  const pose = ev => { const a = vise(ev); pos = heures ? (Math.round(a / 30) % 12) * 60 : Math.round(a / 6) % 60; if (!heures && etat.simple <= 2) pos = (Math.round(pos / 5) * 5) % 60; uneAiguille(o, pos); };
+  svg.addEventListener("pointerdown", ev => { ev.preventDefault(); tient = true; pose(ev); });
+  addEventListener("pointermove", glisseAiguille = ev => { if (tient) pose(ev); });
+  addEventListener("pointerup", lacheAiguille = () => {
+    if (!tient || etat.phase !== "placer") return; tient = false;
+    const juste = heures ? pos === (etat.une.voulu % 12) * 60 : pos === etat.une.voulu;
+    if (juste) { etat.phase = "fini"; marque(); verdict("✅ " + etat.une.voulu + (heures ? " h." : " minutes."), "ok"); etat.i++; plusTard(tourUne); }
+    else verdict(heures ? "🤪 La petite aiguille va sur le " + etat.une.voulu + "." : "🤪 Lis les minutes écrites autour de l'horloge.", "ko");
+  });
+  consigne(heures ? 'Mets la <span class="q">petite aiguille</span> sur la bonne heure' : 'Mets la <span class="q">grande aiguille</span> sur les bonnes minutes');
+}
+// ---------- Durée : la voie ferrée ----------
+const VX0 = 330, VX1 = 1800, VY = 250;
+function tourDuree() {
+  $("jeu").innerHTML = ""; etat.aide = 0; etat.phase = "bonds"; etat.bonds = [];
+  const [dep, arr] = DUREE[etat.i % DUREE.length], h0 = Math.floor(dep / 60) * 60, h1 = Math.ceil(arr / 60) * 60;
+  etat.vue = { h0, h1, dep, arr }; etat.pos = dep;
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg"); svg.id = "voie"; svg.setAttribute("viewBox", "0 0 1920 440");
+  $("jeu").appendChild(svg); dessineVoie();
+  pave(1340, 470);
+  const e = document.createElement("div"); e.id = "ecran"; Object.assign(e.style, { left: "130px", top: "520px", visibility: "hidden" });
+  e.innerHTML = '<span>Durée du trajet :</span><div class="champ"></div><span>h</span><div class="champ"></div><span>min</span>'; $("jeu").appendChild(e);
+  svg.addEventListener("pointerup", ev => { if (enGlisse || etat.phase !== "bonds") return; if ($("train").classList.contains("choisi")) $("train").classList.remove("choisi"); bondVers(ev.clientX); });
+  consigne('De <span class="q">' + ecrit(dep) + '</span> à <span class="q">' + ecrit(arr) + "</span>");
+}
+const vx = m => VX0 + (m - etat.vue.h0) / (etat.vue.h1 - etat.vue.h0) * (VX1 - VX0);
+function dessineVoie() {
+  const { h0, h1, dep, arr } = etat.vue;
+  // la gare, au bout de la voie
+  let s = '<g transform="translate(20 ' + (VY - 190) + ')"><path d="M0 70L130 10L260 70z" fill="#8d6e63"/><rect x="14" y="70" width="232" height="128" fill="#ffe0b2" stroke="#8d6e63" stroke-width="4"/>' +
+    '<rect x="70" y="80" width="120" height="34" rx="6" fill="#12324a"/><text x="130" y="106" font-size="26" font-weight="700" text-anchor="middle" fill="#ffd54f">GARE</text>' +
+    '<rect x="32" y="128" width="44" height="70" fill="#5d4037"/><rect x="104" y="130" width="50" height="40" fill="#bbdefb" stroke="#8d6e63" stroke-width="3"/><rect x="180" y="130" width="50" height="40" fill="#bbdefb" stroke="#8d6e63" stroke-width="3"/></g>';
+  // la voie vue de côté : le ballast, les traverses, le rail
+  s += '<path d="M' + (VX0 - 70) + ' ' + (VY + 40) + 'L' + (VX0 - 50) + ' ' + (VY + 14) + 'H' + (VX1 + 50) + 'L' + (VX1 + 70) + ' ' + (VY + 40) + 'z" fill="#9e9e9e"/>';
+  for (let x = VX0 - 46; x < VX1 + 50; x += 34) s += '<rect x="' + x + '" y="' + (VY + 6) + '" width="18" height="12" fill="#5d4037"/>';
+  s += '<rect x="' + (VX0 - 60) + '" y="' + (VY - 2) + '" width="' + (VX1 - VX0 + 120) + '" height="10" fill="#607d8b"/>';
+  // la frise des heures, sous la voie ; 21/11 (Karim) : on doit voir qu'entre deux grands traits, il y a 1 heure : un ruban d'une couleur par heure, « 1 heure » dedans
+  for (let m = h0, k = 0; m < h1; m += 60, k++) { const xa = vx(m), xb = vx(m + 60); s += '<rect x="' + xa + '" y="' + (VY + 44) + '" width="' + (xb - xa) + '" height="46" fill="' + (k % 2 ? "#e3f2fd" : "#bbdefb") + '"/><text x="' + ((xa + xb) / 2) + '" y="' + (VY + 85) + '" font-size="22" font-weight="700" text-anchor="middle" fill="#1565c0">1 heure</text>'; }
+  s += '<text x="150" y="' + (VY + 66) + '" font-size="26" font-weight="700" text-anchor="middle" fill="#1565c0">la ligne des heures</text>';
+  for (let m = h0; m <= h1; m += 5) { const x = vx(m), h = m % 60 === 0; s += '<rect x="' + (x - (h ? 4 : 1.5)) + '" y="' + (VY + 44) + '" width="' + (h ? 8 : 3) + '" height="' + (h ? 30 : 16) + '" fill="' + (h ? "#12324a" : "#78909c") + '"/>'; if (h) s += '<text x="' + x + '" y="' + (VY + 132) + '" font-size="46" font-weight="700" text-anchor="middle" fill="#12324a">' + (m / 60) % 24 + ' h</text>'; }
+  for (const [m, nom] of [[dep, "départ"], [arr, "arrivée"]]) s += '<path d="M' + vx(m) + ' ' + (VY + 46) + 'l-14 30h28z" fill="#c2410c"/><text x="' + vx(m) + ' " y="' + (VY + 178) + '" font-size="34" font-weight="700" text-anchor="middle" fill="#c2410c">' + nom + ' ' + ecrit(m) + '</text>';
+  let a = dep;   // les bonds déjà faits : des arcs au-dessus de la voie
+  for (const b of etat.bonds) { const x1 = vx(a), x2 = vx(b.vers); s += '<path d="M' + x1 + ' ' + (VY - 22) + 'Q' + ((x1 + x2) / 2) + ' ' + (VY - 22 - Math.min(170, (x2 - x1) * 0.6)) + ' ' + x2 + ' ' + (VY - 22) + '" fill="none" stroke="#1f7a8c" stroke-width="7" marker-end="url(#fl)"/>'; a = b.vers; }
+  s += '<defs><marker id="fl" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0L10 5L0 10z" fill="#1f7a8c"/></marker></defs>';
+  // le train, vu de côté, nez vers la droite
+  s += '<g id="train" transform="translate(' + (vx(etat.pos) - 50) + ' ' + (VY - 62) + ')"><path d="M0 8Q0 0 8 0H82Q100 0 112 30L118 52H0z" fill="#c62828" stroke="#7f1d1d" stroke-width="4"/><rect x="0" y="34" width="118" height="8" fill="#fff"/>' +
+    '<rect x="10" y="9" width="24" height="18" rx="3" fill="#bbdefb"/><rect x="42" y="9" width="24" height="18" rx="3" fill="#bbdefb"/><path d="M76 9H90L102 27H76z" fill="#bbdefb"/><circle cx="24" cy="56" r="8" fill="#263238"/><circle cx="90" cy="56" r="8" fill="#263238"/></g>';
+  $("voie").innerHTML = s;
+  rendGlissableTrain();
+}
+// les arrêts possibles : les heures rondes et l'arrivée (la méthode de la classe : passer par l'heure ronde)
+function arretPres(clientX) {
+  const r = $("voie").getBoundingClientRect(), x = (clientX - r.left) / r.width * 1920, { h0, h1, arr } = etat.vue;
+  const arrets = []; for (let m = h0 + 60; m < h1; m += 60) arrets.push(m); arrets.push(arr);
+  return arrets.filter(m => m > etat.pos).sort((a, b) => Math.abs(vx(a) - x) - Math.abs(vx(b) - x))[0];
+}
+function bondVers(clientX) {
+  const m = arretPres(clientX); if (m === undefined) return;
+  const d = m - etat.pos, heures = etat.pos % 60 === 0 && m % 60 === 0;
+  etat.bonds.push({ de: etat.pos, vers: m }); etat.pos = m; etat.phase = "bond-ecrit"; dessineVoie(); verdict("");
+  // l'élève écrit la durée du bond au-dessus de l'arc
+  const x = (vx(etat.bonds[etat.bonds.length - 1].de) + vx(m)) / 2, c = document.createElement("div");
+  c.className = "bond-champ"; Object.assign(c.style, { left: x + "px", top: "0px" });
+  c.innerHTML = '<span>+</span><div class="champ"></div><span>' + (heures ? "h" : "min") + "</span>";
+  $("jeu").appendChild(c);
+  champsActifs([{ el: c.querySelector(".champ"), juste: deux(heures ? d / 60 : d) }]);
+}
+function champsFinis() {
+  if (UNE[etat.onglet]) { marque(); verdict("✅ " + etat.une.voulu + (etat.onglet === "heures" ? " h." : " minutes."), "ok"); etat.i++; plusTard(tourUne); return; }
+  if (etat.onglet === "lis") { const m = LIS[etat.i % LIS.length]; marque(); verdict("✅ Il est " + ecrit(m) + ".", "ok"); etat.i++; plusTard(tourLis); return; }
+  if (etat.phase === "bond-ecrit") {
+    if (etat.pos !== etat.vue.arr) { etat.phase = "bonds"; verdict("✅", "ok"); return; }
+    etat.phase = "total"; const e = $("ecran"); e.style.visibility = "visible";
+    const d = etat.vue.arr - etat.vue.dep, [h, mi] = e.querySelectorAll(".champ");
+    consigne('Durée du <span class="q">trajet</span> ?');
+    champsActifs([{ el: h, juste: deux(Math.floor(d / 60)) }, { el: mi, juste: deux(d % 60) }]);
+    return;
+  }
+  if (etat.phase === "total") { const d = etat.vue.arr - etat.vue.dep; marque(); verdict("✅ Le trajet dure " + ecritDuree(d) + ".", "ok"); etat.phase = "fini"; etat.i++; plusTard(tourDuree); }
+}
+
+// ---------- le train : glisser, ou toucher le train puis l'arrêt ----------
+let enGlisse = false;
+function rendGlissableTrain() {
+  const t = $("train");
+  t.addEventListener("pointerdown", ev => {
+    if (etat.phase !== "bonds") return;
+    ev.preventDefault(); ev.stopPropagation();
+    const sx = ev.clientX; let bouge = false;
+    const move = e => { if (!bouge && Math.abs(e.clientX - sx) > 12) { bouge = true; enGlisse = true; } if (bouge) { const r = $("voie").getBoundingClientRect(), x = (e.clientX - r.left) / r.width * 1920; t.setAttribute("transform", "translate(" + (Math.max(vx(etat.pos), Math.min(VX1, x)) - 50) + " " + (VY - 70) + ")"); } };
+    const up = e => { removeEventListener("pointermove", move); removeEventListener("pointerup", up); setTimeout(() => enGlisse = false, 0); if (bouge) bondVers(e.clientX); else t.classList.toggle("choisi"); };
+    addEventListener("pointermove", move); addEventListener("pointerup", up);
+  });
+}
+
+// ---------- ✏️ mon heure : elle remplace la question en cours ----------
+const versMin = v => { const [h, m] = v.split(":").map(Number); return h * 60 + m; };
+$("crayon").onclick = () => { $("l2").style.display = etat.onglet === "duree" ? "" : "none"; $("choix").style.display = "flex"; };
+$("choix").addEventListener("pointerup", ev => { if (ev.target.id === "choix") $("choix").style.display = "none"; });
+$("ok").onclick = () => {
+  const a = versMin($("h1").value || "09:40"), b = versMin($("h2").value || "11:15");
+  if (etat.onglet === "duree") { if (b <= a) { $("h2").style.outline = "4px solid #c62828"; return; } $("h2").style.outline = ""; DUREE.splice(etat.i % DUREE.length, 0, [a, b]); }
+  else (etat.onglet === "lis" ? LIS : PLACE).splice(etat.i % (etat.onglet === "lis" ? LIS : PLACE).length, 0, a);
+  $("choix").style.display = "none"; clearTimeout(minuteur); verdict("");
+  ({ lis: tourLis, place: tourPlace, duree: tourDuree })[etat.onglet]();
+};
+
+// ---------- démarrer ----------
+function ouvre(o) {
+  clearTimeout(minuteur);
+  if (glisseAiguille) { removeEventListener("pointermove", glisseAiguille); removeEventListener("pointerup", lacheAiguille); glisseAiguille = lacheAiguille = null; }
+  etat.onglet = o; etat.i = 0; etat.score = 0; etat.champs = []; horaires();
+  document.querySelectorAll("#niveaux button").forEach(b => {
+    const n = +b.dataset.n; b.dataset.nom = b.dataset.nom || b.textContent;
+    b.textContent = UNE[o] ? (UNE[o][n - 1] || "") : b.dataset.nom; b.style.display = UNE[o] && !UNE[o][n - 1] ? "none" : "";
+    b.classList.toggle("on", n === (UNE[o] ? etat.simple : etat.niveau));
+  });
+  $("crayon").style.display = UNE[o] ? "none" : "";
+  document.querySelectorAll(".onglets button").forEach(b => b.classList.toggle("on", b.dataset.o === o));
+  history.replaceState(null, "", "#" + o + (UNE[o] ? "-" + etat.simple : ""));
+  afficheScore(); verdict(""); $("bulle").style.display = "none";
+  ({ heures: tourUne, minutes: tourUne, lis: tourLis, place: tourPlace, duree: tourDuree })[o]();
+}
+document.querySelectorAll(".onglets button").forEach(b => b.onclick = () => ouvre(b.dataset.o));
+addEventListener("keydown", e => { if (/^[0-9]$/.test(e.key)) touche(e.key); else if (e.key === "Backspace") touche("⌫"); });
+// l'indice donne la méthode de la séance, jamais l'heure
+$("indice").onclick = () => {
+  etat.aide++;
+  if (etat.onglet === "heures") bulle(etat.simple === 3 ? "La petite aiguille est entre deux nombres : l'heure, c'est le plus petit, celui qu'elle vient de passer." : "La petite aiguille montre l'heure : je lis le nombre sur lequel elle est.");
+  else if (etat.onglet === "minutes") bulle(etat.simple <= 2 ? "La grande aiguille montre les minutes : je lis le nombre jaune, autour de l'horloge." : "Je lis le nombre jaune juste avant la grande aiguille, puis je compte les petits traits.");
+  else if (etat.onglet === "lis") bulle(etat.aide === 1 ? "La petite aiguille donne l'heure : le nombre qu'elle vient de passer. La grande donne les minutes : compte de 5 en 5." : "L'après-midi et le soir, on ajoute 12 : 3 h de l'après-midi, c'est 15 h.");
+  else if (etat.onglet === "place") bulle(etat.aide === 1 ? "Tourne d'abord la grande aiguille vers les minutes : 15 min, c'est sur le 3." : "Fais des tours : à chaque tour de la grande aiguille, la petite avance d'une heure. 14 h, c'est 2 h sur l'horloge.");
+  else bulle(etat.aide === 1 ? "Premier bond : jusqu'à l'heure ronde. Puis des heures entières. Puis jusqu'à l'arrivée." : "Pour l'heure ronde : combien de minutes manque-t-il pour faire 60 ? 6 h 38 → 7 h : 22 min.");
+};
+function ajuste() {
+  const e = Math.min(innerWidth / 1920, innerHeight / 1080), s = $("scene");
+  s.style.transform = "scale(" + e + ")"; s.style.left = ((innerWidth - 1920 * e) / 2) + "px"; s.style.top = ((innerHeight - 1080 * e) / 2) + "px"; s.dataset.ech = e;
+}
+addEventListener("resize", ajuste); ajuste();
+document.querySelectorAll("#niveaux button").forEach(b => b.onclick = () => { if (UNE[etat.onglet]) etat.simple = +b.dataset.n; else etat.niveau = +b.dataset.n; ouvre(etat.onglet); });
+function depuisLien() { const [m, n] = location.hash.slice(1).split("-"); if (UNE[m] && UNE[m][+n - 1]) etat.simple = +n; else if (UNE[m]) etat.simple = 1; ouvre(["heures", "minutes", "lis", "place", "duree"].includes(m) ? m : "lis"); }
+addEventListener("hashchange", depuisLien);
+depuisLien();
+</script>
+</body>
+</html>
